@@ -1,0 +1,19 @@
+name: futsal_on
+description: "풋살ON (Futsal ON) - 풋살 팀 매니저"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.1
+
+# 외부 패키지는 kopn 승인 후에만 추가한다 (lead 지시, 스프린트 01).
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

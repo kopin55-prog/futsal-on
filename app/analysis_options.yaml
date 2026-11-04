@@ -1,0 +1,26 @@
+# flutter_lints 패키지는 외부 패키지 추가 승인 전이라 쓰지 않고,
+# Dart 내장 린트 규칙을 직접 켠다. (승인되면 include: package:flutter_lints/flutter.yaml 로 교체)
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - avoid_relative_lib_imports
+    - avoid_empty_else
+    - avoid_types_as_parameter_names
+    - cancel_subscriptions
+    - curly_braces_in_flow_control_structures
+    - empty_catches
+    - exhaustive_cases
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_single_quotes
+    - unnecessary_new
+    - unnecessary_this
+    - use_key_in_widget_constructors

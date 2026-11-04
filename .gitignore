@@ -1,0 +1,16 @@
+# 비밀 값 (절대 커밋 금지)
+.env
+.env.*
+*.env
+**/supabase/.env
+**/google-services.json
+**/GoogleService-Info.plist
+*.keystore
+*.jks
+key.properties
+
+# 도구
+.idea/
+.vscode/
+.DS_Store
+supabase/.temp/

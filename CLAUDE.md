@@ -16,6 +16,7 @@
 | docs/data-model.md | 데이터 구조 (kopn 승인본만 구현 기준) |
 | docs/notifications.md | 알림 목록과 규칙 |
 | docs/security.md | 보안 체크리스트 |
+| docs/consent-texts.md | 가입·부상 정보 동의 문구 |
 | tasks/questions.md | kopn에게 보낼 질문과 답변 |
 
 문서끼리 내용이 다르면 **decisions.md > glossary.md > 기획서** 순으로 따른다.

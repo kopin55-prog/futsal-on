@@ -29,6 +29,54 @@ void main() {
     });
   });
 
+  group('팀 이름: 한 줄, 이모지·특수문자 허용, 가운데 연속 공백 하나로 (Q-034)', () {
+    test('줄바꿈이 있으면 저장 불가', () {
+      expect(create('코코\nFC'), {TeamCreateError.nameHasLineBreak});
+      expect(create('코코\r\nFC'), {TeamCreateError.nameHasLineBreak});
+    });
+    test('앞뒤 줄바꿈은 제거되어 통과', () {
+      expect(create('\n코코FC\n'), isEmpty);
+    });
+    test('이모지·특수문자 허용', () {
+      expect(create('⚽코코FC'), isEmpty);
+      expect(create('코코FC★#1!'), isEmpty);
+    });
+    test('가운데 연속 공백은 하나로 줄인 뒤 글자 수를 센다', () {
+      expect(create('가나다라마   바사아자'), isEmpty); // 줄이면 10자
+      expect(create('가나다라마\t　바사아자'), isEmpty);
+      expect(create('가나다라마  바사아자차'), {TeamCreateError.nameTooLong});
+    });
+    test('정리된 팀 이름', () {
+      expect(TeamValidator.normalizeName('  FC   코코  '), 'FC 코코');
+    });
+    test('줄바꿈과 글자 수 초과는 함께 알려준다', () {
+      expect(create('가나다라마\n바사아자차카'), {
+        TeamCreateError.nameTooLong,
+        TeamCreateError.nameHasLineBreak,
+      });
+    });
+  });
+
+  group('팀 이름 변경 시 로고 글자 (Q-036)', () {
+    String after(String newName, String current, {required bool customized}) =>
+        TeamValidator.logoTextAfterRename(
+          newTeamName: newName,
+          currentLogoText: current,
+          logoTextCustomized: customized,
+        );
+
+    test('직접 바꾼 적이 없으면 새 이름 앞 두 글자로 바뀐다', () {
+      expect(after('번개FC', '코코', customized: false), '번개');
+      expect(after('FC 번개', '코코', customized: false), 'FC');
+      expect(after('⚽번개', '코코', customized: false), '⚽번');
+      expect(after('번', '코코', customized: false), '번');
+    });
+    test('직접 바꾼 적이 있으면 그대로 둔다', () {
+      expect(after('번개FC', 'KK', customized: true), 'KK');
+      expect(after('번개FC', '코', customized: true), '코');
+    });
+  });
+
   group('기본 로고 글자 (Q-013)', () {
     String logo(String name) => TeamValidator.defaultLogoText(name);
 

@@ -21,5 +21,16 @@ bool containsLineBreak(String text) => _lineBreak.hasMatch(text);
 
 final RegExp _lineBreak = RegExp('[\r\n  ]');
 
+/// 한 줄 이름(팀 이름·팀에서 쓸 이름) 정리 (Q-034).
+///
+/// 앞뒤 공백을 빼고, 가운데의 공백(띄어쓰기·탭·전각 공백 등) 연속은 띄어쓰기 하나로 줄인다.
+/// 줄바꿈은 줄이지 않고 남긴다 → 검증에서 [containsLineBreak]로 막는다.
+/// 이름의 글자 수는 이 정리 결과로 센다. 이모지·특수문자는 제한하지 않는다.
+String normalizeSingleLineName(String text) =>
+    normalizeInput(text).replaceAll(_inlineWhitespaceRun, ' ');
+
+/// 줄바꿈([_lineBreak]의 문자)을 제외한 공백 문자의 연속.
+final RegExp _inlineWhitespaceRun = RegExp(r'[^\S\r\n  ]+');
+
 /// 모든 공백(띄어쓰기·탭·줄바꿈 등)을 뺀 문자열.
 String removeWhitespace(String text) => text.replaceAll(RegExp(r'\s'), '');

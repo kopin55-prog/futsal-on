@@ -100,14 +100,79 @@ void main() {
     test('체크 안 하면 자동 포함 없음', () {
       expect(input().effectivePositions, [Position.defender]);
     });
-    test('골키퍼 외 3개 + 전문 골키퍼: 처리 미정, 저장 불가 오류로 막지 않음', () {
-      // 확정 규칙이 아님 (TODO(Q-대기)). 결정되면 이 테스트를 바꾼다.
+  });
+
+  group('골키퍼 포함 총 3개까지 (Q-035)', () {
+    const threeOutfield = [
+      Position.defender,
+      Position.midfielder,
+      Position.forward,
+    ];
+
+    test('골키퍼 외 3개 + 전문 골키퍼: 하나 빼도록 안내하는 별도 오류로 저장 불가', () {
+      final i = input(positions: threeOutfield, isDedicatedGk: true);
+      expect(v(i), {ProfileError.dedicatedGkNeedsFreeSlot});
+      expect(ProfileValidator.canCheckDedicatedGk(threeOutfield), isFalse);
+    });
+    test('하나 빼면 골키퍼 자동 포함으로 3개가 되어 통과', () {
       final i = input(
-        positions: [Position.defender, Position.midfielder, Position.forward],
+        positions: [Position.defender, Position.forward],
         isDedicatedGk: true,
       );
       expect(v(i), isEmpty);
-      expect(i.effectivePositions, hasLength(4));
+      expect(i.effectivePositions, hasLength(3));
+      expect(
+        ProfileValidator.canCheckDedicatedGk([
+          Position.defender,
+          Position.forward,
+        ]),
+        isTrue,
+      );
+    });
+    test('이미 골키퍼가 포함된 3개면 전문 골키퍼 체크 가능', () {
+      const withGk = [Position.goalkeeper, Position.defender, Position.forward];
+      expect(v(input(positions: withGk, isDedicatedGk: true)), isEmpty);
+      expect(ProfileValidator.canCheckDedicatedGk(withGk), isTrue);
+    });
+    test('전문 골키퍼 체크 안 하면 골키퍼 외 3개 그대로 통과', () {
+      expect(v(input(positions: threeOutfield)), isEmpty);
+    });
+    test('직접 4개 이상 고르면 기존 오류만 (전문 골키퍼 여부 무관)', () {
+      final four = [...threeOutfield, Position.winger];
+      expect(v(input(positions: four)), {ProfileError.tooManyPositions});
+      expect(v(input(positions: four, isDedicatedGk: true)), {
+        ProfileError.tooManyPositions,
+      });
+    });
+    test('빈 선택 또는 1~2개면 언제든 체크 가능', () {
+      expect(ProfileValidator.canCheckDedicatedGk([]), isTrue);
+      expect(ProfileValidator.canCheckDedicatedGk([Position.winger]), isTrue);
+    });
+  });
+
+  group('팀에서 쓸 이름: 한 줄, 이모지·특수문자 허용, 가운데 연속 공백 하나로 (Q-034)', () {
+    test('줄바꿈이 있으면 저장 불가', () {
+      expect(v(input(name: '홍\n길동')), {ProfileError.nameHasLineBreak});
+      expect(v(input(name: '홍\r\n길동')), {ProfileError.nameHasLineBreak});
+      expect(v(input(name: '홍 길동')), {ProfileError.nameHasLineBreak});
+    });
+    test('앞뒤 줄바꿈은 앞뒤 공백으로 제거되어 통과', () {
+      expect(v(input(name: '\n길동\n')), isEmpty);
+    });
+    test('이모지·특수문자 허용', () {
+      expect(v(input(name: '⚽길동★')), isEmpty);
+      expect(v(input(name: '#10_길동!')), isEmpty);
+    });
+    test('가운데 연속 공백은 하나로 줄인 뒤 글자 수를 센다', () {
+      // "가나다  라마바사" (공백 2개) → "가나다 라마바사" 8자
+      expect(v(input(name: '가나다  라마바사')), isEmpty);
+      expect(v(input(name: '가나다\t 　라마바사')), isEmpty);
+      // 줄인 뒤에도 9자면 불가
+      expect(v(input(name: '가나다  라마바사아')), {ProfileError.nameTooLong});
+    });
+    test('정리본 이름은 가운데 공백이 하나로 줄어 있다', () {
+      expect(input(name: '  길   동  ').normalized().name, '길 동');
+      expect(input(name: '길\t동').normalized().name, '길 동');
     });
   });
 

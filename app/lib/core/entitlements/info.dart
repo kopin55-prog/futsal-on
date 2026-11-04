@@ -53,7 +53,7 @@ final class InjuryInfo extends Info {
   });
   final String subjectUserId;
 
-  /// 본인이 건강 정보 처리·팀원 공개에 동의했는지 (동의 문구는 Q-003 대기).
+  /// 본인이 건강 정보 처리·팀원 공개에 동의했는지 (가입 시 최초 1회 체크박스, Q-028. 문구는 승인 대기).
   final bool subjectConsented;
 }
 

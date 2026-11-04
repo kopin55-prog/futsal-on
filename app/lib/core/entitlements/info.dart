@@ -67,3 +67,18 @@ final class PersonalRecordInfo extends Info {
 final class TeamReportInfo extends Info {
   const TeamReportInfo();
 }
+
+/// 그룹·라이벌 설정 (누구와 누구를 같은 팀/다른 팀으로 둘지). 팀 단위.
+final class GroupRivalSettingsInfo extends Info {
+  const GroupRivalSettingsInfo();
+}
+
+/// 팀 나누기 배치 변경 이력. 팀 단위.
+final class LineupChangeHistoryInfo extends Info {
+  const LineupChangeHistoryInfo();
+}
+
+/// 게스트의 포지션. 팀 단위.
+final class GuestPositionInfo extends Info {
+  const GuestPositionInfo();
+}

@@ -25,6 +25,7 @@ void main() {
       TeamAction.copyShareImage,
     };
     const ownerOnly = {
+      TeamAction.editLogoText,
       TeamAction.appointOrDismissManager,
       TeamAction.removeMember,
       TeamAction.transferOwnership,
@@ -33,8 +34,11 @@ void main() {
     const everyone = {TeamAction.voteAttendance, TeamAction.voteAwards};
 
     test('모든 행동이 세 분류 중 하나에 들어 있다', () {
-      expect({...staffOnly, ...ownerOnly, ...everyone},
-          TeamAction.values.toSet());
+      expect({
+        ...staffOnly,
+        ...ownerOnly,
+        ...everyone,
+      }, TeamAction.values.toSet());
     });
 
     for (final action in staffOnly) {
@@ -77,16 +81,56 @@ void main() {
       expect(e.canView(member, info), isFalse);
       expect(e.canView(outsider, info), isFalse);
       expect(
-          e.canView(member, const SkillLevelInfo(subjectUserId: 'other')),
-          isFalse);
+        e.canView(member, const SkillLevelInfo(subjectUserId: 'other')),
+        isFalse,
+      );
+    });
+
+    test('실력 등급: 팀장·운영진은 본인 등급도 볼 수 있다 (Q-016)', () {
+      expect(
+        e.canView(owner, const SkillLevelInfo(subjectUserId: 'o')),
+        isTrue,
+      );
+      expect(
+        e.canView(manager, const SkillLevelInfo(subjectUserId: 'm')),
+        isTrue,
+      );
+    });
+
+    test('선호 포지션·전문 골키퍼: 다른 사람 것은 팀장·운영진만 (Q-017)', () {
+      const info = PreferredPositionsInfo(subjectUserId: 'other');
+      expect(e.canView(owner, info), isTrue);
+      expect(e.canView(manager, info), isTrue);
+      expect(e.canView(outsider, info), isFalse);
+    });
+
+    test('그룹·라이벌 설정, 배치 변경 이력, 게스트 포지션: 팀장·운영진만 (Q-017)', () {
+      const infos = <Info>[
+        GroupRivalSettingsInfo(),
+        LineupChangeHistoryInfo(),
+        GuestPositionInfo(),
+      ];
+      for (final info in infos) {
+        expect(e.canView(owner, info), isTrue);
+        expect(e.canView(manager, info), isTrue);
+        expect(e.canView(member, info), isFalse);
+        expect(e.canView(outsider, info), isFalse);
+      }
+    });
+
+    test('로고 글자 변경은 팀장만, 나머지 팀 정보 수정은 팀장·운영진 (Q-014)', () {
+      expect(e.canPerform(owner, TeamAction.editLogoText), isTrue);
+      expect(e.canPerform(manager, TeamAction.editLogoText), isFalse);
+      expect(e.canPerform(manager, TeamAction.editTeamInfo), isTrue);
     });
 
     test('선호 포지션: 다른 팀원은 볼 수 없다', () {
       const info = PreferredPositionsInfo(subjectUserId: 'other');
       expect(e.canView(member, info), isFalse);
       expect(
-          e.canView(member, const PreferredPositionsInfo(subjectUserId: 'u')),
-          isTrue);
+        e.canView(member, const PreferredPositionsInfo(subjectUserId: 'u')),
+        isTrue,
+      );
     });
 
     test('참석 명단: 팀원 전체', () {
@@ -107,11 +151,13 @@ void main() {
       for (final v in [owner, manager, member]) {
         expect(
           e.canView(
-              v,
-              VoteCountInfo(
-                  subjectUserId: v.userId,
-                  matchId: 'g1',
-                  category: VoteCategory.pom)),
+            v,
+            VoteCountInfo(
+              subjectUserId: v.userId,
+              matchId: 'g1',
+              category: VoteCategory.pom,
+            ),
+          ),
           isFalse,
         );
         expect(e.showVoteCountButton(v), isFalse);
@@ -126,8 +172,10 @@ void main() {
 
     test('부상: 동의하면 팀원 전체, 동의 전에는 본인만', () {
       const consented = InjuryInfo(subjectUserId: 'a', subjectConsented: true);
-      const notConsented =
-          InjuryInfo(subjectUserId: 'u', subjectConsented: false);
+      const notConsented = InjuryInfo(
+        subjectUserId: 'u',
+        subjectConsented: false,
+      );
       expect(e.canView(member, consented), isTrue);
       expect(e.canView(outsider, consented), isFalse);
       expect(e.canView(member, notConsented), isTrue); // 본인
@@ -136,10 +184,13 @@ void main() {
 
     test('내 기록: 본인만 (팀장도 불가)', () {
       expect(
-          e.canView(member, const PersonalRecordInfo(subjectUserId: 'u')),
-          isTrue);
-      expect(e.canView(owner, const PersonalRecordInfo(subjectUserId: 'u')),
-          isFalse);
+        e.canView(member, const PersonalRecordInfo(subjectUserId: 'u')),
+        isTrue,
+      );
+      expect(
+        e.canView(owner, const PersonalRecordInfo(subjectUserId: 'u')),
+        isFalse,
+      );
     });
 
     test('팀 리포트: 1차에서는 숨김', () {
@@ -150,13 +201,20 @@ void main() {
 
   group('2차 등급 자리', () {
     test('1차에서는 등급이 있어도 판단이 바뀌지 않는다', () {
-      final paidOwner =
-          Viewer(userId: 'o', role: TeamRole.owner, grants: allGrants);
+      final paidOwner = Viewer(
+        userId: 'o',
+        role: TeamRole.owner,
+        grants: allGrants,
+      );
       expect(
         e.canView(
-            paidOwner,
-            const VoteCountInfo(
-                subjectUserId: 'o', matchId: 'g1', category: VoteCategory.pom)),
+          paidOwner,
+          const VoteCountInfo(
+            subjectUserId: 'o',
+            matchId: 'g1',
+            category: VoteCategory.pom,
+          ),
+        ),
         isFalse,
       );
       expect(e.voteResultMaxRank(paidOwner, VoteCategory.pom), 1);
@@ -172,13 +230,15 @@ void main() {
     });
 
     test('AdUnlock은 경기·항목으로 같음을 판단한다', () {
-      expect(const AdUnlock(matchId: 'g1', category: VoteCategory.pom),
-          const AdUnlock(matchId: 'g1', category: VoteCategory.pom));
       expect(
-          const AdUnlock(matchId: 'g1', category: VoteCategory.pom) ==
-              const AdUnlock(
-                  matchId: 'g1', category: VoteCategory.goalOfTheDay),
-          isFalse);
+        const AdUnlock(matchId: 'g1', category: VoteCategory.pom),
+        const AdUnlock(matchId: 'g1', category: VoteCategory.pom),
+      );
+      expect(
+        const AdUnlock(matchId: 'g1', category: VoteCategory.pom) ==
+            const AdUnlock(matchId: 'g1', category: VoteCategory.goalOfTheDay),
+        isFalse,
+      );
     });
   });
 }

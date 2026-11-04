@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # 보이는 글자(grapheme) 단위 글자 수 세기. Flutter SDK 포함 패키지 (Q-012 승인).
+  characters: ^1.4.0
 
 dev_dependencies:
   flutter_test:

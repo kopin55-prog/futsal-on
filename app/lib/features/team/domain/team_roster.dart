@@ -45,16 +45,15 @@ final class RoleChangeFailed extends RoleChangeResult {
 /// 저장 구조와 무관한 순수 규칙이며, 서버(RLS·서버 함수)에서도 같은 규칙을 강제해야 한다.
 class TeamRoster {
   TeamRoster(Map<String, TeamRole> roles, {Entitlements? entitlements})
-      : _roles = Map.unmodifiable(roles),
-        _entitlements = entitlements ?? const Entitlements() {
+    : _roles = Map.unmodifiable(roles),
+      _entitlements = entitlements ?? const Entitlements() {
     final owners = _roles.values.where((r) => r == TeamRole.owner).length;
     final managers = _roles.values.where((r) => r == TeamRole.manager).length;
     if (owners != 1) {
       throw ArgumentError('팀장은 정확히 1명이어야 함 (현재 $owners명)');
     }
     if (managers > TeamRole.maxManagers) {
-      throw ArgumentError(
-          '운영진은 최대 ${TeamRole.maxManagers}명 (현재 $managers명)');
+      throw ArgumentError('운영진은 최대 ${TeamRole.maxManagers}명 (현재 $managers명)');
     }
   }
 
@@ -144,11 +143,13 @@ class TeamRoster {
     if (target != TeamRole.manager) {
       return const RoleChangeFailed(RoleChangeError.targetNotManager);
     }
-    return RoleChangeOk(_with({
-      ..._roles,
-      targetUserId: TeamRole.owner,
-      actorUserId: TeamRole.manager,
-    }));
+    return RoleChangeOk(
+      _with({
+        ..._roles,
+        targetUserId: TeamRole.owner,
+        actorUserId: TeamRole.manager,
+      }),
+    );
   }
 
   /// 팀원 내보내기: 팀장만. 자기 자신은 내보낼 수 없다.
@@ -165,8 +166,7 @@ class TeamRoster {
     if (!_roles.containsKey(targetUserId)) {
       return const RoleChangeFailed(RoleChangeError.targetNotInTeam);
     }
-    // TODO(Q-대기): 운영진도 바로 내보낼 수 있는지(먼저 해제해야 하는지) 미정
-    //   → 가장 덜 제한적으로 바로 내보낼 수 있게 둔다.
+    // 운영진도 먼저 해제하지 않고 바로 내보낼 수 있다 (Q-018).
     return RoleChangeOk(_with({..._roles}..remove(targetUserId)));
   }
 

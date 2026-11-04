@@ -31,7 +31,7 @@
 ## 작업 흐름
 1. lead가 tasks/에서 작업을 고르고 담당 에이전트에게 위임
 2. 담당 에이전트가 작업 후 결과와 막힌 점을 lead에게 보고
-3. qa와 security가 점검 (보안 관련 작업은 security 필수)
+3. qa가 점검 (security 점검은 kopn이 요청할 때와 출시 직전에만)
 4. lead가 tasks/ 상태를 갱신하고, 결정이 생기면 docs/decisions.md에 기록
 
 ## 기술 스택

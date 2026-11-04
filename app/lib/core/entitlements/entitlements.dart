@@ -43,6 +43,7 @@ class Entitlements {
       case TeamAction.manageLineup:
       case TeamAction.copyShareImage:
         return role.isStaff;
+      case TeamAction.editLogoText:
       case TeamAction.appointOrDismissManager:
       case TeamAction.removeMember:
       case TeamAction.transferOwnership:
@@ -69,8 +70,9 @@ class Entitlements {
       PreferredPositionsInfo(:final subjectUserId) ||
       VoteCountInfo(:final subjectUserId) ||
       InjuryInfo(:final subjectUserId) ||
-      PersonalRecordInfo(:final subjectUserId) =>
-        viewer.userId == subjectUserId,
+      PersonalRecordInfo(
+        :final subjectUserId,
+      ) => viewer.userId == subjectUserId,
       _ => false,
     };
 
@@ -82,16 +84,19 @@ class Entitlements {
 
     switch (info) {
       case SkillLevelInfo():
-        // 팀장·운영진만. 팀원은 본인 등급도 못 본다.
-        // TODO(Q-대기): "본인도 불가"가 팀장·운영진 본인 등급에도 적용되는지 미정.
-        //   가장 덜 제한적으로 팀장·운영진은 본인 포함 전원 조회 가능으로 둔다.
+        // 팀장·운영진만, 본인 등급 포함 (Q-016). 팀원은 본인 등급도 못 본다.
         return role.isStaff;
 
       case PreferredPositionsInfo():
-        // 팀원 명단에는 표시하지 않는다. 본인은 수정 화면에서 본다.
-        // TODO(Q-대기): 팀장·운영진이 팀 나누기 화면 등에서 다른 사람의 선호 포지션·
-        //   전문 골키퍼 여부를 볼 수 있는지 미정. 가장 덜 제한적으로 팀장·운영진 허용.
+        // 선호 포지션·전문 골키퍼: 본인, 그리고 팀장·운영진만 (Q-017).
+        // 팀원 명단에는 표시하지 않는다.
         return isSelf || role.isStaff;
+
+      case GroupRivalSettingsInfo():
+      case LineupChangeHistoryInfo():
+      case GuestPositionInfo():
+        // 팀장·운영진만 (Q-017).
+        return role.isStaff;
 
       case AttendanceListInfo():
         return true;

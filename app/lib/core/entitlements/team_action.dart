@@ -3,8 +3,11 @@ enum TeamAction {
   /// 가입 승인·거절, 초대 링크 발급
   reviewJoinRequests,
 
-  /// 팀 정보 수정, 인원 모집 켜기·끄기
+  /// 팀 정보 수정 (사진 로고 포함, 로고 글자 제외), 인원 모집 켜기·끄기
   editTeamInfo,
+
+  /// 로고 글자 변경 (Q-014: 팀장만)
+  editLogoText,
 
   /// 실력 등급 설정 (조회는 SkillLevelInfo)
   setSkillLevel,

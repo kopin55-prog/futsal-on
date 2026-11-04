@@ -6,10 +6,7 @@
 library;
 
 /// 투표 항목. 득표수·결과 공개를 항목별로 판단하기 위해 core에 둔다.
-enum VoteCategory {
-  pom,
-  goalOfTheDay,
-}
+enum VoteCategory { pom, goalOfTheDay }
 
 /// 보상형 광고 1회로 열리는 범위: 그 경기 1건의 본인 득표수 (항목별).
 class AdUnlock {

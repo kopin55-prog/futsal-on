@@ -176,6 +176,26 @@ void main() {
     });
   });
 
+  group('팀에서 쓸 이름: 보이지 않는 문자 삭제 (Q-048)', () {
+    final zwsp = String.fromCharCode(0x200B);
+    final bom = String.fromCharCode(0xFEFF);
+    final zwj = String.fromCharCode(0x200D);
+
+    test('보이지 않는 문자만으로 된 이름은 비어 있음 오류', () {
+      expect(v(input(name: zwsp)), {ProfileError.nameRequired});
+      expect(v(input(name: ' $zwsp$bom ')), {ProfileError.nameRequired});
+    });
+    test('보이지 않는 문자는 지우고 글자 수를 센다', () {
+      expect(v(input(name: '${'가' * 8}$zwsp')), isEmpty);
+      expect(input(name: '길$zwsp동').normalized().name, '길동');
+    });
+    test('이모지 사이 ZWJ는 남긴다', () {
+      final cook = '🧑$zwj🍳';
+      expect(input(name: '$cook길동').normalized().name, '$cook길동');
+      expect(v(input(name: cook * 8)), isEmpty);
+    });
+  });
+
   group('한줄 자기소개: 20자, 줄바꿈 불가 (Q-012)', () {
     test('없어도 됨', () {
       expect(v(input(bio: null)), isEmpty);

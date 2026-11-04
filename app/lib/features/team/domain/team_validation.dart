@@ -49,8 +49,25 @@ class TeamValidator {
   /// 팀 이름에서 공백을 모두 뺀 앞 두 글자. 한 글자 이름이면 한 글자.
   /// 영문은 입력 그대로 (대소문자 변환 없음). 한글·영어 구분 없음.
   /// 예: "코코FC" → "코코", "FC 코코" → "FC", "A B팀" → "AB".
-  static String defaultLogoText(String teamName) =>
-      takeChars(removeWhitespace(teamName), logoTextLength);
+  /// 보이지 않는 문자도 빼고 센다 (Q-048).
+  static String defaultLogoText(String teamName) => takeChars(
+    removeWhitespace(removeInvisibleChars(teamName)),
+    logoTextLength,
+  );
+
+  /// 저장 직전 로고 글자 정리: 팀 이름과 같은 규칙 (보이지 않는 문자 삭제,
+  /// 앞뒤 공백 제거, 가운데 연속 공백 하나로. Q-034, Q-048).
+  static String normalizeLogoText(String text) => normalizeSingleLineName(text);
+
+  /// 팀장이 로고 글자를 저장할 때 logo_text_customized 값 (Q-047).
+  ///
+  /// 정리한 [newLogoText]가 현재 팀 이름 [teamName]의 기본 로고 글자와 같으면
+  /// "직접 바꾸지 않은 것"(false) → 이후 팀 이름이 바뀌면 다시 자동 갱신된다.
+  /// 다르면 true. 비교는 대소문자를 구분한다 (기본 로고는 대소문자 변환 없음, Q-013).
+  static bool isLogoTextCustomized({
+    required String newLogoText,
+    required String teamName,
+  }) => normalizeLogoText(newLogoText) != defaultLogoText(teamName);
 
   /// 팀 이름을 바꾼 뒤의 로고 글자 (Q-036).
   ///
@@ -65,8 +82,9 @@ class TeamValidator {
 
   /// 팀장이 직접 바꾼 로고 글자 검증: 앞뒤 공백을 빼고 1~2자 (Q-013).
   /// 가운데 공백도 1자로 센다 ("A B"는 3자로 불가, Q-034 참고).
+  /// 보이지 않는 문자는 지우고 센다 → 그것만으로 된 글자는 [LogoTextError.empty] (Q-048).
   static Set<LogoTextError> validateLogoText(String text) {
-    final length = countChars(normalizeInput(text));
+    final length = countChars(normalizeLogoText(text));
     if (length == 0) return {LogoTextError.empty};
     if (length > logoTextLength) return {LogoTextError.tooLong};
     return {};

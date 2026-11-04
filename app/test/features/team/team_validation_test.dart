@@ -123,4 +123,93 @@ void main() {
       expect(v('🇰🇷👍🏽'), isEmpty);
     });
   });
+
+  // 보이지 않는 문자는 코드 포인트로 만든다.
+  final zwsp = String.fromCharCode(0x200B);
+  final zwj = String.fromCharCode(0x200D);
+  final softHyphen = String.fromCharCode(0x00AD);
+  final hangulFiller = String.fromCharCode(0x3164);
+
+  group('보이지 않는 문자 삭제: 팀 이름 (Q-048)', () {
+    test('보이지 않는 문자만으로 된 이름은 비어 있음 오류', () {
+      expect(create(zwsp), {TeamCreateError.nameRequired});
+      expect(create(' $zwsp$hangulFiller '), {TeamCreateError.nameRequired});
+    });
+    test('보이지 않는 문자는 지우고 글자 수를 센다', () {
+      expect(create('${'가' * 10}$zwsp$softHyphen'), isEmpty);
+      expect(TeamValidator.normalizeName('코$zwsp코FC'), '코코FC');
+    });
+    test('이모지 사이 ZWJ는 남아 결합 이모지가 1자로 유지된다', () {
+      final family = ['👨', '👩', '👧'].join(zwj);
+      expect(TeamValidator.normalizeName('${family}FC'), '${family}FC');
+      expect(create(family * 10), isEmpty);
+    });
+    test('기본 로고 글자도 보이지 않는 문자를 빼고 만든다', () {
+      expect(TeamValidator.defaultLogoText('$zwsp코$zwsp코FC'), '코코');
+    });
+  });
+
+  group('직접 바꾼 로고 글자 정리 (Q-048)', () {
+    Set<LogoTextError> v(String t) => TeamValidator.validateLogoText(t);
+
+    test('보이지 않는 문자만이면 비어 있음 오류', () {
+      expect(v(zwsp), {LogoTextError.empty});
+      expect(v('$hangulFiller$zwj'), {LogoTextError.empty});
+    });
+    test('보이지 않는 문자는 세지 않는다', () {
+      expect(v('코$zwsp코'), isEmpty);
+      expect(TeamValidator.normalizeLogoText(' 코$zwsp코 '), '코코');
+    });
+  });
+
+  group('로고 글자 저장 시 직접 바꿨는지 판단 (Q-047)', () {
+    bool customized(String logo, String team) =>
+        TeamValidator.isLogoTextCustomized(newLogoText: logo, teamName: team);
+
+    test('기본값(공백 뺀 앞 두 글자)과 같으면 바꾸지 않은 것', () {
+      expect(customized('코코', '코코FC'), isFalse);
+      expect(customized('FC', 'FC 코코'), isFalse);
+      expect(customized('AB', 'A B팀'), isFalse);
+      expect(customized('코', '코'), isFalse);
+    });
+    test('기본값과 다르면 바꾼 것', () {
+      expect(customized('KK', '코코FC'), isTrue);
+      expect(customized('코', '코코FC'), isTrue);
+      expect(customized('코F', '코코FC'), isTrue);
+    });
+    test('대소문자가 다르면 바꾼 것 (기본 로고는 대소문자 변환 없음)', () {
+      expect(customized('fc', 'FC 코코'), isTrue);
+    });
+    test('저장 전 정리 후 비교한다 (앞뒤 공백·보이지 않는 문자)', () {
+      expect(customized(' 코코 ', '코코FC'), isFalse);
+      expect(customized('코$zwsp코', '코코FC'), isFalse);
+      expect(customized('코코', '$zwsp코코FC'), isFalse);
+    });
+
+    test('기본값으로 되돌리면 다음 이름 변경 때 다시 자동 갱신된다', () {
+      // 1) 팀장이 "KK"로 바꿈 → 이름을 바꿔도 유지
+      var logo = 'KK';
+      var flag = customized(logo, '코코FC');
+      expect(flag, isTrue);
+      logo = TeamValidator.logoTextAfterRename(
+        newTeamName: '번개FC',
+        currentLogoText: logo,
+        logoTextCustomized: flag,
+      );
+      expect(logo, 'KK');
+
+      // 2) 팀장이 현재 이름의 기본값 "번개"로 되돌림 → 바꾸지 않은 것으로 봄
+      logo = '번개';
+      flag = customized(logo, '번개FC');
+      expect(flag, isFalse);
+
+      // 3) 이름을 바꾸면 새 이름 앞 두 글자로 자동 갱신
+      logo = TeamValidator.logoTextAfterRename(
+        newTeamName: '천둥FC',
+        currentLogoText: logo,
+        logoTextCustomized: flag,
+      );
+      expect(logo, '천둥');
+    });
+  });
 }

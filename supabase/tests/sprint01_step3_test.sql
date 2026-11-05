@@ -72,63 +72,63 @@ select public.appoint_manager((select v::uuid from t_vars where k = 'team'), '00
 -- ================================================================ 팀 정보 수정
 -- 운영진: 이름·운동일·모집. 로고 글자는 이름 기본값 규칙으로 자동 갱신 (Q-047)
 select pg_temp.login('00000000-0000-4000-8000-0000000000c2');
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '  번개   FC ', 5::smallint, '22:00', '00:30', false);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '  번개   FC ', 5::smallint, '22:00', '00:30', false, null);
 select pg_temp.check((select name = '번개 FC' and logo_text = '번개' and regular_weekday = 5
     and regular_start_time = '22:00' and regular_end_time = '00:30' and not is_recruiting
   from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'manager updates info, logo auto');
 -- 운영진은 로고 글자를 못 바꾼다 (Q-014). 아무것도 저장되지 않는다.
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', 5::smallint, '22:00', '00:30', true, 'KK')$$, 'not_permitted');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', 5::smallint, '22:00', '00:30', true, null, 'KK')$$, 'not_permitted');
 select pg_temp.check((select name = '번개 FC' and not is_recruiting from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'rejected call saved nothing');
 -- 팀원은 못 고친다
 select pg_temp.login('00000000-0000-4000-8000-0000000000c3');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', null, null, null, true)$$, 'not_permitted');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', null, null, null, true, null)$$, 'not_permitted');
 -- 팀 밖 사람도 못 고친다 (프로필 없는 사람 포함)
 select pg_temp.login('00000000-0000-4000-8000-0000000000c4');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', null, null, null, true)$$, 'profile_required');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', null, null, null, true, null)$$, 'profile_required');
 
 -- 팀장: 이름과 로고 글자를 함께. 넣은 로고 글자가 남는다 (이름 변경 뒤에 저장)
 select pg_temp.login('00000000-0000-4000-8000-0000000000c1');
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', 5::smallint, '22:00', '00:30', true, ' KK ');
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '천둥FC', 5::smallint, '22:00', '00:30', true, null, ' KK ');
 select pg_temp.check((select name = '천둥FC' and logo_text = 'KK' and is_recruiting from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'owner sets logo with rename');
 -- 직접 바꾼 로고는 이름을 바꿔도 그대로
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '폭풍FC', 5::smallint, '22:00', '00:30', true);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '폭풍FC', 5::smallint, '22:00', '00:30', true, null);
 select pg_temp.check((select logo_text = 'KK' from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'custom logo kept on rename');
 -- 지금 이름 기본값으로 되돌리면 다시 자동 갱신 대상 (Q-047)
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '폭풍FC', 5::smallint, '22:00', '00:30', true, '폭풍');
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '바람FC', 5::smallint, '22:00', '00:30', true);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '폭풍FC', 5::smallint, '22:00', '00:30', true, null, '폭풍');
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '바람FC', 5::smallint, '22:00', '00:30', true, null);
 select pg_temp.check((select logo_text = '바람' from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'reset logo follows rename again');
 -- 같은 이름의 기본값과 같은 글자를 이름 변경과 함께 넣어도 넣은 값이 남는다
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 5::smallint, '22:00', '00:30', true, '바람');
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 5::smallint, '22:00', '00:30', true, null, '바람');
 select pg_temp.check((select name = '구름FC' and logo_text = '바람' from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'explicit logo wins over auto');
 
 -- 잘못된 값
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '', null, null, null, true)$$, 'invalid_team_name');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), repeat('가', 81), null, null, null, true)$$, 'invalid_team_name');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), E'코코\nFC', null, null, null, true)$$, 'invalid_team_name');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), null, null, null, null, true)$$, 'invalid_team_name');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', 1::smallint, '22:00', '22:00', true)$$, 'invalid_regular_schedule');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, '20:00', null, true)$$, 'invalid_regular_schedule');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', 8::smallint, null, null, true)$$, 'invalid_regular_schedule');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, null)$$, 'invalid_team_info');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, true, 'ABC')$$, 'invalid_logo_text');
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, true, '  ')$$, 'invalid_logo_text');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '', null, null, null, true, null)$$, 'invalid_team_name');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), repeat('가', 81), null, null, null, true, null)$$, 'invalid_team_name');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), E'코코\nFC', null, null, null, true, null)$$, 'invalid_team_name');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), null, null, null, null, true, null)$$, 'invalid_team_name');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', 1::smallint, '22:00', '22:00', true, null)$$, 'invalid_regular_schedule');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, '20:00', null, true, null)$$, 'invalid_regular_schedule');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', 8::smallint, null, null, true, null)$$, 'invalid_regular_schedule');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, null, null)$$, 'invalid_team_info');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, true, null, 'ABC')$$, 'invalid_logo_text');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '팀', null, null, null, true, null, '  ')$$, 'invalid_logo_text');
 select pg_temp.check((select name = '구름FC' from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'invalid calls saved nothing');
 -- 운동일 지우기 가능
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', null, null, null, true);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', null, null, null, true, null);
 select pg_temp.check((select regular_weekday is null and regular_start_time is null from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'schedule cleared');
 
 -- ================================================================ 시작 시각 변경과 경기 설정 저장 규칙
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '20:00', '22:00', true);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '20:00', '22:00', true, null);
 -- 0일 전 09:00 자동 생성, 10시간 전 마감 → 20:00 경기면 10:00 마감이라 허용
 select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 10, 0, '09:00');
 -- 시작을 18:00 으로 당기면 마감 08:00 < 생성 09:00 → 거절
-select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '18:00', '22:00', true)$$, 'deadline_before_auto_create');
+select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '18:00', '22:00', true, null)$$, 'deadline_before_auto_create');
 -- 표 직접 수정 경로도 같은 규칙
 select pg_temp.expect_error($$update public.teams set regular_start_time = '18:00' where id = (select v::uuid from t_vars where k = 'team')$$, 'deadline_before_auto_create');
 select pg_temp.check((select regular_start_time = '20:00' from public.teams where id = (select v::uuid from t_vars where k = 'team')), 'start time unchanged');
 -- 시작을 늦추는 것은 허용, 시작 시각을 지우는 것도 허용 (자동 생성 없음)
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '21:00', '23:00', true);
-select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, null, null, true);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '21:00', '23:00', true, null);
+select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, null, null, true, null);
 
 -- ================================================================ 프로필 한 번에 저장
 select public.update_own_profile('  새  이름 ', '  반가워요 ', array['goalkeeper', 'forward']::public.play_position[], true);
@@ -158,7 +158,7 @@ select pg_temp.expect_error($$select public.update_own_profile('사번', null, a
 
 -- ================================================================ 실행 권한
 reset role;
-select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, text)', 'execute'), 'anon cannot update team');
+select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text)', 'execute'), 'anon cannot update team');
 select pg_temp.check(not has_function_privilege('anon', 'public.update_own_profile(text, text, public.play_position[], boolean)', 'execute'), 'anon cannot update profile');
 select pg_temp.check(has_function_privilege('authenticated', 'public.update_own_profile(text, text, public.play_position[], boolean)', 'execute'), 'authenticated can update profile');
 

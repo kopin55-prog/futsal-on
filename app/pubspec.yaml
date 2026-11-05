@@ -12,6 +12,10 @@ dependencies:
     sdk: flutter
   # 보이는 글자(grapheme) 단위 글자 수 세기. Flutter SDK 포함 패키지 (Q-012 승인).
   characters: ^1.4.0
+  # 로그인·서버 연결 (Q-004 로그인 관련 라이브러리 허용). 애플 로그인(sign_in_with_apple)은 유료 계정 이후.
+  supabase_flutter: ^2.18.3
+  kakao_flutter_sdk_user: ^2.1.0
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

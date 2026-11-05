@@ -1,4 +1,4 @@
-# 정리 예약 작업용 비밀값을 만들고 등록한 뒤, 정리 서버 함수 2개를 배포한다 (개발 프로젝트 전용).
+﻿# 정리 예약 작업용 비밀값을 만들고 등록한 뒤, 정리 서버 함수 2개를 배포한다 (개발 프로젝트 전용).
 # 실행: futsal-app 폴더에서  powershell -ExecutionPolicy Bypass -File supabase\scripts\setup_cron_secret.ps1
 # 비밀값은 화면·파일에 남기지 않는다 (임시 파일은 실행 직후 삭제).
 # 이미 등록한 뒤 다시 실행하면 Vault 값을 새 값으로 바꾼다.
@@ -34,7 +34,7 @@ try {
 
   Write-Host "2/3 정리 서버 함수 2개 배포 (JWT 검사 끔, 함수가 CRON_SECRET으로 직접 검사)"
   foreach ($f in 'account-cleanup', 'team-logo-cleanup') {
-    npx --yes supabase functions deploy $f --use-api --no-verify-jwt --remote=$ref --yes | Out-Null; if ($LASTEXITCODE -ne 0) { throw "비밀값 등록 실패" }
+    npx --yes supabase functions deploy $f --use-api --no-verify-jwt --remote=$ref --yes | Out-Null; if ($LASTEXITCODE -ne 0) { throw "$f 배포 실패" }
   }
 
   Write-Host "3/3 Vault에 cron_secret, project_url 저장"
@@ -53,7 +53,7 @@ end
 `$`$;
 "@
   $sql | Set-Content -Encoding ascii "$tmp\vault.sql"
-  npx --yes supabase db query --db-url $dbUrl -f "$tmp\vault.sql" --yes | Out-Null
+  npx --yes supabase db query --db-url $dbUrl -f "$tmp\vault.sql" --yes | Out-Null; if ($LASTEXITCODE -ne 0) { throw "Vault 저장 실패" }
   Remove-Item "$tmp\vault.sql" -Force
 
   Write-Host "완료. 비밀값은 화면에 출력하지 않았습니다."

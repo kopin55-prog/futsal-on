@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../domain/login_nonce.dart';
 
 /// 로그인 방법 (Q-030, Q-050: 안드로이드 카카오·구글, iOS 카카오·구글·애플).
 enum SignInMethod { kakao, google, apple }
@@ -55,6 +58,7 @@ abstract interface class AuthRepository {
 /// 각 로그인 서비스의 SDK 로 ID 토큰을 받고 Supabase `signInWithIdToken` 으로 세션을 만든다.
 /// 인증된 같은 이메일이면 Supabase 가 기존 계정에 자동으로 붙인다 (Q-063 A). 앱은 계정 연결 기능을 쓰지 않는다.
 /// 로그인 서비스가 넘긴 이름·사진을 프로필에 복사하지 않는다 (11장 10번).
+/// 로그인마다 새 nonce 를 만들어 ID 토큰 재사용을 막는다 ([LoginNonce]).
 class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository({
     required SupabaseClient client,
@@ -64,7 +68,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
   final SupabaseClient _client;
   final String _googleServerClientId;
-  Future<void>? _googleInit;
+  bool _googleInitialized = false;
 
   @override
   String? get currentUserId => _client.auth.currentUser?.id;
@@ -81,9 +85,10 @@ class SupabaseAuthRepository implements AuthRepository {
   };
 
   Future<void> _signInWithKakao() async {
+    final nonce = LoginNonce.generate();
     final kakao.OAuthToken token;
     try {
-      token = await _kakaoLogin();
+      token = await _kakaoLogin(nonce.hashed);
     } on PlatformException catch (e) {
       if (e.code == 'CANCELED') {
         throw SignInFailure(SignInFailureReason.cancelled, e);
@@ -103,28 +108,50 @@ class SupabaseAuthRepository implements AuthRepository {
       OAuthProvider.kakao,
       idToken: idToken,
       accessToken: token.accessToken,
+      nonce: nonce.raw,
     );
   }
 
   /// 카카오톡이 있으면 카카오톡으로, 없거나 실패하면 카카오계정으로.
-  Future<kakao.OAuthToken> _kakaoLogin() async {
+  Future<kakao.OAuthToken> _kakaoLogin(String hashedNonce) async {
     if (await kakao.isKakaoTalkInstalled()) {
       try {
-        return await kakao.UserApi.instance.loginWithKakaoTalk();
+        return await kakao.UserApi.instance.loginWithKakaoTalk(
+          nonce: hashedNonce,
+        );
       } on PlatformException catch (e) {
         // 카카오톡 로그인 화면에서 사용자가 취소한 경우는 그대로 취소로 본다.
         if (e.code == 'CANCELED') rethrow;
       }
     }
-    return kakao.UserApi.instance.loginWithKakaoAccount();
+    return kakao.UserApi.instance.loginWithKakaoAccount(nonce: hashedNonce);
+  }
+
+  /// google_sign_in 은 앱에서 initialize 를 한 번만 부르게 되어 있어, 두 번째 로그인부터는
+  /// 플랫폼 초기화만 다시 해 새 nonce 를 넘긴다 (안드로이드·iOS 플랫폼 init 은 값만 바꾼다).
+  Future<void> _prepareGoogle(String hashedNonce) async {
+    if (!_googleInitialized) {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: _googleServerClientId,
+        nonce: hashedNonce,
+      );
+      _googleInitialized = true;
+    } else {
+      await GoogleSignInPlatform.instance.init(
+        InitParameters(
+          serverClientId: _googleServerClientId,
+          nonce: hashedNonce,
+        ),
+      );
+    }
   }
 
   Future<void> _signInWithGoogle() async {
     final google = GoogleSignIn.instance;
-    _googleInit ??= google.initialize(serverClientId: _googleServerClientId);
+    final nonce = LoginNonce.generate();
     final GoogleSignInAccount account;
     try {
-      await _googleInit;
+      await _prepareGoogle(nonce.hashed);
       account = await google.authenticate();
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
@@ -139,7 +166,11 @@ class SupabaseAuthRepository implements AuthRepository {
     if (idToken == null) {
       throw const SignInFailure(SignInFailureReason.googleIdTokenMissing);
     }
-    await _signInSupabase(OAuthProvider.google, idToken: idToken);
+    await _signInSupabase(
+      OAuthProvider.google,
+      idToken: idToken,
+      nonce: nonce.raw,
+    );
   }
 
   /// TODO(Q-005-2): 애플 로그인은 유료 애플 개발자 계정 준비 후 구현·테스트한다 (iOS 전용, Q-050).
@@ -151,6 +182,7 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> _signInSupabase(
     OAuthProvider provider, {
     required String idToken,
+    required String nonce,
     String? accessToken,
   }) async {
     try {
@@ -158,6 +190,7 @@ class SupabaseAuthRepository implements AuthRepository {
         provider: provider,
         idToken: idToken,
         accessToken: accessToken,
+        nonce: nonce,
       );
     } catch (e) {
       throw SignInFailure(SignInFailureReason.failed, e);
@@ -173,8 +206,7 @@ class SupabaseAuthRepository implements AuthRepository {
       // 카카오로 로그인하지 않았으면 실패한다. 무시.
     }
     try {
-      await (_googleInit ?? Future<void>.value());
-      if (_googleInit != null) await GoogleSignIn.instance.signOut();
+      if (_googleInitialized) await GoogleSignIn.instance.signOut();
     } catch (_) {
       // 구글로 로그인하지 않았으면 무시.
     }

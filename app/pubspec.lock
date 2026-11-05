@@ -106,7 +106,7 @@ packages:
     source: hosted
     version: "3.1.2"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       sha256: e3626ae6270383c9e3a549f34c9e4cd26c09ae6a9adaab2bf4737a00340efdc4
@@ -249,7 +249,7 @@ packages:
     source: hosted
     version: "6.3.8"
   google_sign_in_platform_interface:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_sign_in_platform_interface
       sha256: "7f59208c42b415a3cca203571128d6f84f885fead2d5b53eb65a9e27f2965bb5"
@@ -513,7 +513,7 @@ packages:
     source: hosted
     version: "2.13.2"
   shared_preferences:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: shared_preferences
       sha256: "1e85e0dccf5b4a016077fea7dfbb4a7cb39c759ac1596fcf60c06deadb7da91f"

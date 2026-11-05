@@ -16,6 +16,13 @@ dependencies:
   supabase_flutter: ^2.18.3
   kakao_flutter_sdk_user: ^2.1.0
   google_sign_in: ^7.2.0
+  # 로그인 nonce(재사용 방지값)의 SHA-256 (Q-004 로그인 관련 라이브러리 허용). 이미 supabase_flutter 가 쓰는 패키지.
+  crypto: ^3.0.8
+  # 구글 로그인마다 새 nonce 를 넘기기 위한 플랫폼 초기화 (google_sign_in 이 쓰는 패키지, Q-004).
+  google_sign_in_platform_interface: ^3.1.0
+  # 마지막으로 본 팀 기억 (기기 안 저장). supabase_flutter 가 세션 저장에 이미 쓰는 패키지.
+  # TODO(lead 확인): 직접 의존성으로 올린 것 (새 패키지 추가 아님, 기존 묶음 안의 패키지).
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:

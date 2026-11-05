@@ -93,9 +93,9 @@ insert into auth.users (id, aud, role, email, created_at, updated_at) values
   ('00000000-0000-4000-8000-0000000000d4', 'authenticated', 'authenticated', 'd4@test.invalid', now(), now());
 
 -- ================================================================ 버킷
-select pg_temp.check((select not public and file_size_limit = 10485760
+select pg_temp.check((select not public and file_size_limit = 2097152
     and allowed_mime_types = array['image/jpeg', 'image/png']
-  from storage.buckets where id = 'team-logos'), 'bucket private, 10MB, jpg/png');
+  from storage.buckets where id = 'team-logos'), 'bucket private, 2MB (202611050018), jpg/png');
 
 set local role authenticated;
 

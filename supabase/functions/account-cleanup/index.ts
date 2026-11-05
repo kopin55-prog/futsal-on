@@ -5,33 +5,34 @@
 //   2) 계정마다 카카오 연결 끊기 시도 — 실패해도 계속 (Q-066 2번과 같은 방식)
 //   3) public.delete_profileless_account(uid): 그 사이 프로필이 생겼으면 지우지 않는다
 //
-// 호출 보호: Authorization 의 Bearer 값이 서비스 키와 같을 때만 실행한다 (예약 작업만 부른다).
-//
-// 아직 배포하지 않았다 (Supabase 액세스 토큰 필요). 배포 후 할 일 (lead·kopn):
-//   - supabase secrets set KAKAO_ADMIN_KEY=...
-//   - 예약 작업을 이 함수 호출로 바꾸는 마이그레이션 추가: cron.unschedule('cleanup-profileless-accounts') 후
-//     pg_net 으로 이 함수를 매시 호출 (서비스 키는 Vault 에 두고 마이그레이션 파일에 넣지 않는다)
-//   그 전까지는 기존 예약 작업(202611050008)이 연결 해제 없이 지운다.
+// 호출 보호: x-cron-secret 헤더가 서버 비밀값 CRON_SECRET 과 같을 때만 실행한다 (_shared/cron_auth.ts).
+//   예약 작업(202611050018, 매시 17분)이 Vault 의 cron_secret 을 보낸다. service_role 키는 DB 에 두지 않는다.
+//   배포: supabase functions deploy account-cleanup --no-verify-jwt (예약 작업은 JWT 를 보내지 않는다)
+// 필요한 서버 비밀값: CRON_SECRET, KAKAO_ADMIN_KEY (supabase secrets set)
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 는 Supabase 가 자동 제공 (함수 안 관리 권한용)
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { unlinkExternalIdentities } from '../_shared/unlink.ts';
-
-const json = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+import { guardCronRequest, json } from '../_shared/cron_auth.ts';
 
 const BATCH = 100;
 
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+export type Deps = {
+  env: (name: string) => string | undefined;
+  /** 실제 정리 (비밀값 확인을 통과했을 때만 부른다). */
+  run: () => Promise<Response>;
+};
 
-  const url = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  if ((req.headers.get('Authorization') ?? '') !== `Bearer ${serviceKey}`) {
-    return json(401, { error: 'not_authorized' });
-  }
+export async function handle(req: Request, deps: Deps): Promise<Response> {
+  const rejected = await guardCronRequest(req, deps.env('CRON_SECRET'));
+  if (rejected) return rejected;
+  return await deps.run();
+}
+
+async function runCleanup(): Promise<Response> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) return json(500, { error: 'not_configured' });
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
@@ -55,4 +56,8 @@ Deno.serve(async (req) => {
   // 사람 ID 는 남기지 않고 개수만.
   if (unlinkFailed > 0) console.warn('unlink failed count', unlinkFailed);
   return json(200, { deleted });
-});
+}
+
+if (import.meta.main) {
+  Deno.serve((req) => handle(req, { env: (name) => Deno.env.get(name), run: runCleanup }));
+}

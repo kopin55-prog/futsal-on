@@ -4,30 +4,33 @@
 // 남은 파일(어느 팀의 지금 로고도 아니고 1시간 지난 파일)을 이 함수가 Storage API 로 지운다.
 // (storage.objects 는 SQL 로 직접 지울 수 없다.)
 //
-// 호출 보호: Authorization 의 Bearer 값이 서비스 키와 같을 때만 실행한다 (예약 작업만 부른다).
-// 필요한 서버 비밀값: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Supabase 가 자동 제공). 추가 비밀값 없음.
-//
-// 아직 배포하지 않았다 (Supabase 액세스 토큰 필요). 배포 후 할 일 (lead·kopn):
-//   - 예약 작업 추가: pg_cron + pg_net 으로 하루 1번 이 함수 호출 (서비스 키는 Vault 에 두고 마이그레이션에 넣지 않는다)
+// 호출 보호: x-cron-secret 헤더가 서버 비밀값 CRON_SECRET 과 같을 때만 실행한다 (_shared/cron_auth.ts).
+//   예약 작업(202611050018, 하루 1번 UTC 18:43)이 Vault 의 cron_secret 을 보낸다. service_role 키는 DB 에 두지 않는다.
+//   배포: supabase functions deploy team-logo-cleanup --no-verify-jwt (예약 작업은 JWT 를 보내지 않는다)
+// 필요한 서버 비밀값: CRON_SECRET (supabase secrets set)
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 는 Supabase 가 자동 제공 (함수 안 관리 권한용)
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-
-const json = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+import { guardCronRequest, json } from '../_shared/cron_auth.ts';
 
 const BATCH = 100;
 
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+export type Deps = {
+  env: (name: string) => string | undefined;
+  /** 실제 정리 (비밀값 확인을 통과했을 때만 부른다). */
+  run: () => Promise<Response>;
+};
 
-  const url = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  if ((req.headers.get('Authorization') ?? '') !== `Bearer ${serviceKey}`) {
-    return json(401, { error: 'not_authorized' });
-  }
+export async function handle(req: Request, deps: Deps): Promise<Response> {
+  const rejected = await guardCronRequest(req, deps.env('CRON_SECRET'));
+  if (rejected) return rejected;
+  return await deps.run();
+}
+
+async function runCleanup(): Promise<Response> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) return json(500, { error: 'not_configured' });
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
@@ -42,4 +45,8 @@ Deno.serve(async (req) => {
 
   // 파일 경로는 남기지 않고 개수만.
   return json(200, { deleted: removed?.length ?? 0 });
-});
+}
+
+if (import.meta.main) {
+  Deno.serve((req) => handle(req, { env: (name) => Deno.env.get(name), run: runCleanup }));
+}

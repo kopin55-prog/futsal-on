@@ -9,9 +9,9 @@
 create table public.team_settings (
   team_id uuid primary key references public.teams (id) on delete cascade,
   -- 정원. 비어 있으면 "정원 없음"
-  -- TODO(Q-067 5번): 팀 최대 인원이 정해지면 상한을 맞춘다. 지금은 남용 방지용 넉넉한 상한만.
+  -- 정원 상한은 팀 최대 인원 100명 (Q-067 5번)
   capacity int
-    constraint team_settings_capacity_range check (capacity between 1 and 1000),
+    constraint team_settings_capacity_range check (capacity between 1 and 100),
   -- 참석 투표 마감 = 경기 시작 몇 시간 전 (기본 2, Q-066)
   rsvp_deadline_hours int not null default 2
     constraint team_settings_rsvp_deadline_range check (rsvp_deadline_hours between 0 and 720),
@@ -129,6 +129,13 @@ declare
   v_team_id uuid;
   v_logo text;
 begin
+  -- 한 사람이 소속할 수 있는 팀은 만든 팀 포함 최대 10개 (Q-067 5번)
+  if (select count(*) from public.team_members m
+        join public.teams t on t.id = m.team_id
+       where m.user_id = v_uid and m.status = 'active' and t.dissolved_at is null) >= 10 then
+    raise exception 'team_limit_reached' using errcode = 'P0001';
+  end if;
+
   -- 로고 글자: 비우면 기본값(팀 이름 앞 두 글자, Q-013). 만든 사람은 팀장이므로 직접 정할 수 있다 (Q-014).
   if p_logo_text is not null and btrim(p_logo_text) <> '' then
     v_logo := private.normalize_single_line_name(p_logo_text);
@@ -146,8 +153,8 @@ begin
     raise exception 'invalid_team_name' using errcode = 'P0001';
   end;
 
-  -- 정기 운동일: 요일 → 시작 → 종료 순으로 짝이 맞아야 하고, 종료는 시작보다 늦게.
-  -- TODO(Q-067 4번): 자정 넘김(예: 22:00~00:30) 허용 여부 답변 후 조정. 지금은 표 검사 그대로.
+  -- 정기 운동일: 요일 → 시작 → 종료 순으로 짝이 맞아야 한다 (표 검사).
+  -- 자정 넘김(예: 22:00~00:30)은 202611050014 에서 허용 (Q-067 4번).
   if p_regular_weekday is not null or p_regular_start_time is not null or p_regular_end_time is not null then
     begin
       update public.teams

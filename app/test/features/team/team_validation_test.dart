@@ -57,23 +57,38 @@ void main() {
     });
   });
 
-  group('팀 이름 변경 시 로고 글자 (Q-036)', () {
-    String after(String newName, String current, {required bool customized}) =>
-        TeamValidator.logoTextAfterRename(
+  group('팀 이름 변경 시 로고 글자 미리보기 (Q-036, Q-047, 서버 트리거와 같은 규칙)', () {
+    String after(String oldName, String newName, String current) =>
+        TeamValidator.previewLogoTextAfterRename(
+          oldTeamName: oldName,
           newTeamName: newName,
           currentLogoText: current,
-          logoTextCustomized: customized,
         );
 
-    test('직접 바꾼 적이 없으면 새 이름 앞 두 글자로 바뀐다', () {
-      expect(after('번개FC', '코코', customized: false), '번개');
-      expect(after('FC 번개', '코코', customized: false), 'FC');
-      expect(after('⚽번개', '코코', customized: false), '⚽번');
-      expect(after('번', '코코', customized: false), '번');
+    test('지금 로고가 바꾸기 전 이름의 기본값이면 새 이름 앞 두 글자', () {
+      expect(after('코코FC', '번개FC', '코코'), '번개');
+      expect(after('코코FC', 'FC 번개', '코코'), 'FC');
+      expect(after('코코FC', '⚽번개', '코코'), '⚽번');
+      expect(after('코코FC', '번', '코코'), '번');
     });
-    test('직접 바꾼 적이 있으면 그대로 둔다', () {
-      expect(after('번개FC', 'KK', customized: true), 'KK');
-      expect(after('번개FC', '코', customized: true), '코');
+    test('기본값과 다르면(직접 바꾼 로고) 그대로', () {
+      expect(after('코코FC', '번개FC', 'KK'), 'KK');
+      expect(after('코코FC', '번개FC', '코'), '코');
+    });
+    test('대소문자가 다르면 직접 바꾼 것으로 본다', () {
+      expect(after('FC 코코', '번개', 'fc'), 'fc');
+    });
+    test('이름 정리 후 같으면 바뀌지 않은 것', () {
+      expect(after('코코FC', '  코코FC ', 'KK'), 'KK');
+      expect(after('코코FC', '  코코FC ', '코코'), '코코');
+    });
+    test('기본값으로 되돌린 로고는 다음 이름 변경 때 다시 따라간다', () {
+      // 팀장이 "KK"로 바꿈 → 이름을 바꿔도 유지
+      var logo = after('코코FC', '번개FC', 'KK');
+      expect(logo, 'KK');
+      // 지금 이름 기본값 "번개"로 되돌림 → 다음 변경 때 새 이름을 따른다
+      logo = after('번개FC', '천둥FC', '번개');
+      expect(logo, '천둥');
     });
   });
 
@@ -159,57 +174,6 @@ void main() {
     test('보이지 않는 문자는 세지 않는다', () {
       expect(v('코$zwsp코'), isEmpty);
       expect(TeamValidator.normalizeLogoText(' 코$zwsp코 '), '코코');
-    });
-  });
-
-  group('로고 글자 저장 시 직접 바꿨는지 판단 (Q-047)', () {
-    bool customized(String logo, String team) =>
-        TeamValidator.isLogoTextCustomized(newLogoText: logo, teamName: team);
-
-    test('기본값(공백 뺀 앞 두 글자)과 같으면 바꾸지 않은 것', () {
-      expect(customized('코코', '코코FC'), isFalse);
-      expect(customized('FC', 'FC 코코'), isFalse);
-      expect(customized('AB', 'A B팀'), isFalse);
-      expect(customized('코', '코'), isFalse);
-    });
-    test('기본값과 다르면 바꾼 것', () {
-      expect(customized('KK', '코코FC'), isTrue);
-      expect(customized('코', '코코FC'), isTrue);
-      expect(customized('코F', '코코FC'), isTrue);
-    });
-    test('대소문자가 다르면 바꾼 것 (기본 로고는 대소문자 변환 없음)', () {
-      expect(customized('fc', 'FC 코코'), isTrue);
-    });
-    test('저장 전 정리 후 비교한다 (앞뒤 공백·보이지 않는 문자)', () {
-      expect(customized(' 코코 ', '코코FC'), isFalse);
-      expect(customized('코$zwsp코', '코코FC'), isFalse);
-      expect(customized('코코', '$zwsp코코FC'), isFalse);
-    });
-
-    test('기본값으로 되돌리면 다음 이름 변경 때 다시 자동 갱신된다', () {
-      // 1) 팀장이 "KK"로 바꿈 → 이름을 바꿔도 유지
-      var logo = 'KK';
-      var flag = customized(logo, '코코FC');
-      expect(flag, isTrue);
-      logo = TeamValidator.logoTextAfterRename(
-        newTeamName: '번개FC',
-        currentLogoText: logo,
-        logoTextCustomized: flag,
-      );
-      expect(logo, 'KK');
-
-      // 2) 팀장이 현재 이름의 기본값 "번개"로 되돌림 → 바꾸지 않은 것으로 봄
-      logo = '번개';
-      flag = customized(logo, '번개FC');
-      expect(flag, isFalse);
-
-      // 3) 이름을 바꾸면 새 이름 앞 두 글자로 자동 갱신
-      logo = TeamValidator.logoTextAfterRename(
-        newTeamName: '천둥FC',
-        currentLogoText: logo,
-        logoTextCustomized: flag,
-      );
-      expect(logo, '천둥');
     });
   });
 }

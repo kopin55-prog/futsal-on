@@ -74,8 +74,37 @@ abstract final class TeamTexts {
   static const logoText = '로고 글자 (선택, 1~2자)';
   static String logoTextHint(String preview) =>
       preview.isEmpty ? '비우면 팀 이름 앞 두 글자' : '비우면 "$preview"';
-  static const venuePlaceholder = '지정 풋살장 (카카오맵 검색 준비 중)';
-  static const logoPhotoPlaceholder = '로고 사진 (준비 중)';
+  // 로고 사진 (Q-068 1번)
+  static const logoPhoto = '로고 사진 (선택)';
+  static const logoPhotoNote = 'JPG·PNG, 10MB 이하. 정사각형으로 잘라 저장해요.';
+  static const pickPhoto = '사진 고르기';
+  static const changePhoto = '사진 바꾸기';
+  static const removePhoto = '사진 지우기';
+  static const photoTooLarge = '10MB 이하 사진만 쓸 수 있어요';
+  static const photoUnsupported = 'JPG·PNG 사진만 쓸 수 있어요';
+  static const photoFailed = '사진을 불러오지 못했어요';
+  static const logoPhotoSaveFailed = '로고 사진은 저장하지 못했어요. 팀 정보 수정에서 다시 해 주세요.';
+
+  // 지정 풋살장 (Q-032, Q-068 2번)
+  static const venue = '지정 풋살장 (선택)';
+  static const venueNone = '정하지 않음';
+  static const venueTitle = '지정 풋살장';
+  static const venueClear = '지우기';
+  static const venueSearchLabel = '구장 이름이나 주소';
+  static const venueSearchTooLong = '50자까지 입력할 수 있어요';
+  static const venueSearchUnavailable = '구장 검색은 준비 중이에요. 직접 입력해 주세요.';
+  static const venueSearchFailed = '검색하지 못했어요. 다시 시도해 주세요.';
+  static const venueNoResult = '검색 결과가 없어요';
+  static const venueSearchGuide = '구장 이름으로 검색해 고르거나 직접 입력해요';
+  static const venueMore = '더 보기';
+  static const venueManual = '찾는 구장이 없으면 직접 입력';
+  static const venueManualTitle = '구장 직접 입력';
+  static const venueName = '구장 이름';
+  static const venueAddress = '주소 (선택)';
+  static const venueNameRequired = '구장 이름을 입력해 주세요';
+  static const venueNameTooLong = '200자까지 입력할 수 있어요';
+  static const venueAddressTooLong = '300자까지 입력할 수 있어요';
+  static const venueManualBadge = '직접 입력';
   static const create = '만들기';
   static const nameTooLong = '팀 이름은 10자까지 쓸 수 있어요';
   static const nameHasLineBreak = '팀 이름은 한 줄로 써주세요';
@@ -166,6 +195,8 @@ abstract final class TeamTexts {
     ServerErrorCode.invalidTeamName => '팀 이름을 확인해 주세요',
     ServerErrorCode.invalidLogoText => logoEmpty,
     ServerErrorCode.invalidRegularSchedule => '정기 운동 시간을 확인해 주세요',
+    ServerErrorCode.invalidVenue => '지정 풋살장 정보를 확인해 주세요',
+    ServerErrorCode.invalidLogoImage => photoFailed,
     ServerErrorCode.invalidSearchQuery => searchTooShort,
     ServerErrorCode.requestNotPending => '이미 처리된 신청이에요',
     ServerErrorCode.notPermitted => '권한이 없어요',

@@ -23,6 +23,9 @@ dependencies:
   # 마지막으로 본 팀 기억 (기기 안 저장). supabase_flutter 가 세션 저장에 이미 쓰는 패키지.
   # TODO(lead 확인): 직접 의존성으로 올린 것 (새 패키지 추가 아님, 기존 묶음 안의 패키지).
   shared_preferences: ^2.5.6
+  # 로고 사진 고르기·정사각형 자르기 (Q-068 1번 승인). 위치 정보 제거·축소는 앱 코드(dart:ui)로 다시 인코딩.
+  image_picker: ^1.2.4
+  image_cropper: ^12.2.1
 
 dev_dependencies:
   flutter_test:

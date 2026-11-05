@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/venue.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../domain/match_settings.dart';
@@ -14,12 +15,16 @@ class TeamInfoInput {
     required this.name,
     required this.schedule,
     required this.isRecruiting,
+    this.venue,
     this.logoText,
   });
 
   final String name;
   final RegularSchedule schedule;
   final bool isRecruiting;
+
+  /// 지정 풋살장. 항상 화면의 현재 값을 보낸다 (null = 없음, 지움).
+  final Venue? venue;
   final String? logoText;
 }
 
@@ -63,6 +68,7 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
         'p_regular_start_time': input.schedule.start?.hhmm,
         'p_regular_end_time': input.schedule.end?.hhmm,
         'p_is_recruiting': input.isRecruiting,
+        'p_venue': input.venue?.toServerJson(),
         'p_logo_text': input.logoText,
       },
     ),

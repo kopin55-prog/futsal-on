@@ -37,6 +37,10 @@
                 <data android:scheme="kakao${kakaoNativeAppKey}" android:host="oauth"/>
             </intent-filter>
         </activity>
+        <!-- 로고 사진 정사각형 자르기 화면 (image_cropper, Q-068 1번) -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

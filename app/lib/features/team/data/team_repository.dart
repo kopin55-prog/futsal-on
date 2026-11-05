@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/entitlements/entitlements.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/domain/position.dart';
+import '../../../shared/domain/venue.dart';
 import '../domain/team_models.dart';
 import '../domain/team_validation.dart';
 
@@ -16,6 +17,7 @@ abstract interface class TeamRepository {
     required String name,
     RegularSchedule schedule = const RegularSchedule(),
     String? logoText,
+    Venue? venue,
   });
 
   /// 현재 팀원 명단 (팀장 → 운영진 → 팀원, 같은 역할은 이름순).
@@ -70,7 +72,8 @@ class SupabaseTeamRepository implements TeamRepository {
         .from('team_members')
         .select(
           'role, joined_at, teams(id, name, team_code, logo_text, logo_image_path, '
-          'is_recruiting, regular_weekday, regular_start_time, regular_end_time)',
+          'is_recruiting, regular_weekday, regular_start_time, regular_end_time, '
+          'venue_name, venue_address, venue_lat, venue_lng, venue_map_provider, venue_map_place_id)',
         )
         .eq('user_id', _uid)
         .eq('status', 'active')
@@ -87,6 +90,7 @@ class SupabaseTeamRepository implements TeamRepository {
             isRecruiting: t['is_recruiting'] as bool,
             myRole: _role(row['role'] as String),
             schedule: scheduleFromRow(t),
+            venue: Venue.fromRow(t),
           ),
     ];
   });
@@ -96,6 +100,7 @@ class SupabaseTeamRepository implements TeamRepository {
     required String name,
     RegularSchedule schedule = const RegularSchedule(),
     String? logoText,
+    Venue? venue,
   }) => guardServer(() async {
     final id = await _client.rpc<String>(
       'create_team',
@@ -105,6 +110,7 @@ class SupabaseTeamRepository implements TeamRepository {
         'p_regular_start_time': schedule.start?.hhmm,
         'p_regular_end_time': schedule.end?.hhmm,
         'p_logo_text': logoText,
+        'p_venue': venue?.toServerJson(),
       },
     );
     return id;

@@ -86,7 +86,14 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
 
   Future<void> _openCreate() async {
     final id = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => TeamCreateScreen(teams: _s.teams)),
+      MaterialPageRoute(
+        builder: (_) => TeamCreateScreen(
+          teams: _s.teams,
+          logos: _s.logos,
+          logoPicker: _s.logoPicker,
+          places: _s.places,
+        ),
+      ),
     );
     if (id != null) await _load(open: id);
   }
@@ -111,7 +118,7 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
             for (final t in teams)
               ListTile(
                 key: Key('switch-team-${t.id}'),
-                leading: TeamLogo(text: t.logoText, size: 36),
+                leading: TeamLogo(text: t.logoText, imagePath: t.logoImagePath, size: 36),
                 title: Text(t.name),
                 subtitle: Text(TeamTexts.role(t.myRole)),
                 selected: t.id == _currentId,
@@ -299,7 +306,7 @@ class _TeamShellState extends State<_TeamShell> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TeamLogo(text: widget.team.logoText, size: 32),
+              TeamLogo(text: widget.team.logoText, imagePath: widget.team.logoImagePath, size: 32),
               const SizedBox(width: 8),
               Flexible(child: Text(widget.team.name, overflow: TextOverflow.ellipsis)),
               const Icon(Icons.arrow_drop_down),

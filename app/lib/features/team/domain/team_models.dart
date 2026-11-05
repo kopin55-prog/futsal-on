@@ -1,5 +1,6 @@
 import '../../../core/entitlements/entitlements.dart';
 import '../../../shared/domain/position.dart';
+import '../../../shared/domain/venue.dart';
 import 'team_validation.dart';
 
 /// 정기 운동일 (요일 1=월 … 7=일, ISO).
@@ -24,6 +25,7 @@ class TeamSummary {
     required this.isRecruiting,
     this.logoImagePath,
     this.schedule = const RegularSchedule(),
+    this.venue,
   });
 
   final String id;
@@ -34,6 +36,9 @@ class TeamSummary {
   final TeamRole myRole;
   final bool isRecruiting;
   final RegularSchedule schedule;
+
+  /// 지정 풋살장. 없으면 null.
+  final Venue? venue;
 }
 
 /// 팀원 명단의 한 사람 (이름·역할·자기소개). 선호 포지션은 따로 읽는다 (Q-017).
@@ -105,12 +110,14 @@ class MyJoinRequest {
     required this.teamCode,
     required this.logoText,
     required this.createdAt,
+    this.logoImagePath,
   });
 
   final String requestId;
   final String teamName;
   final String teamCode;
   final String logoText;
+  final String? logoImagePath;
   final DateTime createdAt;
 }
 

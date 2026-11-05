@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/venue.dart';
+import '../../../shared/presentation/common_widgets.dart';
+import '../../team/data/logo_picker.dart';
+import '../../team/data/team_logo_repository.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
+import '../../team/presentation/logo_photo_field.dart';
 import '../../team/presentation/regular_schedule_fields.dart';
 import '../../team/presentation/team_logo.dart';
 import '../../team/presentation/team_texts.dart';
+import '../../venue/data/place_search_repository.dart';
+import '../../venue/presentation/venue_field.dart';
 import '../data/team_admin_repository.dart';
 import 'admin_texts.dart';
 
@@ -16,10 +24,14 @@ import 'admin_texts.dart';
 /// - 로고 글자를 손대지 않으면 서버로 보내지 않는다 → 이름을 바꾸면 서버 트리거가 Q-047 규칙으로 갱신.
 ///   화면에는 같은 규칙의 미리보기를 보여준다.
 /// - 팀장이 로고 글자 칸을 비우면 새 이름의 기본값(앞 두 글자)으로 저장 (팀 만들기와 같은 동작).
-/// - 지정 풋살장(카카오맵)·로고 사진은 BLOCKED (Q-068) → 자리만.
+/// - 지정 풋살장: 카카오맵 검색 또는 직접 입력 (Q-032, Q-068 2번). 팀 정보와 한 번에 저장.
+/// - 로고 사진: 팀 정보 저장 뒤 바꾸거나 지운다 (Q-068 1번). 사진만 실패하면 안내하고 닫는다.
 class TeamInfoEditScreen extends StatefulWidget {
   const TeamInfoEditScreen({
     required this.admin,
+    required this.logos,
+    required this.logoPicker,
+    required this.places,
     required this.entitlements,
     required this.viewer,
     required this.team,
@@ -27,6 +39,9 @@ class TeamInfoEditScreen extends StatefulWidget {
   });
 
   final TeamAdminRepository admin;
+  final TeamLogoRepository logos;
+  final LogoPicker logoPicker;
+  final PlaceSearchRepository places;
   final Entitlements entitlements;
   final Viewer viewer;
   final TeamSummary team;
@@ -40,6 +55,8 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
   late final _logo = TextEditingController(text: widget.team.logoText);
   late RegularSchedule _schedule = widget.team.schedule;
   late bool _recruiting = widget.team.isRecruiting;
+  late Venue? _venue = widget.team.venue;
+  late LogoPhotoDraft _photo = LogoPhotoDraft(currentPath: widget.team.logoImagePath);
   bool _submitted = false;
   bool _saving = false;
   String? _serverError;
@@ -116,9 +133,11 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
           name: TeamValidator.normalizeName(_name.text),
           schedule: _schedule,
           isRecruiting: _recruiting,
+          venue: _venue,
           logoText: _logoTouched ? _logoPreview : null,
         ),
       );
+      await _saveLogoPhoto();
       if (mounted) Navigator.of(context).pop(true);
     } on ServerFailure catch (e) {
       if (mounted) setState(() => _serverError = AdminTexts.serverError(e.code));
@@ -127,24 +146,45 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
     }
   }
 
+  /// 로고 사진 바꾸기·지우기. 실패해도 팀 정보는 이미 저장됐으므로 안내만 한다.
+  Future<void> _saveLogoPhoto() async {
+    if (!_photo.changed) return;
+    final teamId = widget.team.id;
+    try {
+      final png = _photo.newPng;
+      if (png != null) {
+        await widget.logos.setLogo(teamId, png, previousPath: _photo.currentPath);
+      } else if (_photo.currentPath != null) {
+        await widget.logos.removeLogo(teamId, _photo.currentPath!);
+      }
+    } on ServerFailure {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(TeamTexts.logoPhotoSaveFailed)),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final errorColor = theme.colorScheme.error;
     return Scaffold(
       appBar: AppBar(title: const Text(AdminTexts.teamInfo)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             Center(
               child: TeamLogo(
                 key: const Key('team-info-logo-preview'),
                 text: _logoPreview,
-                size: 64,
+                imagePath: _photo.shownPath,
+                imageBytes: _photo.newPng,
+                size: 88,
               ),
             ),
-            const SizedBox(height: 16),
+            AppSpacing.sectionGap,
             TextField(
               key: const Key('team-info-name'),
               controller: _name,
@@ -155,7 +195,7 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
               ),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.fieldGap,
             if (_canEditLogo)
               TextField(
                 key: const Key('team-info-logo-text'),
@@ -177,12 +217,26 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
                 key: const Key('team-info-logo-owner-only'),
                 style: theme.textTheme.bodySmall,
               ),
-            const SizedBox(height: 20),
+            AppSpacing.sectionGap,
+            LogoPhotoField(
+              value: _photo,
+              picker: widget.logoPicker,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _photo = v),
+            ),
+            AppSpacing.sectionGap,
             RegularScheduleFields(
               value: _schedule,
               onChanged: (v) => setState(() => _schedule = v),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.sectionGap,
+            VenueField(
+              value: _venue,
+              places: widget.places,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _venue = v),
+            ),
+            AppSpacing.fieldGap,
             SwitchListTile(
               key: const Key('team-info-recruiting'),
               contentPadding: EdgeInsets.zero,
@@ -193,29 +247,13 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
               value: _recruiting,
               onChanged: (v) => setState(() => _recruiting = v),
             ),
-            const SizedBox(height: 8),
-            // BLOCKED(Q-068): 카카오맵 구장 선택·로고 사진 업로드
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.place_outlined),
-              title: Text(TeamTexts.venuePlaceholder),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.image_outlined),
-              title: Text(TeamTexts.logoPhotoPlaceholder),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 16),
-            if (_serverError != null) ...[
-              Text(_serverError!, key: const Key('team-info-error'), style: TextStyle(color: errorColor)),
-              const SizedBox(height: 12),
-            ],
-            FilledButton(
+            AppSpacing.sectionGap,
+            if (_serverError != null) ErrorText(_serverError!, key: const Key('team-info-error')),
+            PrimaryButton(
               key: const Key('team-info-save'),
-              onPressed: _saving ? null : _submit,
-              child: const Text(AdminTexts.save),
+              label: AdminTexts.save,
+              busy: _saving,
+              onPressed: _submit,
             ),
           ],
         ),

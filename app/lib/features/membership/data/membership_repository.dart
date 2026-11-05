@@ -115,6 +115,7 @@ class SupabaseMembershipRepository implements MembershipRepository {
           teamName: r['team_name'] as String,
           teamCode: r['team_code'] as String,
           logoText: r['logo_text'] as String,
+          logoImagePath: r['logo_image_path'] as String?,
           createdAt: DateTime.parse(r['created_at'] as String),
         ),
     ];

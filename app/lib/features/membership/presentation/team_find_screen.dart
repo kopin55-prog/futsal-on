@@ -209,7 +209,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
             if (_inviteTeam != null)
               Card(
                 child: ListTile(
-                  leading: TeamLogo(text: _inviteTeam!.logoText),
+                  leading: TeamLogo(text: _inviteTeam!.logoText, imagePath: _inviteTeam!.logoImagePath),
                   title: Text(_inviteTeam!.name),
                   subtitle: Text(_inviteTeam!.teamCode),
                   trailing: FilledButton(
@@ -225,7 +225,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
               for (final r in _myRequests)
                 ListTile(
                   key: Key('my-request-${r.requestId}'),
-                  leading: TeamLogo(text: r.logoText, size: 36),
+                  leading: TeamLogo(text: r.logoText, imagePath: r.logoImagePath, size: 36),
                   title: Text(r.teamName),
                   subtitle: Text(r.teamCode),
                   trailing: TextButton(
@@ -259,7 +259,7 @@ class _ResultCard extends StatelessWidget {
     return Card(
       child: ListTile(
         key: Key('result-${team.teamCode}'),
-        leading: TeamLogo(text: team.logoText),
+        leading: TeamLogo(text: team.logoText, imagePath: team.logoImagePath),
         title: Text(team.name),
         subtitle: Text(details.join(' · ')),
         isThreeLine: true,

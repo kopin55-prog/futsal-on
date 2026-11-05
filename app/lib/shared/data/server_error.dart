@@ -42,6 +42,8 @@ enum ServerErrorCode {
   teamFull('team_full'),
   teamDissolved('team_dissolved'),
   dissolveConfirmationMismatch('dissolve_confirmation_mismatch'),
+  invalidVenue('invalid_venue'),
+  invalidLogoImage('invalid_logo_image'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

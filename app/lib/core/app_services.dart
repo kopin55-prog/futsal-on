@@ -2,8 +2,11 @@ import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/profile/data/profile_repository.dart';
+import '../features/team/data/logo_picker.dart';
 import '../features/team/data/recent_team_store.dart';
+import '../features/team/data/team_logo_repository.dart';
 import '../features/team/data/team_repository.dart';
+import '../features/venue/data/place_search_repository.dart';
 import 'entitlements/entitlements.dart';
 
 /// 화면이 쓰는 저장소 묶음. 테스트에서는 가짜 저장소로 바꿔 끼운다.
@@ -15,6 +18,9 @@ class AppServices {
     required this.accounts,
     required this.recentTeams,
     required this.admin,
+    required this.logos,
+    required this.logoPicker,
+    required this.places,
     this.entitlements = const Entitlements(),
   });
 
@@ -26,6 +32,15 @@ class AppServices {
 
   /// 관리 탭의 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌)
   final TeamAdminRepository admin;
+
+  /// 로고 사진 저장소 (team-logos)
+  final TeamLogoRepository logos;
+
+  /// 로고 사진 고르기·자르기
+  final LogoPicker logoPicker;
+
+  /// 지정 풋살장 검색 (서버 함수 place-search)
+  final PlaceSearchRepository places;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

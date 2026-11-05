@@ -199,6 +199,9 @@ class _AdminTabState extends State<AdminTab> {
       MaterialPageRoute(
         builder: (_) => TeamInfoEditScreen(
           admin: _s.admin,
+          logos: _s.logos,
+          logoPicker: _s.logoPicker,
+          places: _s.places,
           entitlements: _e,
           viewer: widget.viewer,
           team: widget.team,
@@ -276,7 +279,10 @@ class _AdminTabState extends State<AdminTab> {
       builder: (_) => _DissolveDialog(teamName: widget.team.name),
     );
     if (input == null) return;
+    final logoPath = widget.team.logoImagePath;
     if (await _run(() => _s.teams.dissolveTeam(_teamId, input))) {
+      // 서버가 로고 칸을 비웠다. 해체 당시 관리자로서 파일도 지운다 (실패하면 team-logo-cleanup).
+      if (logoPath != null) await _s.logos.deleteFileQuietly(logoPath);
       await widget.onDissolved();
     }
   }

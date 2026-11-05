@@ -9,11 +9,18 @@ import 'package:futsal_on/features/auth/domain/signup_consent.dart';
 import 'package:futsal_on/features/membership/data/membership_repository.dart';
 import 'package:futsal_on/features/profile/data/profile_repository.dart';
 import 'package:futsal_on/features/profile/domain/profile_validation.dart';
+import 'dart:typed_data';
+
+import 'package:flutter/widgets.dart';
+import 'package:futsal_on/features/team/data/logo_picker.dart';
 import 'package:futsal_on/features/team/data/recent_team_store.dart';
+import 'package:futsal_on/features/team/data/team_logo_repository.dart';
 import 'package:futsal_on/features/team/data/team_repository.dart';
 import 'package:futsal_on/features/team/domain/team_models.dart';
+import 'package:futsal_on/features/venue/data/place_search_repository.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
+import 'package:futsal_on/shared/domain/venue.dart';
 
 /// 화면 테스트용 메모리 저장소. 서버 규칙은 필요한 만큼만 흉내 낸다.
 class FakeTeamRepository implements TeamRepository {
@@ -25,6 +32,7 @@ class FakeTeamRepository implements TeamRepository {
   final Map<String, List<MemberEntry>> members;
   final List<String> calls = [];
   ServerFailure? nextFailure;
+  Venue? lastCreatedVenue;
   int _seq = 0;
 
   void _maybeFail() {
@@ -43,10 +51,12 @@ class FakeTeamRepository implements TeamRepository {
     required String name,
     RegularSchedule schedule = const RegularSchedule(),
     String? logoText,
+    Venue? venue,
   }) async {
     _maybeFail();
     final id = 'new-${++_seq}';
     calls.add('create:$name');
+    lastCreatedVenue = venue;
     teams.add(
       TeamSummary(
         id: id,
@@ -56,6 +66,7 @@ class FakeTeamRepository implements TeamRepository {
         myRole: TeamRole.owner,
         isRecruiting: true,
         schedule: schedule,
+        venue: venue,
       ),
     );
     return id;
@@ -301,6 +312,71 @@ TeamSummary team(String id, String name, TeamRole role, {bool recruiting = true}
       isRecruiting: recruiting,
     );
 
+/// 로고 사진 저장소 흉내. 호출 기록만 남긴다.
+class FakeTeamLogoRepository implements TeamLogoRepository {
+  final List<String> calls = [];
+  ServerFailure? nextFailure;
+  int _seq = 0;
+
+  @override
+  Future<String> setLogo(String teamId, Uint8List png, {String? previousPath}) async {
+    final f = nextFailure;
+    if (f != null) {
+      nextFailure = null;
+      throw f;
+    }
+    final path = '$teamId/logo-${++_seq}.png';
+    calls.add('set:$teamId:${png.length}:${previousPath ?? '-'}');
+    return path;
+  }
+
+  @override
+  Future<void> removeLogo(String teamId, String currentPath) async {
+    final f = nextFailure;
+    if (f != null) {
+      nextFailure = null;
+      throw f;
+    }
+    calls.add('remove:$teamId:$currentPath');
+  }
+
+  @override
+  Future<void> deleteFileQuietly(String path) async => calls.add('delete:$path');
+}
+
+/// 사진 고르기 흉내: [next] 를 돌려준다.
+class FakeLogoPicker implements LogoPicker {
+  LogoPickResult next = LogoPicked(Uint8List.fromList([1, 2, 3]));
+  int calls = 0;
+
+  @override
+  Future<LogoPickResult> pick(BuildContext context) async {
+    calls++;
+    return next;
+  }
+}
+
+/// 장소 검색 흉내. [failure] 가 있으면 그 오류.
+class FakePlaceSearchRepository implements PlaceSearchRepository {
+  FakePlaceSearchRepository({this.failure});
+
+  PlaceSearchFailure? failure;
+  List<PlaceResult> results = const [
+    PlaceResult(placeId: 'k1', name: '강남 풋살파크', address: '서울 강남구 1', category: '풋살장', lat: 37.5, lng: 127.0),
+    PlaceResult(placeId: 'k2', name: '역삼 풋살장', lat: 37.4, lng: 127.1),
+  ];
+  bool isEnd = true;
+  final List<String> queries = [];
+
+  @override
+  Future<PlacePage> search(String query, {int page = 1}) async {
+    queries.add('$query:$page');
+    final f = failure;
+    if (f != null) throw f;
+    return PlacePage(places: results, isEnd: isEnd);
+  }
+}
+
 class TestServices {
   TestServices({
     List<TeamSummary>? teams,
@@ -320,6 +396,9 @@ class TestServices {
   final accounts = FakeAccountRepository();
   final admin = FakeTeamAdminRepository();
   final recent = MemoryRecentTeamStore();
+  final logos = FakeTeamLogoRepository();
+  final logoPicker = FakeLogoPicker();
+  final places = FakePlaceSearchRepository();
 
   AppServices get services => AppServices(
     profiles: profiles,
@@ -328,5 +407,8 @@ class TestServices {
     accounts: accounts,
     recentTeams: recent,
     admin: admin,
+    logos: logos,
+    logoPicker: logoPicker,
+    places: places,
   );
 }

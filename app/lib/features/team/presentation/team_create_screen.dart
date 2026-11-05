@@ -1,21 +1,39 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/venue.dart';
+import '../../../shared/presentation/common_widgets.dart';
+import '../../venue/data/place_search_repository.dart';
+import '../../venue/presentation/venue_field.dart';
+import '../data/logo_picker.dart';
+import '../data/team_logo_repository.dart';
 import '../data/team_repository.dart';
 import '../domain/team_models.dart';
 import '../domain/team_validation.dart';
+import 'logo_photo_field.dart';
 import 'regular_schedule_fields.dart';
 import 'team_logo.dart';
 import 'team_texts.dart';
 
-/// 팀 만들기 (data-model.md 3-1): 팀 이름(필수), 정기 운동일, 로고 글자.
+/// 팀 만들기 (data-model.md 3-1): 팀 이름(필수), 로고 글자·로고 사진, 정기 운동일, 지정 풋살장.
 /// 만든 사람이 팀장이므로 로고 글자도 정할 수 있다 (Q-014). 만들면 팀 ID 를 돌려주며 닫힌다.
 ///
-/// 자리만 있는 항목: 지정 풋살장(카카오맵 검색, 연동 작업 전), 로고 사진(저장소 승인 전).
+/// 로고 사진은 팀이 생긴 뒤에 올린다 (저장 경로에 팀 ID 가 필요). 사진만 실패하면 팀은 만들어진 채로
+/// 안내하고 닫는다 (팀 정보 수정에서 다시).
 class TeamCreateScreen extends StatefulWidget {
-  const TeamCreateScreen({required this.teams, super.key});
+  const TeamCreateScreen({
+    required this.teams,
+    required this.logos,
+    required this.logoPicker,
+    required this.places,
+    super.key,
+  });
 
   final TeamRepository teams;
+  final TeamLogoRepository logos;
+  final LogoPicker logoPicker;
+  final PlaceSearchRepository places;
 
   @override
   State<TeamCreateScreen> createState() => _TeamCreateScreenState();
@@ -25,6 +43,8 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
   final _name = TextEditingController();
   final _logo = TextEditingController();
   RegularSchedule _schedule = const RegularSchedule();
+  LogoPhotoDraft _photo = const LogoPhotoDraft();
+  Venue? _venue;
   bool _submitted = false;
   bool _saving = false;
   String? _serverError;
@@ -83,7 +103,20 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
         name: TeamValidator.normalizeName(_name.text),
         schedule: _schedule,
         logoText: logo.isEmpty ? null : logo,
+        venue: _venue,
       );
+      final png = _photo.newPng;
+      if (png != null) {
+        try {
+          await widget.logos.setLogo(id, png);
+        } on ServerFailure {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(TeamTexts.logoPhotoSaveFailed)),
+            );
+          }
+        }
+      }
       if (mounted) Navigator.of(context).pop(id);
     } on ServerFailure catch (e) {
       if (mounted) setState(() => _serverError = TeamTexts.serverError(e.code));
@@ -94,7 +127,6 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final errorColor = Theme.of(context).colorScheme.error;
     final preview = TeamValidator.defaultLogoText(_name.text);
     final logoShown = TeamValidator.normalizeLogoText(_logo.text).isEmpty
         ? preview
@@ -104,10 +136,17 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
       appBar: AppBar(title: const Text(TeamTexts.createTeam)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
-            Center(child: TeamLogo(text: logoShown, size: 64)),
-            const SizedBox(height: 16),
+            Center(
+              child: TeamLogo(
+                key: const Key('team-create-logo-preview'),
+                text: logoShown,
+                imageBytes: _photo.newPng,
+                size: 88,
+              ),
+            ),
+            AppSpacing.sectionGap,
             TextField(
               key: const Key('team-name'),
               controller: _name,
@@ -118,7 +157,7 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
               ),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.fieldGap,
             TextField(
               key: const Key('team-logo-text'),
               controller: _logo,
@@ -130,39 +169,32 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
               ),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 20),
+            AppSpacing.sectionGap,
+            LogoPhotoField(
+              value: _photo,
+              picker: widget.logoPicker,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _photo = v),
+            ),
+            AppSpacing.sectionGap,
             RegularScheduleFields(
               value: _schedule,
               onChanged: (v) => setState(() => _schedule = v),
             ),
-            const SizedBox(height: 20),
-            // 자리만: Q-067 답변으로 동작은 정해졌지만 카카오맵 연동·로고 사진 저장소는 다음 작업.
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.place_outlined),
-              title: Text(TeamTexts.venuePlaceholder),
-              contentPadding: EdgeInsets.zero,
+            AppSpacing.sectionGap,
+            VenueField(
+              value: _venue,
+              places: widget.places,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _venue = v),
             ),
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.image_outlined),
-              title: Text(TeamTexts.logoPhotoPlaceholder),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 16),
-            if (_serverError != null) ...[
-              Text(_serverError!, style: TextStyle(color: errorColor)),
-              const SizedBox(height: 12),
-            ],
-            FilledButton(
+            AppSpacing.sectionGap,
+            if (_serverError != null) ErrorText(_serverError!),
+            PrimaryButton(
               key: const Key('team-create-submit'),
-              onPressed: _saving ? null : _submit,
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(TeamTexts.create),
+              label: TeamTexts.create,
+              busy: _saving,
+              onPressed: _submit,
             ),
           ],
         ),

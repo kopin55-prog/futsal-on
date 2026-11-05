@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../auth/presentation/account_delete_screen.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_texts.dart';
@@ -122,18 +124,18 @@ class _MyTabState extends State<MyTab> {
     final p = _profile;
     final e = _s.entitlements;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.page,
       children: [
         if (_error != null) ...[
           Text(_error!, key: const Key('my-error'), style: TextStyle(color: theme.colorScheme.error)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
         ],
         if (p == null && _error == null)
           const Center(child: CircularProgressIndicator())
         else if (p != null) ...[
           Text(p.displayName, key: const Key('my-name'), style: theme.textTheme.titleLarge),
-          if (p.bio != null) ...[const SizedBox(height: 4), Text(p.bio!)],
-          const SizedBox(height: 8),
+          if (p.bio != null) ...[const SizedBox(height: AppSpacing.xs), Text(p.bio!)],
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: 6,
             children: [
@@ -152,51 +154,50 @@ class _MyTabState extends State<MyTab> {
               ),
             ),
         ],
-        const Divider(height: 32),
-        if (e.canViewTeamCode(widget.viewer))
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text(TeamTexts.teamCode),
-            subtitle: Text(widget.team.teamCode, key: const Key('my-team-code')),
-            trailing: IconButton(
-              tooltip: TeamTexts.copy,
-              icon: const Icon(Icons.copy),
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: widget.team.teamCode));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text(TeamTexts.copied)),
-                  );
-                }
-              },
+        AppSpacing.sectionGap,
+        SectionCard(
+          children: [
+            if (e.canViewTeamCode(widget.viewer))
+              ListTile(
+                title: const Text(TeamTexts.teamCode),
+                subtitle: Text(widget.team.teamCode, key: const Key('my-team-code')),
+                trailing: IconButton(
+                  tooltip: TeamTexts.copy,
+                  icon: const Icon(Icons.copy),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: widget.team.teamCode));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text(TeamTexts.copied)),
+                      );
+                    }
+                  },
+                ),
+              ),
+            if (e.canPerform(widget.viewer, TeamAction.leaveTeam))
+              ListTile(
+                key: const Key('leave-team'),
+                enabled: !_busy,
+                title: const Text(TeamTexts.leaveTeam),
+                onTap: _leave,
+              )
+            else
+              const ListTile(
+                enabled: false,
+                title: Text(TeamTexts.leaveTeam),
+                subtitle: Text(TeamTexts.ownerCannotLeave),
+              ),
+            ListTile(
+              key: const Key('sign-out'),
+              title: const Text(TeamTexts.signOut),
+              onTap: widget.onSignOut,
             ),
-          ),
-        if (e.canPerform(widget.viewer, TeamAction.leaveTeam))
-          ListTile(
-            key: const Key('leave-team'),
-            contentPadding: EdgeInsets.zero,
-            enabled: !_busy,
-            title: const Text(TeamTexts.leaveTeam),
-            onTap: _leave,
-          )
-        else
-          const ListTile(
-            contentPadding: EdgeInsets.zero,
-            enabled: false,
-            title: Text(TeamTexts.leaveTeam),
-            subtitle: Text(TeamTexts.ownerCannotLeave),
-          ),
-        ListTile(
-          key: const Key('sign-out'),
-          contentPadding: EdgeInsets.zero,
-          title: const Text(TeamTexts.signOut),
-          onTap: widget.onSignOut,
-        ),
-        ListTile(
-          key: const Key('delete-account'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(TeamTexts.deleteAccount, style: TextStyle(color: theme.colorScheme.error)),
-          onTap: _deleteAccount,
+            ListTile(
+              key: const Key('delete-account'),
+              title: Text(TeamTexts.deleteAccount, style: TextStyle(color: theme.colorScheme.error)),
+              onTap: _deleteAccount,
+            ),
+          ],
         ),
       ],
     );

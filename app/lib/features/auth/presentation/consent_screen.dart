@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../domain/signup_consent.dart';
 import 'auth_texts.dart';
 
@@ -59,7 +60,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             CheckboxListTile(
               key: const Key('consent-all'),

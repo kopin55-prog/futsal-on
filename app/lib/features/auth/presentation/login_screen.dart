@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import 'auth_texts.dart';
 
@@ -50,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -66,14 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _busy ? null : () => _signIn(SignInMethod.kakao),
                 child: const Text(AuthTempTexts.loginWithKakao),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               OutlinedButton(
                 key: const Key('login-google'),
                 onPressed: _busy ? null : () => _signIn(SignInMethod.google),
                 child: const Text(AuthTempTexts.loginWithGoogle),
               ),
               if (_showApple) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 OutlinedButton(
                   key: const Key('login-apple'),
                   onPressed: _busy ? null : () => _signIn(SignInMethod.apple),
@@ -81,11 +82,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
               if (_busy) ...[
-                const SizedBox(height: 24),
+                AppSpacing.sectionGap,
                 const Center(child: CircularProgressIndicator()),
               ],
               if (_error != null) ...[
-                const SizedBox(height: 24),
+                AppSpacing.sectionGap,
                 Text(
                   _error!,
                   textAlign: TextAlign.center,

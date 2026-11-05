@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_logo.dart';
 import '../../team/presentation/team_texts.dart';
@@ -162,7 +164,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
       appBar: AppBar(title: const Text(TeamTexts.findTeam)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             SegmentedButton<_Mode>(
               segments: const [
@@ -173,7 +175,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
               selected: {_mode},
               onSelectionChanged: (s) => _setMode(s.first),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               key: const Key('find-input'),
               controller: _input,
@@ -193,17 +195,17 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
               ),
               onSubmitted: (_) => _search(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             FilledButton(
               key: const Key('find-submit'),
               onPressed: _busy ? null : _search,
               child: const Text(TeamTexts.search),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(_message!, key: const Key('find-message'), style: TextStyle(color: errorColor)),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             for (final t in _results ?? const <TeamSearchResult>[])
               _ResultCard(team: t, busy: _busy, onRequest: () => _requestJoin(t)),
             if (_inviteTeam != null)
@@ -220,8 +222,8 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
                 ),
               ),
             if (_myRequests.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text(TeamTexts.myRequests, style: Theme.of(context).textTheme.titleSmall),
+              AppSpacing.sectionGap,
+              const SectionHeader(TeamTexts.myRequests),
               for (final r in _myRequests)
                 ListTile(
                   key: Key('my-request-${r.requestId}'),

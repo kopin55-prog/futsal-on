@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../profile/presentation/profile_texts.dart';
 import '../domain/team_models.dart';
 import 'team_texts.dart';
@@ -60,12 +62,14 @@ class _RosterTabState extends State<RosterTab> {
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
             itemCount: members.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const Divider(indent: 72, endIndent: AppSpacing.lg),
             itemBuilder: (context, i) {
               final m = members[i];
               return ListTile(
                 key: Key('member-${m.userId}'),
+                leading: _Initial(name: m.displayName),
                 title: Row(
                   children: [
                     Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
@@ -96,18 +100,37 @@ class RoleBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final owner = role == TeamRole.owner;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       decoration: BoxDecoration(
         color: owner ? scheme.primary : scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         TeamTexts.role(role),
         style: TextStyle(
           fontSize: 12,
+          fontWeight: FontWeight.w600,
           color: owner ? scheme.onPrimary : scheme.onSecondaryContainer,
         ),
       ),
+    );
+  }
+}
+
+/// 팀원 목록 왼쪽의 이름 첫 글자 원 (사진 없음, 모양만).
+class _Initial extends StatelessWidget {
+  const _Initial({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final first = name.characters.isEmpty ? '' : name.characters.first;
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: scheme.surfaceContainerHighest,
+      child: Text(first, style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -151,14 +174,14 @@ class MemberProfileSheet extends StatelessWidget {
               ],
             ),
             if (member.bio != null && member.bio!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(member.bio!),
             ],
             if (canSeePrefs) ...[
-              const SizedBox(height: 16),
+              AppSpacing.fieldGap,
               _PrefsView(services: services, userId: member.userId),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
           ],
         ),
       ),
@@ -186,8 +209,8 @@ class _PrefsView extends StatelessWidget {
           key: const Key('member-prefs'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(TeamTexts.positions, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 4),
+            const SectionHeader(TeamTexts.positions),
+            const SizedBox(height: AppSpacing.xs),
             Wrap(
               spacing: 6,
               children: [

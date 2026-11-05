@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/roster_tab.dart' show RoleBadge;
@@ -125,7 +127,7 @@ class _AdminTabState extends State<AdminTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SelectableText(code!, key: const Key('invite-code')),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const Text(TeamTexts.inviteIssuedNote),
           ],
         ),
@@ -258,18 +260,21 @@ class _AdminTabState extends State<AdminTab> {
     ];
     if (items.isEmpty) return const [];
     return [
-      Text(AdminTexts.settingsSection, style: theme.textTheme.titleMedium),
-      for (final (key, icon, label, onTap) in items)
-        ListTile(
-          key: key,
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(icon),
-          title: Text(label),
-          trailing: const Icon(Icons.chevron_right),
-          enabled: !_busy,
-          onTap: onTap,
-        ),
-      const SizedBox(height: 24),
+      const SectionHeader(AdminTexts.settingsSection),
+      SectionCard(
+        children: [
+          for (final (key, icon, label, onTap) in items)
+            ListTile(
+              key: key,
+              leading: Icon(icon),
+              title: Text(label),
+              trailing: const Icon(Icons.chevron_right),
+              enabled: !_busy,
+              onTap: onTap,
+            ),
+        ],
+      ),
+      AppSpacing.sectionGap,
     ];
   }
 
@@ -295,37 +300,38 @@ class _AdminTabState extends State<AdminTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.page,
         children: [
           if (_error != null) ...[
             Text(_error!, key: const Key('admin-error'), style: TextStyle(color: theme.colorScheme.error)),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
           ],
           // ---- 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌)
           ..._settingsSection(theme),
           // ---- 초대 코드 (팀장·운영진)
           if (_e.canPerform(widget.viewer, TeamAction.reviewJoinRequests)) ...[
-            Text(TeamTexts.inviteSection, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 4),
+            const SectionHeader(TeamTexts.inviteSection),
+            const SizedBox(height: AppSpacing.xs),
             const Text(TeamTexts.issueInviteNote),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             OutlinedButton(
               key: const Key('issue-invite'),
               onPressed: _busy ? null : _issueInvite,
               child: const Text(TeamTexts.issueInvite),
             ),
-            const SizedBox(height: 24),
+            AppSpacing.sectionGap,
             // ---- 가입 신청
-            Text(TeamTexts.requestsSection, style: theme.textTheme.titleMedium),
+            const SectionHeader(TeamTexts.requestsSection),
             if (requests == null)
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (requests.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(TeamTexts.noRequests),
+              const EmptyState(
+                icon: Icons.mark_email_read_outlined,
+                message: TeamTexts.noRequests,
+                compact: true,
               )
             else
               for (final r in requests)
@@ -352,8 +358,8 @@ class _AdminTabState extends State<AdminTab> {
           ],
           // ---- 팀원 관리 (팀장만)
           if (members != null) ...[
-            const SizedBox(height: 24),
-            Text(TeamTexts.membersSection, style: theme.textTheme.titleMedium),
+            AppSpacing.sectionGap,
+            const SectionHeader(TeamTexts.membersSection),
             for (final m in members)
               Builder(
                 builder: (context) {
@@ -391,9 +397,9 @@ class _AdminTabState extends State<AdminTab> {
           ],
           // ---- 팀 해체 (팀장만, Q-067 7·8번)
           if (_e.canPerform(widget.viewer, TeamAction.disbandTeam)) ...[
-            const SizedBox(height: 32),
-            Text(TeamTexts.dissolveSection, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xxl),
+            const SectionHeader(TeamTexts.dissolveSection),
+            const SizedBox(height: AppSpacing.sm),
             OutlinedButton(
               key: const Key('dissolve-team'),
               style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),

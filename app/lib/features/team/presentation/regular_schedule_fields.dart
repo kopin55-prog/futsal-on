@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../domain/team_models.dart';
 import '../domain/team_validation.dart';
 import 'team_texts.dart';
@@ -92,7 +93,7 @@ class RegularScheduleFields extends StatelessWidget {
                 : RegularSchedule(weekday: v, start: value.start, end: value.end),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             _timeButton(context, start: true),

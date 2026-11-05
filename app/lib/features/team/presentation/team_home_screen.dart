@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_tab.dart';
 import '../../membership/presentation/team_find_screen.dart';
 import '../../profile/presentation/my_tab.dart';
@@ -150,12 +152,10 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
     if (_failed) {
       return Scaffold(
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(TeamTexts.loadFailed),
-              TextButton(onPressed: _load, child: const Text(TeamTexts.retry)),
-            ],
+          child: EmptyState(
+            icon: Icons.cloud_off_outlined,
+            message: TeamTexts.loadFailed,
+            actions: [TextButton(onPressed: _load, child: const Text(TeamTexts.retry))],
           ),
         ),
       );
@@ -204,27 +204,26 @@ class _NoTeamView extends StatelessWidget {
           TextButton(onPressed: onSignOut, child: const Text(TeamTexts.signOut)),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(TeamTexts.noTeamTitle, textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              FilledButton(
-                key: const Key('home-create-team'),
-                onPressed: onCreate,
-                child: const Text(TeamTexts.createTeam),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                key: const Key('home-find-team'),
-                onPressed: onFind,
-                child: const Text(TeamTexts.findTeam),
-              ),
-            ],
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: EmptyState(
+              icon: Icons.groups_outlined,
+              message: TeamTexts.noTeamTitle,
+              actions: [
+                FilledButton(
+                  key: const Key('home-create-team'),
+                  onPressed: onCreate,
+                  child: const Text(TeamTexts.createTeam),
+                ),
+                OutlinedButton(
+                  key: const Key('home-find-team'),
+                  onPressed: onFind,
+                  child: const Text(TeamTexts.findTeam),
+                ),
+              ],
+            ),
           ),
         ),
       ),

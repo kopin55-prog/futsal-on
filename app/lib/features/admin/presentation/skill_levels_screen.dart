@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/entitlements/entitlements.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../team/data/team_repository.dart';
 import '../../team/domain/team_models.dart';
@@ -89,18 +90,18 @@ class _SkillLevelsScreenState extends State<SkillLevelsScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             Text(AdminTexts.skillLevelsNote, style: theme.textTheme.bodySmall),
             if (_error != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
                 key: const Key('skill-error'),
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (members == null && _error == null)
               const Padding(
                 padding: EdgeInsets.all(16),

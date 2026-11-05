@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../team/presentation/team_texts.dart';
 import '../data/account_repository.dart';
@@ -45,7 +46,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
       appBar: AppBar(title: const Text(TeamTexts.deleteAccountTitle)),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -57,7 +58,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
               const Spacer(),
               if (_error != null) ...[
                 Text(_error!, key: const Key('delete-error'), style: TextStyle(color: theme.colorScheme.error)),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
               ],
               FilledButton(
                 key: const Key('delete-confirm'),

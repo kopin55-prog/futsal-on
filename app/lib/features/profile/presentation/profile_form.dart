@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/domain/position.dart';
 import '../domain/position_picker.dart';
 import '../domain/profile_validation.dart';
@@ -118,7 +119,7 @@ class _ProfileFormState extends State<ProfileForm> {
     final errorColor = Theme.of(context).colorScheme.error;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.page,
       children: [
         TextField(
           key: const Key('profile-name'),
@@ -130,7 +131,7 @@ class _ProfileFormState extends State<ProfileForm> {
           maxLines: 1,
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           key: const Key('profile-bio'),
           controller: _bioController,
@@ -141,12 +142,12 @@ class _ProfileFormState extends State<ProfileForm> {
           maxLines: 1,
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 20),
+        AppSpacing.sectionGap,
         Text(
           ProfileTexts.positionsLabel,
           style: Theme.of(context).textTheme.titleSmall,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: 8,
           children: [
@@ -176,10 +177,10 @@ class _ProfileFormState extends State<ProfileForm> {
             key: const Key('profile-position-error'),
             style: TextStyle(color: errorColor),
           ),
-        const SizedBox(height: 24),
+        AppSpacing.sectionGap,
         if (_serverError != null) ...[
           Text(_serverError!, style: TextStyle(color: errorColor)),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
         ],
         FilledButton(
           key: const Key('profile-submit'),

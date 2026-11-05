@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/team_texts.dart';
@@ -136,10 +138,10 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
       appBar: AppBar(title: const Text(AdminTexts.matchSettings)),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             // ---- 정원
-            Text(AdminTexts.capacitySection, style: theme.textTheme.titleMedium),
+            const SectionHeader(AdminTexts.capacitySection),
             RadioGroup<bool>(
               groupValue: _hasCapacity,
               onChanged: (v) => setState(() => _hasCapacity = v ?? false),
@@ -163,12 +165,12 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
             ),
             if (_hasCapacity)
               _numberField(const Key('settings-capacity'), _capacity, AdminTexts.capacityLabel),
-            const SizedBox(height: 24),
+            AppSpacing.sectionGap,
             // ---- 참석 투표 마감
             _numberField(const Key('settings-deadline'), _deadline, AdminTexts.deadlineLabel),
-            const SizedBox(height: 24),
+            AppSpacing.sectionGap,
             // ---- 일정 자동 생성
-            Text(AdminTexts.autoCreateSection, style: theme.textTheme.titleMedium),
+            const SectionHeader(AdminTexts.autoCreateSection),
             Row(
               children: [
                 Expanded(
@@ -186,7 +188,7 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            AppSpacing.fieldGap,
             for (final e in errors)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -197,10 +199,10 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
                 ),
               ),
             Text(AdminTexts.settingsKeepNote, style: theme.textTheme.bodySmall),
-            const SizedBox(height: 16),
+            AppSpacing.fieldGap,
             if (_error != null) ...[
               Text(_error!, key: const Key('settings-server-error'), style: TextStyle(color: errorColor)),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
             ],
             FilledButton(
               key: const Key('settings-save'),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/presentation/common_widgets.dart';
 import '../../team/data/team_repository.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_texts.dart';
@@ -139,11 +141,11 @@ class _PairingRulesScreenState extends State<PairingRulesScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.page,
           children: [
             const Text('${AdminTexts.group}: ${AdminTexts.groupNote}'),
             const Text('${AdminTexts.rival}: ${AdminTexts.rivalNote}'),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Wrap(
               spacing: 8,
               children: [
@@ -170,23 +172,24 @@ class _PairingRulesScreenState extends State<PairingRulesScreen> {
               ],
             ),
             if (_error != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _error!,
                 key: const Key('pairing-error'),
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (rules == null && _error == null)
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (rules != null && rules.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text(AdminTexts.noRules),
+              const EmptyState(
+                icon: Icons.compare_arrows,
+                message: AdminTexts.noRules,
+                compact: true,
               )
             else if (rules != null)
               for (final r in rules)

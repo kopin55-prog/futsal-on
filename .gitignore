@@ -18,3 +18,6 @@ supabase/.temp/
 # 앱 설정값 (--dart-define-from-file). 예시 파일만 커밋한다.
 app/config/*.json
 !app/config/*.example.json
+
+# 서버 비밀 파일 (Firebase 서비스 계정 등)
+.secrets/

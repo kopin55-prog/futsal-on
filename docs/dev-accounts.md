@@ -69,10 +69,20 @@ GOOGLE_WEB_CLIENT_ID=
 2. 저장소 주소(`https://github.com/계정/futsal-on`)를 lead에게 알려주기
 3. 처음 올릴 때 브라우저 로그인 창이 한 번 뜨면 로그인
 
+
+## 5. Firebase (푸시 알림, 스프린트 02)
+푸시 알림을 보내려면 Firebase가 필요하다. 무료(Spark 요금제)로 충분하다.
+1. https://console.firebase.google.com → **프로젝트 추가** → "기존 Google Cloud 프로젝트에 Firebase 추가"에서 **`futsal-on-dev`** 선택 (구글 로그인용으로 만든 프로젝트와 같은 것) → 요금제 Spark, Google 애널리틱스는 **사용 안 함**
+2. 프로젝트 설정 → 내 앱 → **Android 앱 추가**
+   - 패키지 이름 `com.example.futsal_on`, 디버그 SHA-1은 위 표 값
+   - 내려받은 **`google-services.json`**을 `C:\Users\sdt\SDT_project\futsal-app\app\android\app\google-services.json`에 저장 (Git에 안 올라가게 설정됨)
+3. 프로젝트 설정 → **서비스 계정** → "새 비공개 키 생성" → 내려받은 JSON 파일을 `C:\Users\sdt\SDT_project\futsal-app\.secrets\firebase-service-account.json`에 저장 (Git에 안 올라가게 설정됨, 서버가 푸시를 보낼 때만 사용)
+4. Cloud Messaging API(V1)가 켜져 있는지 확인 (프로젝트 설정 → 클라우드 메시징). 예전 방식(서버 키)은 쓰지 않음
+- iOS 앱 추가와 APNs 키는 애플 유료 계정이 생긴 뒤에 한다
 ## 나중에 (지금 안 해도 됨)
 | 항목 | 시점 |
 | --- | --- |
-| Firebase 프로젝트 (푸시) | 스프린트 02 시작 전 |
+| Firebase iOS 설정·APNs 키 | 애플 유료 계정 후 |
 | Supabase 운영용 프로젝트 | 출시 준비 때 |
 | 애플 개발자 계정 (연 99달러) | 테스트 배포 직전 |
 | 구글 플레이 개발자 (25달러) | 테스트 배포 직전 |

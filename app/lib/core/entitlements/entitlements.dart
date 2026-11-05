@@ -49,11 +49,44 @@ class Entitlements {
       case TeamAction.transferOwnership:
       case TeamAction.disbandTeam:
         return role == TeamRole.owner;
+      case TeamAction.leaveTeam:
+        return role != TeamRole.owner;
       case TeamAction.voteAttendance:
       case TeamAction.voteAwards:
         return true;
     }
   }
+
+  /// 관리 탭을 보여줄지: 팀장·운영진 (가입 승인·초대 코드가 관리 탭의 기본 기능).
+  bool showAdminTab(Viewer viewer) =>
+      canPerform(viewer, TeamAction.reviewJoinRequests);
+
+  /// [viewer]가 팀원 [target]에게 할 수 있는 관리 행동 (관리 탭의 팀원 메뉴).
+  /// 서버도 같은 규칙으로 다시 거절한다 (3-3, Q-018).
+  Set<TeamAction> memberActions(
+    Viewer viewer, {
+    required String targetUserId,
+    required TeamRole targetRole,
+  }) {
+    if (viewer.userId == targetUserId) return const {};
+    return {
+      if (targetRole == TeamRole.member &&
+          canPerform(viewer, TeamAction.appointOrDismissManager))
+        TeamAction.appointOrDismissManager,
+      if (targetRole == TeamRole.manager &&
+          canPerform(viewer, TeamAction.appointOrDismissManager))
+        TeamAction.appointOrDismissManager,
+      if (targetRole == TeamRole.manager &&
+          canPerform(viewer, TeamAction.transferOwnership))
+        TeamAction.transferOwnership,
+      if (targetRole != TeamRole.owner &&
+          canPerform(viewer, TeamAction.removeMember))
+        TeamAction.removeMember,
+    };
+  }
+
+  /// 팀 식별코드를 볼 수 있는지: 팀원 전체 (Q-051).
+  bool canViewTeamCode(Viewer viewer) => viewer.isTeamMember;
 
   /// 프로필 항목(선호 포지션·전문 골키퍼 포함)을 수정할 수 있는지: 본인만.
   bool canEditProfile(Viewer viewer, {required String subjectUserId}) =>

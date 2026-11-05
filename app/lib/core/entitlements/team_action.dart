@@ -39,6 +39,9 @@ enum TeamAction {
   /// 팀 해체
   disbandTeam,
 
+  /// 팀 탈퇴 (본인). 팀장은 위임 또는 해체 전에는 불가 (Q-037)
+  leaveTeam,
+
   /// 참석 투표
   voteAttendance,
 

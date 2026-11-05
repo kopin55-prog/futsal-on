@@ -32,13 +32,66 @@ void main() {
       TeamAction.disbandTeam,
     };
     const everyone = {TeamAction.voteAttendance, TeamAction.voteAwards};
+    const exceptOwner = {TeamAction.leaveTeam};
 
-    test('모든 행동이 세 분류 중 하나에 들어 있다', () {
+    test('모든 행동이 네 분류 중 하나에 들어 있다', () {
       expect({
         ...staffOnly,
         ...ownerOnly,
         ...everyone,
+        ...exceptOwner,
       }, TeamAction.values.toSet());
+    });
+
+    test('팀 탈퇴: 팀장은 위임·해체 전 불가 (Q-037)', () {
+      expect(e.canPerform(owner, TeamAction.leaveTeam), isFalse);
+      expect(e.canPerform(manager, TeamAction.leaveTeam), isTrue);
+      expect(e.canPerform(member, TeamAction.leaveTeam), isTrue);
+      expect(e.canPerform(outsider, TeamAction.leaveTeam), isFalse);
+    });
+
+    test('관리 탭은 팀장·운영진만', () {
+      expect(e.showAdminTab(owner), isTrue);
+      expect(e.showAdminTab(manager), isTrue);
+      expect(e.showAdminTab(member), isFalse);
+      expect(e.showAdminTab(outsider), isFalse);
+    });
+
+    test('팀 식별코드는 팀원 전체 (Q-051)', () {
+      expect(e.canViewTeamCode(member), isTrue);
+      expect(e.canViewTeamCode(outsider), isFalse);
+    });
+
+    group('팀원 관리 메뉴 (3-3, Q-018)', () {
+      Set<TeamAction> on(Viewer v, String target, TeamRole role) =>
+          e.memberActions(v, targetUserId: target, targetRole: role);
+
+      test('팀장: 팀원 → 운영진 지정·내보내기', () {
+        expect(on(owner, 'u', TeamRole.member), {
+          TeamAction.appointOrDismissManager,
+          TeamAction.removeMember,
+        });
+      });
+      test('팀장: 운영진 → 해제·위임·내보내기 (먼저 해제할 필요 없음)', () {
+        expect(on(owner, 'm', TeamRole.manager), {
+          TeamAction.appointOrDismissManager,
+          TeamAction.transferOwnership,
+          TeamAction.removeMember,
+        });
+      });
+      test('자기 자신에게는 메뉴 없음', () {
+        expect(on(owner, 'o', TeamRole.owner), isEmpty);
+      });
+      test('운영진·팀원은 메뉴 없음', () {
+        expect(on(manager, 'u', TeamRole.member), isEmpty);
+        expect(on(member, 'm', TeamRole.manager), isEmpty);
+      });
+      test('위임은 운영진에게만', () {
+        expect(
+          on(owner, 'u', TeamRole.member).contains(TeamAction.transferOwnership),
+          isFalse,
+        );
+      });
     });
 
     for (final action in staffOnly) {

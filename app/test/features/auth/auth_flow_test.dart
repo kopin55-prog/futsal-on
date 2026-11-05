@@ -60,6 +60,13 @@ class FakeProfileRepository implements ProfileRepository {
     createdConsent = consent;
     hasProfile = true;
   }
+
+  @override
+  Future<OwnProfile> getOwnProfile() => throw UnimplementedError();
+
+  @override
+  Future<void> updateOwnProfile(ProfileInput input) =>
+      throw UnimplementedError();
 }
 
 Widget _app(AuthRepository auth, ProfileRepository profile) => MaterialApp(
@@ -211,12 +218,23 @@ void main() {
     expect(selected(Position.goalkeeper), isTrue);
     expect(dedicated(), isTrue);
 
-    // 골키퍼를 빼면 전문 골키퍼도 해제
+    // 전문 골키퍼인 동안 골키퍼 칩은 잠김 (Q-067 16번)
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const Key('profile-position-goalkeeper')))
+          .onSelected,
+      isNull,
+    );
+    // 전문 골키퍼를 풀어도 골키퍼 선택은 남는다 (Q-067 16번)
+    await _tapVisible(tester, find.byKey(const Key('profile-dedicated-gk')));
+    expect(dedicated(), isFalse);
+    expect(selected(Position.goalkeeper), isTrue);
+    // 이제 골키퍼를 직접 뺄 수 있다
     await _tapVisible(
       tester,
       find.byKey(const Key('profile-position-goalkeeper')),
     );
-    expect(dedicated(), isFalse);
+    expect(selected(Position.goalkeeper), isFalse);
 
     for (final p in [
       Position.defender,
@@ -232,6 +250,11 @@ void main() {
       find.text(ProfileTexts.error(ProfileError.dedicatedGkNeedsFreeSlot)),
       findsOneWidget,
     );
+
+    // 4번째 포지션은 선택되지 않고 안내 (Q-067 1번)
+    await _tapVisible(tester, find.byKey(const Key('profile-position-winger')));
+    expect(selected(Position.winger), isFalse);
+    expect(find.text(ProfileTexts.maxPositionsReached), findsOneWidget);
   });
 
   testWidgets('서버가 이미 프로필이 있다고 하면 가입 완료로 본다', (tester) async {

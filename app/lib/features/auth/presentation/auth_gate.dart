@@ -21,11 +21,16 @@ class AuthGate extends StatefulWidget {
   const AuthGate({
     required this.authRepository,
     required this.profileRepository,
+    this.homeBuilder,
     super.key,
   });
 
   final AuthRepository authRepository;
   final ProfileRepository profileRepository;
+
+  /// 가입을 마친 뒤 첫 화면 (팀 홈). 없으면 자리 화면.
+  final Widget Function(String userId, Future<void> Function() signOut)?
+  homeBuilder;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -107,7 +112,9 @@ class _AuthGateState extends State<AuthGate> {
           onCreated: () => setState(() => _stage = _Stage.home),
         ),
       ),
-      _Stage.home => HomePlaceholderScreen(onSignOut: _signOut),
+      _Stage.home =>
+        widget.homeBuilder?.call(_userId!, _signOut) ??
+            HomePlaceholderScreen(onSignOut: _signOut),
       _Stage.error => Scaffold(
         body: Center(
           child: Column(

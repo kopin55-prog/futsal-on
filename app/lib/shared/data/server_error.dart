@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+
 /// 서버 함수 오류 코드 (supabase/migrations 의 `raise exception '<code>'`).
 ///
 /// 서버는 오류 메시지에 코드만 담는다. 화면 문구는 앱이 코드로 고른다.
@@ -26,6 +28,19 @@ enum ServerErrorCode {
   cannotTargetSelf('cannot_target_self'),
   notMember('not_member'),
   ownerMustTransferOrDissolve('owner_must_transfer_or_dissolve'),
+  invalidJoinVia('invalid_join_via'),
+  invalidDecision('invalid_decision'),
+  invalidRegularSchedule('invalid_regular_schedule'),
+  invalidTeamSettings('invalid_team_settings'),
+  deadlineBeforeAutoCreate('deadline_before_auto_create'),
+  invalidSkillLevel('invalid_skill_level'),
+  invalidPairingRule('invalid_pairing_rule'),
+  invalidPairingMembers('invalid_pairing_members'),
+  pairingRuleConflict('pairing_rule_conflict'),
+  teamLimitReached('team_limit_reached'),
+  teamFull('team_full'),
+  teamDissolved('team_dissolved'),
+  dissolveConfirmationMismatch('dissolve_confirmation_mismatch'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');
@@ -46,4 +61,17 @@ class ServerFailure implements Exception {
 
   @override
   String toString() => 'ServerFailure(${code.code})';
+}
+
+/// 서버 호출을 감싸 오류를 [ServerFailure] 로 바꾼다. 화면은 [ServerFailure] 만 다룬다.
+Future<T> guardServer<T>(Future<T> Function() call) async {
+  try {
+    return await call();
+  } on ServerFailure {
+    rethrow;
+  } on PostgrestException catch (e) {
+    throw ServerFailure(ServerErrorCode.fromCode(e.message));
+  } catch (_) {
+    throw const ServerFailure(ServerErrorCode.unknown);
+  }
 }

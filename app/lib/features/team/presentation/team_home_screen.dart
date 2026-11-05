@@ -1,0 +1,321 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/app_services.dart';
+import '../../../core/entitlements/entitlements.dart';
+import '../../../shared/data/server_error.dart';
+import '../../admin/presentation/admin_tab.dart';
+import '../../membership/presentation/team_find_screen.dart';
+import '../../profile/presentation/my_tab.dart';
+import '../domain/recent_teams.dart';
+import '../domain/team_models.dart';
+import 'roster_tab.dart';
+import 'team_create_screen.dart';
+import 'team_logo.dart';
+import 'team_texts.dart';
+
+/// 로그인·가입 후 첫 화면.
+///
+/// - 소속 팀이 없으면 "팀 만들기 / 팀 찾기" 홈.
+/// - 있으면 가장 최근에 본 팀을 연다. 팀 이름을 누르면 팀 전환.
+/// - 팀을 떠나거나 해체하면 가장 최근에 본 다른 팀, 없으면 홈 (Q-067 6번).
+class TeamHomeScreen extends StatefulWidget {
+  const TeamHomeScreen({
+    required this.services,
+    required this.userId,
+    required this.onSignOut,
+    super.key,
+  });
+
+  final AppServices services;
+  final String userId;
+  final Future<void> Function() onSignOut;
+
+  @override
+  State<TeamHomeScreen> createState() => _TeamHomeScreenState();
+}
+
+class _TeamHomeScreenState extends State<TeamHomeScreen> {
+  List<TeamSummary>? _teams;
+  List<String> _recent = const [];
+  String? _currentId;
+  bool _failed = false;
+
+  AppServices get _s => widget.services;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// 팀 목록을 다시 읽는다. [open] 이 있으면 그 팀을, [forget] 이 있으면 그 팀을 기록에서 빼고 고른다.
+  Future<void> _load({String? open, String? forget}) async {
+    setState(() => _failed = false);
+    try {
+      var recent = await _s.recentTeams.load(widget.userId);
+      if (forget != null) recent = RecentTeams.forget(recent, forget);
+      if (open != null) recent = RecentTeams.touch(recent, open);
+      final teams = await _s.teams.listMyTeams();
+      final picked = RecentTeams.pick(
+        recent: recent,
+        myTeamIds: [for (final t in teams) t.id],
+      );
+      if (picked != null) recent = RecentTeams.touch(recent, picked);
+      await _s.recentTeams.save(widget.userId, recent);
+      if (!mounted) return;
+      setState(() {
+        _teams = teams;
+        _recent = recent;
+        _currentId = picked;
+      });
+    } on ServerFailure {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  Future<void> _switchTo(String teamId) async {
+    final recent = RecentTeams.touch(_recent, teamId);
+    await _s.recentTeams.save(widget.userId, recent);
+    if (mounted) {
+      setState(() {
+        _recent = recent;
+        _currentId = teamId;
+      });
+    }
+  }
+
+  Future<void> _openCreate() async {
+    final id = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => TeamCreateScreen(teams: _s.teams)),
+    );
+    if (id != null) await _load(open: id);
+  }
+
+  Future<void> _openFind() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => TeamFindScreen(membership: _s.membership)),
+    );
+    // 신청이 승인됐을 수 있으니 다시 읽는다.
+    await _load();
+  }
+
+  Future<void> _showSwitcher() async {
+    final teams = _teams ?? const <TeamSummary>[];
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const ListTile(title: Text(TeamTexts.switchTeam)),
+            for (final t in teams)
+              ListTile(
+                key: Key('switch-team-${t.id}'),
+                leading: TeamLogo(text: t.logoText, size: 36),
+                title: Text(t.name),
+                subtitle: Text(TeamTexts.role(t.myRole)),
+                selected: t.id == _currentId,
+                onTap: () => Navigator.of(context).pop('team:${t.id}'),
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text(TeamTexts.createTeam),
+              onTap: () => Navigator.of(context).pop('create'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text(TeamTexts.findTeam),
+              onTap: () => Navigator.of(context).pop('find'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null) return;
+    if (action == 'create') return _openCreate();
+    if (action == 'find') return _openFind();
+    await _switchTo(action.substring('team:'.length));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(TeamTexts.loadFailed),
+              TextButton(onPressed: _load, child: const Text(TeamTexts.retry)),
+            ],
+          ),
+        ),
+      );
+    }
+    final teams = _teams;
+    if (teams == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final current = teams.where((t) => t.id == _currentId).firstOrNull;
+    if (current == null) {
+      return _NoTeamView(
+        onCreate: _openCreate,
+        onFind: _openFind,
+        onSignOut: widget.onSignOut,
+      );
+    }
+    return _TeamShell(
+      key: ValueKey(current.id),
+      services: _s,
+      userId: widget.userId,
+      team: current,
+      onTapTitle: _showSwitcher,
+      onLeftTeam: () => _load(forget: current.id),
+      onTeamChanged: _load,
+      onSignOut: widget.onSignOut,
+    );
+  }
+}
+
+class _NoTeamView extends StatelessWidget {
+  const _NoTeamView({
+    required this.onCreate,
+    required this.onFind,
+    required this.onSignOut,
+  });
+
+  final VoidCallback onCreate;
+  final VoidCallback onFind;
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          TextButton(onPressed: onSignOut, child: const Text(TeamTexts.signOut)),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(TeamTexts.noTeamTitle, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              FilledButton(
+                key: const Key('home-create-team'),
+                onPressed: onCreate,
+                child: const Text(TeamTexts.createTeam),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                key: const Key('home-find-team'),
+                onPressed: onFind,
+                child: const Text(TeamTexts.findTeam),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeamShell extends StatefulWidget {
+  const _TeamShell({
+    required this.services,
+    required this.userId,
+    required this.team,
+    required this.onTapTitle,
+    required this.onLeftTeam,
+    required this.onTeamChanged,
+    required this.onSignOut,
+    super.key,
+  });
+
+  final AppServices services;
+  final String userId;
+  final TeamSummary team;
+  final VoidCallback onTapTitle;
+
+  /// 팀 탈퇴·해체 후
+  final Future<void> Function() onLeftTeam;
+
+  /// 위임 등으로 내 역할이 바뀐 뒤
+  final Future<void> Function() onTeamChanged;
+  final Future<void> Function() onSignOut;
+
+  @override
+  State<_TeamShell> createState() => _TeamShellState();
+}
+
+class _TeamShellState extends State<_TeamShell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewer = Viewer(userId: widget.userId, role: widget.team.myRole);
+    final showAdmin = widget.services.entitlements.showAdminTab(viewer);
+    final tabs = <(String, IconData, Widget)>[
+      (
+        TeamTexts.tabMembers,
+        Icons.groups,
+        RosterTab(services: widget.services, team: widget.team, viewer: viewer),
+      ),
+      if (showAdmin)
+        (
+          TeamTexts.tabAdmin,
+          Icons.admin_panel_settings,
+          AdminTab(
+            services: widget.services,
+            team: widget.team,
+            viewer: viewer,
+            onRolesChanged: widget.onTeamChanged,
+            onDissolved: widget.onLeftTeam,
+          ),
+        ),
+      (
+        TeamTexts.tabMy,
+        Icons.person,
+        MyTab(
+          services: widget.services,
+          team: widget.team,
+          viewer: viewer,
+          onLeftTeam: widget.onLeftTeam,
+          onSignOut: widget.onSignOut,
+        ),
+      ),
+    ];
+    final index = _tab.clamp(0, tabs.length - 1);
+    return Scaffold(
+      appBar: AppBar(
+        title: InkWell(
+          key: const Key('team-title'),
+          onTap: widget.onTapTitle,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TeamLogo(text: widget.team.logoText, size: 32),
+              const SizedBox(width: 8),
+              Flexible(child: Text(widget.team.name, overflow: TextOverflow.ellipsis)),
+              const Icon(Icons.arrow_drop_down),
+            ],
+          ),
+        ),
+      ),
+      body: tabs[index].$3,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        destinations: [
+          for (final t in tabs)
+            NavigationDestination(icon: Icon(t.$2), label: t.$1),
+        ],
+      ),
+    );
+  }
+}

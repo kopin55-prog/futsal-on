@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/app_services.dart';
 import 'core/config/app_config.dart';
+import 'features/auth/data/account_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/auth_texts.dart';
+import 'features/membership/data/membership_repository.dart';
 import 'features/profile/data/profile_repository.dart';
+import 'features/team/data/recent_team_store.dart';
+import 'features/team/data/team_repository.dart';
+import 'features/team/presentation/team_home_screen.dart';
 
 /// 풋살ON 앱 진입점.
 ///
@@ -34,7 +40,13 @@ Future<void> main() async {
         client: client,
         googleServerClientId: config.googleWebClientId,
       ),
-      profileRepository: SupabaseProfileRepository(client),
+      services: AppServices(
+        profiles: SupabaseProfileRepository(client),
+        teams: SupabaseTeamRepository(client),
+        membership: SupabaseMembershipRepository(client),
+        accounts: SupabaseAccountRepository(client),
+        recentTeams: SharedPrefsRecentTeamStore(),
+      ),
     ),
   );
 }
@@ -42,12 +54,12 @@ Future<void> main() async {
 class FutsalOnApp extends StatelessWidget {
   const FutsalOnApp({
     required this.authRepository,
-    required this.profileRepository,
+    required this.services,
     super.key,
   });
 
   final AuthRepository authRepository;
-  final ProfileRepository profileRepository;
+  final AppServices services;
 
   @override
   Widget build(BuildContext context) {
@@ -55,12 +67,17 @@ class FutsalOnApp extends StatelessWidget {
       title: AuthTempTexts.appTitle,
       home: AuthGate(
         authRepository: authRepository,
-        profileRepository: profileRepository,
+        profileRepository: services.profiles,
+        homeBuilder: (userId, signOut) => TeamHomeScreen(
+          key: ValueKey(userId),
+          services: services,
+          userId: userId,
+          onSignOut: signOut,
+        ),
       ),
     );
   }
 }
-
 /// 설정값 없이 실행했을 때 (개발용).
 class ConfigMissingApp extends StatelessWidget {
   const ConfigMissingApp({required this.missingKeys, super.key});

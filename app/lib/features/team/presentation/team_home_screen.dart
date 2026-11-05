@@ -274,7 +274,7 @@ class _TeamShellState extends State<_TeamShell> {
             services: widget.services,
             team: widget.team,
             viewer: viewer,
-            onRolesChanged: widget.onTeamChanged,
+            onTeamChanged: widget.onTeamChanged,
             onDissolved: widget.onLeftTeam,
           ),
         ),

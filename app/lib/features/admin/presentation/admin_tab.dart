@@ -8,8 +8,13 @@ import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/roster_tab.dart' show RoleBadge;
 import '../../team/presentation/team_texts.dart';
+import 'admin_texts.dart';
+import 'match_settings_screen.dart';
+import 'pairing_rules_screen.dart';
+import 'skill_levels_screen.dart';
+import 'team_info_edit_screen.dart';
 
-/// 관리 탭 (팀장·운영진): 초대 코드 발급, 가입 신청 승인·거절,
+/// 관리 탭 (팀장·운영진): 팀 설정(팀 정보·경기 설정·실력 등급·그룹·라이벌), 초대 코드 발급, 가입 신청 승인·거절,
 /// 팀원 관리(운영진 지정·해제, 위임, 내보내기 — 팀장만), 팀 해체(팀장만).
 /// 버튼 노출은 Entitlements 로만 판단하고, 서버가 같은 규칙으로 다시 거절한다.
 ///
@@ -19,7 +24,7 @@ class AdminTab extends StatefulWidget {
     required this.services,
     required this.team,
     required this.viewer,
-    required this.onRolesChanged,
+    required this.onTeamChanged,
     required this.onDissolved,
     super.key,
   });
@@ -28,8 +33,8 @@ class AdminTab extends StatefulWidget {
   final TeamSummary team;
   final Viewer viewer;
 
-  /// 위임처럼 내 역할이 바뀌는 처리 뒤 (팀 목록 다시 읽기)
-  final Future<void> Function() onRolesChanged;
+  /// 위임처럼 내 역할이 바뀌거나 팀 정보를 고친 뒤 (팀 목록 다시 읽기)
+  final Future<void> Function() onTeamChanged;
   final Future<void> Function() onDissolved;
 
   @override
@@ -175,7 +180,7 @@ class _AdminTabState extends State<AdminTab> {
     if (!await _confirm(message)) return;
     if (!await _run(call)) return;
     if (rolesChangedForMe) {
-      await widget.onRolesChanged();
+      await widget.onTeamChanged();
     } else {
       await _load();
     }
@@ -188,6 +193,82 @@ class _AdminTabState extends State<AdminTab> {
     TeamAction.removeMember => TeamTexts.removeMember,
     _ => '',
   };
+
+  Future<void> _openTeamInfo() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TeamInfoEditScreen(
+          admin: _s.admin,
+          entitlements: _e,
+          viewer: widget.viewer,
+          team: widget.team,
+        ),
+      ),
+    );
+    if (saved ?? false) await widget.onTeamChanged();
+  }
+
+  Future<void> _openMatchSettings() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => MatchSettingsScreen(admin: _s.admin, team: widget.team),
+      ),
+    );
+    if ((saved ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AdminTexts.saved)),
+      );
+    }
+  }
+
+  Future<void> _openSkillLevels() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => SkillLevelsScreen(
+        admin: _s.admin,
+        teams: _s.teams,
+        entitlements: _e,
+        viewer: widget.viewer,
+        team: widget.team,
+      ),
+    ),
+  );
+
+  Future<void> _openPairingRules() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => PairingRulesScreen(admin: _s.admin, teams: _s.teams, team: widget.team),
+    ),
+  );
+
+  /// 팀 설정 메뉴. 메뉴마다 Entitlements 로만 보일지 정한다.
+  List<Widget> _settingsSection(ThemeData theme) {
+    final v = widget.viewer;
+    final items = [
+      if (_e.canPerform(v, TeamAction.editTeamInfo))
+        (const Key('open-team-info'), Icons.edit_outlined, AdminTexts.teamInfo, _openTeamInfo),
+      if (_e.canPerform(v, TeamAction.editMatchSettings))
+        (const Key('open-match-settings'), Icons.event_note_outlined, AdminTexts.matchSettings, _openMatchSettings),
+      if (_e.canPerform(v, TeamAction.setSkillLevel))
+        (const Key('open-skill-levels'), Icons.leaderboard_outlined, AdminTexts.skillLevels, _openSkillLevels),
+      if (_e.canPerform(v, TeamAction.editGroupRivalRules) &&
+          _e.canView(v, const GroupRivalSettingsInfo()))
+        (const Key('open-pairing-rules'), Icons.compare_arrows, AdminTexts.groupRival, _openPairingRules),
+    ];
+    if (items.isEmpty) return const [];
+    return [
+      Text(AdminTexts.settingsSection, style: theme.textTheme.titleMedium),
+      for (final (key, icon, label, onTap) in items)
+        ListTile(
+          key: key,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon),
+          title: Text(label),
+          trailing: const Icon(Icons.chevron_right),
+          enabled: !_busy,
+          onTap: onTap,
+        ),
+      const SizedBox(height: 24),
+    ];
+  }
 
   Future<void> _dissolve() async {
     final input = await showDialog<String>(
@@ -214,6 +295,8 @@ class _AdminTabState extends State<AdminTab> {
             Text(_error!, key: const Key('admin-error'), style: TextStyle(color: theme.colorScheme.error)),
             const SizedBox(height: 8),
           ],
+          // ---- 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌)
+          ..._settingsSection(theme),
           // ---- 초대 코드 (팀장·운영진)
           if (_e.canPerform(widget.viewer, TeamAction.reviewJoinRequests)) ...[
             Text(TeamTexts.inviteSection, style: theme.textTheme.titleMedium),

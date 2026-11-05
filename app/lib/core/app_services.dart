@@ -1,3 +1,4 @@
+import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/profile/data/profile_repository.dart';
@@ -13,6 +14,7 @@ class AppServices {
     required this.membership,
     required this.accounts,
     required this.recentTeams,
+    required this.admin,
     this.entitlements = const Entitlements(),
   });
 
@@ -21,6 +23,9 @@ class AppServices {
   final MembershipRepository membership;
   final AccountRepository accounts;
   final RecentTeamStore recentTeams;
+
+  /// 관리 탭의 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌)
+  final TeamAdminRepository admin;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

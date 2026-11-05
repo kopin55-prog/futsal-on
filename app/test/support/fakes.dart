@@ -1,5 +1,9 @@
 import 'package:futsal_on/core/app_services.dart';
 import 'package:futsal_on/core/entitlements/entitlements.dart';
+import 'package:futsal_on/features/admin/data/team_admin_repository.dart';
+import 'package:futsal_on/features/admin/domain/match_settings.dart';
+import 'package:futsal_on/features/admin/domain/pairing_rules.dart';
+import 'package:futsal_on/features/admin/domain/skill_level.dart';
 import 'package:futsal_on/features/auth/data/account_repository.dart';
 import 'package:futsal_on/features/auth/domain/signup_consent.dart';
 import 'package:futsal_on/features/membership/data/membership_repository.dart';
@@ -197,6 +201,84 @@ class FakeOwnProfileRepository implements ProfileRepository {
   }
 }
 
+class FakeTeamAdminRepository implements TeamAdminRepository {
+  final List<String> calls = [];
+  TeamInfoInput? lastInfo;
+  MatchSettings settings = MatchSettings.defaults;
+  MatchSettings? savedSettings;
+  Map<String, SkillLevel> levels = {};
+  List<PairingRule> rules = [];
+  ServerFailure? nextFailure;
+  int _seq = 0;
+
+  void _maybeFail() {
+    final f = nextFailure;
+    if (f != null) {
+      nextFailure = null;
+      throw f;
+    }
+  }
+
+  @override
+  Future<void> updateTeamInfo(String teamId, TeamInfoInput input) async {
+    _maybeFail();
+    calls.add('info:$teamId');
+    lastInfo = input;
+  }
+
+  @override
+  Future<MatchSettings> getMatchSettings(String teamId) async => settings;
+
+  @override
+  Future<void> updateMatchSettings(String teamId, MatchSettings s) async {
+    _maybeFail();
+    calls.add('settings:$teamId');
+    savedSettings = s;
+    settings = s;
+  }
+
+  @override
+  Future<Map<String, SkillLevel>> listSkillLevels(String teamId) async => Map.of(levels);
+
+  @override
+  Future<void> setSkillLevel(String teamId, String userId, SkillLevel level) async {
+    _maybeFail();
+    calls.add('skill:$userId:${level.name}');
+    if (level == SkillLevel.undecided) {
+      levels.remove(userId);
+    } else {
+      levels[userId] = level;
+    }
+  }
+
+  @override
+  Future<List<PairingRule>> listPairingRules(String teamId) async => List.of(rules);
+
+  @override
+  Future<String> savePairingRule(String teamId, PairingRule rule) async {
+    _maybeFail();
+    final id = rule.id ?? 'rule-${++_seq}';
+    calls.add('save-rule:$id:${rule.kind.name}:${rule.userIds.join(',')}:${rule.enabled}');
+    final saved = PairingRule(id: id, kind: rule.kind, enabled: rule.enabled, userIds: rule.userIds);
+    rules = [for (final r in rules) if (r.id != id) r, saved];
+    return id;
+  }
+
+  @override
+  Future<void> setPairingRuleEnabled(String ruleId, {required bool enabled}) async {
+    _maybeFail();
+    calls.add('enable-rule:$ruleId:$enabled');
+    rules = [for (final r in rules) r.id == ruleId ? r.copyWith(enabled: enabled) : r];
+  }
+
+  @override
+  Future<void> deletePairingRule(String ruleId) async {
+    _maybeFail();
+    calls.add('delete-rule:$ruleId');
+    rules = [for (final r in rules) if (r.id != ruleId) r];
+  }
+}
+
 class FakeAccountRepository implements AccountRepository {
   ServerFailure? nextFailure;
   int deleteCalls = 0;
@@ -236,6 +318,7 @@ class TestServices {
     ),
   );
   final accounts = FakeAccountRepository();
+  final admin = FakeTeamAdminRepository();
   final recent = MemoryRecentTeamStore();
 
   AppServices get services => AppServices(
@@ -244,5 +327,6 @@ class TestServices {
     membership: membership,
     accounts: accounts,
     recentTeams: recent,
+    admin: admin,
   );
 }

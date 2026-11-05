@@ -31,6 +31,7 @@ enum ServerErrorCode {
   invalidJoinVia('invalid_join_via'),
   invalidDecision('invalid_decision'),
   invalidRegularSchedule('invalid_regular_schedule'),
+  invalidTeamInfo('invalid_team_info'),
   invalidTeamSettings('invalid_team_settings'),
   deadlineBeforeAutoCreate('deadline_before_auto_create'),
   invalidSkillLevel('invalid_skill_level'),

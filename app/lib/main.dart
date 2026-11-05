@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_services.dart';
 import 'core/config/app_config.dart';
+import 'features/admin/data/team_admin_repository.dart';
 import 'features/auth/data/account_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_gate.dart';
@@ -46,6 +47,7 @@ Future<void> main() async {
         membership: SupabaseMembershipRepository(client),
         accounts: SupabaseAccountRepository(client),
         recentTeams: SharedPrefsRecentTeamStore(),
+        admin: SupabaseTeamAdminRepository(client),
       ),
     ),
   );

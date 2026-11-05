@@ -4,6 +4,7 @@ import '../../../shared/data/server_error.dart';
 import '../data/team_repository.dart';
 import '../domain/team_models.dart';
 import '../domain/team_validation.dart';
+import 'regular_schedule_fields.dart';
 import 'team_logo.dart';
 import 'team_texts.dart';
 
@@ -23,9 +24,7 @@ class TeamCreateScreen extends StatefulWidget {
 class _TeamCreateScreenState extends State<TeamCreateScreen> {
   final _name = TextEditingController();
   final _logo = TextEditingController();
-  int? _weekday;
-  ClockTime? _start;
-  ClockTime? _end;
+  RegularSchedule _schedule = const RegularSchedule();
   bool _submitted = false;
   bool _saving = false;
   String? _serverError;
@@ -46,9 +45,9 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
 
   Set<RegularScheduleError> get _scheduleErrors =>
       TeamValidator.validateRegularSchedule(
-        weekday: _weekday,
-        start: _start,
-        end: _end,
+        weekday: _schedule.weekday,
+        start: _schedule.start,
+        end: _schedule.end,
       );
 
   String? get _nameErrorText {
@@ -69,26 +68,6 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
     return null;
   }
 
-  Future<void> _pickTime({required bool start}) async {
-    final current = start ? _start : _end;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: current?.hour ?? (start ? 20 : 22),
-        minute: current?.minute ?? 0,
-      ),
-    );
-    if (picked == null) return;
-    setState(() {
-      final t = ClockTime(picked.hour, picked.minute);
-      if (start) {
-        _start = t;
-      } else {
-        _end = t;
-      }
-    });
-  }
-
   Future<void> _submit() async {
     setState(() {
       _submitted = true;
@@ -102,7 +81,7 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
       final logo = TeamValidator.normalizeLogoText(_logo.text);
       final id = await widget.teams.createTeam(
         name: TeamValidator.normalizeName(_name.text),
-        schedule: RegularSchedule(weekday: _weekday, start: _start, end: _end),
+        schedule: _schedule,
         logoText: logo.isEmpty ? null : logo,
       );
       if (mounted) Navigator.of(context).pop(id);
@@ -113,38 +92,6 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
     }
   }
 
-  Widget _timeButton({required bool start}) {
-    final value = start ? _start : _end;
-    final label = start ? TeamTexts.startTime : TeamTexts.endTime;
-    final enabled = start ? _weekday != null : _start != null;
-    return Expanded(
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              key: Key(start ? 'team-start-time' : 'team-end-time'),
-              onPressed: enabled ? () => _pickTime(start: start) : null,
-              child: Text(value == null ? label : '$label ${value.hhmm}'),
-            ),
-          ),
-          if (value != null)
-            IconButton(
-              tooltip: TeamTexts.clearTime,
-              icon: const Icon(Icons.clear),
-              onPressed: () => setState(() {
-                if (start) {
-                  _start = null;
-                  _end = null;
-                } else {
-                  _end = null;
-                }
-              }),
-            ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final errorColor = Theme.of(context).colorScheme.error;
@@ -152,9 +99,6 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
     final logoShown = TeamValidator.normalizeLogoText(_logo.text).isEmpty
         ? preview
         : TeamValidator.normalizeLogoText(_logo.text);
-    final scheduleErrors = _scheduleErrors;
-    final crosses = _start != null && _end != null &&
-        TeamValidator.crossesMidnight(_start!, _end!);
 
     return Scaffold(
       appBar: AppBar(title: const Text(TeamTexts.createTeam)),
@@ -187,37 +131,10 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 20),
-            DropdownButtonFormField<int?>(
-              key: const Key('team-weekday'),
-              initialValue: _weekday,
-              decoration: const InputDecoration(labelText: TeamTexts.regularDay),
-              items: [
-                const DropdownMenuItem(value: null, child: Text(TeamTexts.noWeekday)),
-                for (var d = 1; d <= 7; d++)
-                  DropdownMenuItem(value: d, child: Text(TeamTexts.weekday(d))),
-              ],
-              onChanged: (v) => setState(() {
-                _weekday = v;
-                if (v == null) {
-                  _start = null;
-                  _end = null;
-                }
-              }),
+            RegularScheduleFields(
+              value: _schedule,
+              onChanged: (v) => setState(() => _schedule = v),
             ),
-            const SizedBox(height: 8),
-            Row(children: [_timeButton(start: true), _timeButton(start: false)]),
-            if (crosses)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  TeamTexts.schedule(
-                        RegularSchedule(weekday: _weekday, start: _start, end: _end),
-                      ) ??
-                      '',
-                ),
-              ),
-            for (final e in scheduleErrors)
-              Text(TeamTexts.scheduleError(e), style: TextStyle(color: errorColor)),
             const SizedBox(height: 20),
             // 자리만: Q-067 답변으로 동작은 정해졌지만 카카오맵 연동·로고 사진 저장소는 다음 작업.
             const ListTile(

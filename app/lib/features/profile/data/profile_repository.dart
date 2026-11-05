@@ -104,32 +104,21 @@ class SupabaseProfileRepository implements ProfileRepository {
     );
   });
 
-  /// 이름·자기소개(profiles)와 포지션(profile_play_prefs)은 표가 나뉘어 있어 두 번 저장한다.
-  /// 포지션을 먼저 저장한다 (데이터베이스 검사에 걸릴 가능성이 더 큰 쪽).
+  /// 이름·자기소개와 선호 포지션·전문 골키퍼를 서버 함수 하나(update_own_profile)로 한 번에 저장한다.
+  /// 둘 중 하나만 저장되는 일이 없다 (202611050015). 실패 코드: invalid_profile / invalid_positions.
   @override
   Future<void> updateOwnProfile(ProfileInput input) {
     final normalized = input.normalized();
-    return guardServer(() async {
-      final uid = _uid;
-      try {
-        await _client
-            .from('profile_play_prefs')
-            .update({
-              'positions': [for (final p in normalized.positions) p.name],
-              'is_dedicated_gk': normalized.isDedicatedGk,
-            })
-            .eq('user_id', uid);
-      } on PostgrestException {
-        throw const ServerFailure(ServerErrorCode.invalidPositions);
-      }
-      try {
-        await _client
-            .from('profiles')
-            .update({'display_name': normalized.name, 'bio': normalized.bio})
-            .eq('user_id', uid);
-      } on PostgrestException {
-        throw const ServerFailure(ServerErrorCode.invalidProfile);
-      }
-    });
+    return guardServer(
+      () => _client.rpc<void>(
+        'update_own_profile',
+        params: {
+          'p_display_name': normalized.name,
+          'p_bio': normalized.bio,
+          'p_positions': [for (final p in normalized.positions) p.name],
+          'p_is_dedicated_gk': normalized.isDedicatedGk,
+        },
+      ),
+    );
   }
 }

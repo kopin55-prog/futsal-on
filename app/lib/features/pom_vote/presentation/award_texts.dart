@@ -41,6 +41,9 @@ abstract final class AwardTexts {
   static const cancel = '취소';
   static const votedDone = '투표했어요';
 
+  /// 팀을 떠난 사람 자리 (배치 화면과 같은 표시, Q-058 5번)
+  static const leftMember = ScheduleTexts.leftMember;
+
   static String serverError(ServerErrorCode code) => switch (code) {
     ServerErrorCode.invalidAwardSettings => '발표 시각을 다시 골라 주세요.',
     ServerErrorCode.awardPollNotFound => '투표를 찾을 수 없어요.',

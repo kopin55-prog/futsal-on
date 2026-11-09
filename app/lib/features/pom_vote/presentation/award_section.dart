@@ -14,8 +14,8 @@ import 'award_texts.dart';
 ///   고르고 [투표하기] → 확인 창 → 낸 뒤엔 "투표 완료"(누구를 찍었는지는 보여주지도, 기기에 남기지도 않음. 바꾸기 없음).
 /// - 대상자가 아니면 투표 버튼 없이 "이번 경기 투표 대상이 아니에요".
 /// - 마감 시각이 지났는데 아직 마감 처리 전이면 잠그고 안내.
-/// 마감 뒤: 팀원 전체에게 항목별 1위(공동이면 모두). 1위가 없으면 "결과 없음". 팀을 떠난 1위는 빼고 보여준다
-///   (S3-12 결과 이미지와 같게, lead 지시). 회원 탈퇴자는 서버에서 줄이 지워져 없다. 득표수·순위 없음.
+/// 마감 뒤: 팀원 전체에게 항목별 1위(공동이면 모두). 1위가 없으면 "결과 없음". 팀을 떠난 1위는 빼지 않고
+///   이름 빈칸 자리로 보여준다 (Q-058 5번, 배치 화면과 같은 표시. "빼고 보여줌"은 공유 이미지만, S3-12). 회원 탈퇴자는 서버에서 줄이 지워져 없다. 득표수·순위 없음.
 ///   득표수 보기 버튼 자리는 Entitlements.showVoteCountButton 으로만 판단 (1차 숨김).
 class AwardSection extends StatefulWidget {
   const AwardSection({
@@ -186,8 +186,12 @@ class _AwardSectionState extends State<AwardSection> {
 
   Widget _resultCard(BuildContext context, AwardCategory c) {
     final theme = Theme.of(context);
-    // 떠난 1위는 빼고 (이름을 알 수 있는 지금 팀원만)
-    final winners = _sortedByName(widget.poll.winnersOf(c).where(widget.memberNames.containsKey));
+    // 지금 팀원은 이름 가나다순, 떠난 1위는 뒤에 이름 빈칸 자리로 (Q-058 5번)
+    final all = widget.poll.winnersOf(c);
+    final winners = [
+      ..._sortedByName(all.where(widget.memberNames.containsKey)),
+      ...all.where((id) => !widget.memberNames.containsKey(id)),
+    ];
     final showCountButton = widget.entitlements.showVoteCountButton(widget.viewer);
     return Card(
       key: Key('award-result-${c.code}'),
@@ -211,7 +215,7 @@ class _AwardSectionState extends State<AwardSection> {
                 runSpacing: AppSpacing.sm,
                 children: [
                   for (final id in winners)
-                    Chip(avatar: const Icon(Icons.emoji_events_outlined, size: 18), label: Text(_name(id))),
+                    Chip(avatar: const Icon(Icons.emoji_events_outlined, size: 18), label: Text(widget.memberNames[id] ?? AwardTexts.leftMember)),
                 ],
               ),
             // 득표수 보기 버튼 자리 (1차 숨김, 2차 보상형 광고·개인 구독)

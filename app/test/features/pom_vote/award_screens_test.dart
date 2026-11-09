@@ -273,7 +273,7 @@ void main() {
   });
 
   group('결과 화면 (5-3)', () {
-    testWidgets('마감 뒤 항목별 1위(공동 모두, 가나다순), 떠난 1위는 빼고, 표가 없으면 "결과 없음". 득표수 버튼 숨김', (tester) async {
+    testWidgets('마감 뒤 항목별 1위(공동 모두, 가나다순), 떠난 1위는 이름 빈칸 자리, 표가 없으면 "결과 없음". 득표수 버튼 숨김', (tester) async {
       await _open(
         tester,
         userId: 'u3', // 대상자가 아닌 팀원도 결과는 본다
@@ -288,12 +288,31 @@ void main() {
         ),
       );
       await _openPast(tester, 'm1');
-      expect(_chipTexts(tester, const Key('award-winners-pom')), ['가람', '다현']);
+      expect(_chipTexts(tester, const Key('award-winners-pom')), ['가람', '다현', AwardTexts.leftMember]);
       expect(find.byKey(const Key('award-no-result-goal_of_the_day')), findsOneWidget);
       expect(find.text(AwardTexts.noResult), findsOneWidget);
       expect(find.text(AwardTexts.voteCountButton), findsNothing);
       expect(find.byKey(const Key('award-not-participant')), findsNothing);
       expect(find.byKey(const Key('award-deadline')), findsNothing);
+    });
+
+    testWidgets('1위가 모두 떠났어도 "결과 없음"이 아니라 빈칸 자리로 보인다', (tester) async {
+      await _open(
+        tester,
+        matches: [_match('m1')],
+        setup: (t) => t.awards.polls['m1'] = _poll(
+          'm1',
+          status: AwardPollStatus.closed,
+          closesIn: const Duration(hours: -1),
+          winners: {
+            AwardCategory.goalOfTheDay: ['left'],
+          },
+        ),
+      );
+      await _openPast(tester, 'm1');
+      expect(_chipTexts(tester, const Key('award-winners-goal_of_the_day')), [AwardTexts.leftMember]);
+      expect(find.byKey(const Key('award-no-result-goal_of_the_day')), findsNothing);
+      expect(find.byKey(const Key('award-no-result-pom')), findsOneWidget);
     });
 
     test('득표수 보기 버튼은 1차에 누구에게도 안 보인다 (Entitlements)', () {

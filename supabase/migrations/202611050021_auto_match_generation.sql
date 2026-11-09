@@ -94,7 +94,7 @@ begin
       on conflict (team_id, starts_at) where source = 'auto' do nothing;
       get diagnostics v_rows = row_count;
       v_count := v_count + v_rows;
-      -- TODO(알림 단계): 새 일정 알림 (docs/notifications.md)
+      -- (알림은 202611050029 에서 연결) 새 일정 알림 (docs/notifications.md)
     end if;
 
     v_day := v_day + 7;

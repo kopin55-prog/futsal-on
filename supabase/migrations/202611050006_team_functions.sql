@@ -384,7 +384,7 @@ begin
     insert into public.team_members (team_id, user_id, role, status)
     values (v_req.team_id, v_req.user_id, 'member', 'active');
   end if;
-  -- TODO(알림 단계): join_request_decided 알림 (9장)
+  -- (알림은 202611050029 에서 연결) join_request_decided 알림 (9장)
 end;
 $$;
 
@@ -440,7 +440,7 @@ begin
   end if;
   update public.team_members set role = 'manager'
    where team_id = p_team_id and user_id = p_user_id and status = 'active';
-  -- TODO(알림 단계): manager_assigned (Q-022)
+  -- (알림은 202611050029 에서 연결) manager_assigned (Q-022)
 end;
 $$;
 
@@ -460,7 +460,7 @@ begin
   end if;
   update public.team_members set role = 'member'
    where team_id = p_team_id and user_id = p_user_id and status = 'active';
-  -- TODO(알림 단계): manager_unassigned (Q-022)
+  -- (알림은 202611050029 에서 연결) manager_unassigned (Q-022)
 end;
 $$;
 
@@ -482,7 +482,7 @@ begin
    where team_id = p_team_id and user_id = v_uid and status = 'active';
   update public.team_members set role = 'owner'
    where team_id = p_team_id and user_id = p_user_id and status = 'active';
-  -- TODO(알림 단계): ownership_received (Q-022)
+  -- (알림은 202611050029 에서 연결) ownership_received (Q-022)
 end;
 $$;
 
@@ -509,7 +509,7 @@ begin
      set status = 'removed', ended_at = now(), ended_by = v_uid
    where team_id = p_team_id and user_id = p_user_id and status = 'active';
   -- TODO(팀 나누기·일정 단계): 실력 등급·그룹 소속 삭제, 다가오는 참석 응답 정리 (3-8)
-  -- TODO(알림 단계): member_removed (Q-022)
+  -- (알림은 202611050029 에서 연결) member_removed (Q-022)
 end;
 $$;
 
@@ -536,7 +536,7 @@ begin
      set status = 'left', ended_at = now()
    where team_id = p_team_id and user_id = v_uid and status = 'active';
   -- TODO(팀 나누기·일정 단계): 실력 등급·그룹 소속 삭제, 다가오는 참석 응답 정리 (3-8)
-  -- TODO(알림 단계): member_left
+  -- (알림은 202611050029 에서 연결) member_left
 end;
 $$;
 

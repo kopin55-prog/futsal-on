@@ -193,7 +193,7 @@ begin
   update public.team_invites set revoked_at = now()
    where team_id = p_team_id and revoked_at is null;
 
-  -- TODO(알림 단계): 팀원 전원 team_dissolved 알림, 대기 신청자 "팀이 해체되었어요" 알림 (Q-067 8번)
+  -- (알림은 202611050029 에서 연결) 팀원 전원 team_dissolved 알림, 대기 신청자 "팀이 해체되었어요" 알림 (Q-067 8번)
   -- TODO(일정 단계): 다가오는 일정 취소, 남은 최근 10경기 상세 삭제 (3-8, Q-061 4번)
 end;
 $$;

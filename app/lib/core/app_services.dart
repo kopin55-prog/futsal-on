@@ -1,6 +1,7 @@
 import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
 import '../features/membership/data/membership_repository.dart';
+import '../features/notifications/data/notification_repository.dart';
 import '../features/profile/data/profile_repository.dart';
 import '../features/team/data/logo_picker.dart';
 import '../features/team/data/recent_team_store.dart';
@@ -21,6 +22,7 @@ class AppServices {
     required this.logos,
     required this.logoPicker,
     required this.places,
+    required this.notifications,
     this.entitlements = const Entitlements(),
   });
 
@@ -41,6 +43,9 @@ class AppServices {
 
   /// 지정 풋살장 검색 (서버 함수 place-search)
   final PlaceSearchRepository places;
+
+  /// 알림함 (본인 알림만, 화면은 스프린트 02 4단계)
+  final NotificationRepository notifications;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

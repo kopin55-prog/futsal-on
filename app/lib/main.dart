@@ -11,6 +11,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/auth_texts.dart';
 import 'features/membership/data/membership_repository.dart';
+import 'features/notifications/data/notification_repository.dart';
 import 'features/profile/data/profile_repository.dart';
 import 'features/team/data/logo_picker.dart';
 import 'features/team/data/recent_team_store.dart';
@@ -56,6 +57,7 @@ Future<void> main() async {
         logos: SupabaseTeamLogoRepository(client),
         logoPicker: DeviceLogoPicker(),
         places: SupabasePlaceSearchRepository(client),
+        notifications: SupabaseNotificationRepository(client),
       ),
       logoImages: (path) => _logoImage(client, config, path),
     ),

@@ -11,7 +11,7 @@
 //   KAKAO_ADMIN_KEY (카카오 연결 끊기용)
 //
 // 이 함수는 아직 배포하지 않았다 (배포에는 Supabase 액세스 토큰이 필요).
-// TODO(알림 단계): 팀원이 회원 탈퇴하면 그 팀 팀장·운영진에게 팀 탈퇴와 같은 알림 (Q-067 12번)
+// (알림은 202611050029 에서 연결) 팀원이 회원 탈퇴하면 그 팀 팀장·운영진에게 팀 탈퇴와 같은 알림 (Q-067 12번)
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { unlinkExternalIdentities } from '../_shared/unlink.ts';

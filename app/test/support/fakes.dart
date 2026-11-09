@@ -7,6 +7,8 @@ import 'package:futsal_on/features/admin/domain/skill_level.dart';
 import 'package:futsal_on/features/auth/data/account_repository.dart';
 import 'package:futsal_on/features/auth/domain/signup_consent.dart';
 import 'package:futsal_on/features/membership/data/membership_repository.dart';
+import 'package:futsal_on/features/notifications/data/notification_repository.dart';
+import 'package:futsal_on/features/notifications/domain/notification_models.dart';
 import 'package:futsal_on/features/profile/data/profile_repository.dart';
 import 'package:futsal_on/features/profile/domain/profile_validation.dart';
 import 'dart:typed_data';
@@ -377,6 +379,46 @@ class FakePlaceSearchRepository implements PlaceSearchRepository {
   }
 }
 
+/// 알림함 흉내. 읽음은 되돌릴 수 없고 처음 읽은 시각을 유지한다 (서버와 같게).
+class FakeNotificationRepository implements NotificationRepository {
+  FakeNotificationRepository({List<AppNotification>? items}) : items = items ?? [];
+
+  List<AppNotification> items;
+
+  AppNotification _read(AppNotification n) => n.isRead
+      ? n
+      : AppNotification(
+          id: n.id,
+          kind: n.kind,
+          teamId: n.teamId,
+          refType: n.refType,
+          refId: n.refId,
+          title: n.title,
+          body: n.body,
+          createdAt: n.createdAt,
+          readAt: DateTime.now(),
+        );
+
+  @override
+  Future<List<AppNotification>> listNotifications({int limit = 200}) async =>
+      ([...items]..sort((a, b) => b.createdAt.compareTo(a.createdAt))).take(limit).toList();
+
+  @override
+  Future<int> unreadCount() async => items.where((n) => !n.isRead).length;
+
+  @override
+  Future<void> markRead(String notificationId) async {
+    items = [for (final n in items) n.id == notificationId ? _read(n) : n];
+  }
+
+  @override
+  Future<int> markAllRead() async {
+    final count = items.where((n) => !n.isRead).length;
+    items = [for (final n in items) _read(n)];
+    return count;
+  }
+}
+
 class TestServices {
   TestServices({
     List<TeamSummary>? teams,
@@ -399,6 +441,7 @@ class TestServices {
   final logos = FakeTeamLogoRepository();
   final logoPicker = FakeLogoPicker();
   final places = FakePlaceSearchRepository();
+  final notifications = FakeNotificationRepository();
 
   AppServices get services => AppServices(
     profiles: profiles,
@@ -410,5 +453,6 @@ class TestServices {
     logos: logos,
     logoPicker: logoPicker,
     places: places,
+    notifications: notifications,
   );
 }

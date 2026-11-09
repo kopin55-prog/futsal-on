@@ -44,7 +44,7 @@ begin
      set status = 'cancelled', cancelled_at = now(), cancelled_by = v_uid
    where team_id = p_team_id and status = 'scheduled' and starts_at > now();
 
-  -- TODO(알림 단계): 팀원 전원 team_dissolved 알림(해체한 팀장 제외, Q-071 7번),
+  -- (알림은 202611050029 에서 연결) 팀원 전원 team_dissolved 알림(해체한 팀장 제외, Q-071 7번),
   --   대기 신청자 "팀이 해체되었어요" 알림 (Q-067 8번)
   -- TODO(스프린트 03): 남은 최근 10경기 상세 삭제 (Q-061 4번)
 end;

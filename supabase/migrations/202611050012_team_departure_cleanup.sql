@@ -45,7 +45,7 @@ begin
      set status = 'removed', ended_at = now(), ended_by = v_uid
    where team_id = p_team_id and user_id = p_user_id and status = 'active';
   perform private.cleanup_departed_member(p_team_id, p_user_id);
-  -- TODO(알림 단계): member_removed (Q-022)
+  -- (알림은 202611050029 에서 연결) member_removed (Q-022)
 end;
 $$;
 
@@ -72,7 +72,7 @@ begin
      set status = 'left', ended_at = now()
    where team_id = p_team_id and user_id = v_uid and status = 'active';
   perform private.cleanup_departed_member(p_team_id, v_uid);
-  -- TODO(알림 단계): member_left
+  -- (알림은 202611050029 에서 연결) member_left
 end;
 $$;
 

@@ -191,7 +191,7 @@ begin
   )
   returning id into v_id;
 
-  -- TODO(알림 단계): 새 일정 알림 (추가한 운영진 본인 제외, Q-071 7번)
+  -- (알림은 202611050029 에서 연결) 새 일정 알림 (추가한 운영진 본인 제외, Q-071 7번)
   return v_id;
 end;
 $$;
@@ -237,7 +237,7 @@ begin
      set status = 'cancelled', cancelled_at = now(), cancelled_by = v_uid, cancel_reason = v_reason
    where id = v_match.id;
 
-  -- TODO(알림 단계): 일정 취소 알림 — 참석·대기·불참 응답자 전원, 취소한 본인 제외, 사유 포함 (Q-071 7번, Q-072 5번).
+  -- (알림은 202611050029 에서 연결) 일정 취소 알림 — 참석·대기·불참 응답자 전원, 취소한 본인 제외, 사유 포함 (Q-071 7번, Q-072 5번).
 end;
 $$;
 

@@ -63,7 +63,7 @@ begin
            updated_at = clock_timestamp()
      where id = v_row.id;
     v_count := v_count + 1;
-    -- TODO(알림 단계): waitlist_promoted (승격된 본인, dedupe 키에 promoted_at, lead 정리 L-06)
+    -- (알림은 202611050029 에서 연결) waitlist_promoted (승격된 본인, dedupe 키에 promoted_at, lead 정리 L-06)
   end loop;
 
   return v_count;

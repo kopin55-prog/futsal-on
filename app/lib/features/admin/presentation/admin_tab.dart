@@ -20,7 +20,7 @@ import 'team_info_edit_screen.dart';
 /// 팀원 관리(운영진 지정·해제, 위임, 내보내기 — 팀장만), 팀 해체(팀장만).
 /// 버튼 노출은 Entitlements 로만 판단하고, 서버가 같은 규칙으로 다시 거절한다.
 ///
-/// TODO(알림 단계): 역할 변경·위임·내보내기·가입 처리·해체 알림 (Q-022, Q-067 8·15번).
+/// 역할 변경·위임·내보내기·가입 처리·해체 알림은 서버 함수가 같은 처리 안에서 만든다 (202611050029, Q-022, Q-067 8·15번).
 class AdminTab extends StatefulWidget {
   const AdminTab({
     required this.services,

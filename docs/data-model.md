@@ -1,6 +1,6 @@
 # 데이터 구조
 
-상태: **승인됨 (2026-11-05, v4.2, kopn)** (남은 보류: M-44 → Q-065, 애플 테스트 때) — **v4.3 추가 승인 2026-11-05 kopn (Q-072)**: `matches.cancel_reason`·`rsvp_reminder_at`, `team_settings.rsvp_reminder_hours`, 직접 추가 시 마감·알림 일정마다 선택 — v1 작성 2026-11-04 architect / v1 security 검토 2026-11-04 (13장) / v2·v3 수정 2026-11-04 architect / v4 수정 2026-11-05 architect / v4.1 수정 2026-11-05 lead (Q-060·Q-061 반영, 7-6·7-7 추가) / v4.2 수정 2026-11-05 architect (Q-063·Q-062 3번 반영)
+상태: **승인됨 (2026-11-05, v4.2, kopn)** (남은 보류: M-44 → Q-065, 애플 테스트 때) — **v4.4 추가 승인 2026-11-09 kopn (Q-073 2·3번)**: `match_guests.name` 선택, `guest_no`(일정 안 게스트 번호, 고정) 추가, 일정당 게스트 12명·같은 이름 불가 — **v4.3 추가 승인 2026-11-05 kopn (Q-072)**: `matches.cancel_reason`·`rsvp_reminder_at`, `team_settings.rsvp_reminder_hours`, 직접 추가 시 마감·알림 일정마다 선택 — v1 작성 2026-11-04 architect / v1 security 검토 2026-11-04 (13장) / v2·v3 수정 2026-11-04 architect / v4 수정 2026-11-05 architect / v4.1 수정 2026-11-05 lead (Q-060·Q-061 반영, 7-6·7-7 추가) / v4.2 수정 2026-11-05 architect (Q-063·Q-062 3번 반영)
 
 architect가 작성 → lead를 통해 kopn 승인 후 상태를 `승인됨 (날짜)`로 바꾼다. security 점검은 kopn이 요청할 때와 출시 직전에만 한다(v2~v4 변경분은 그때 함께 본다). 1차 검토(13장) 권고는 계속 지킨다.
 승인 전에는 builder가 테이블을 만들지 않는다. 이 문서의 SQL 마이그레이션은 아직 없다.
@@ -347,7 +347,7 @@ v4.2(Q-063): 인증된 같은 이메일로 들어온 로그인 방법은 모두 
 | logo_image_path | 글자 | 선택 | 업로드한 로고 사진의 저장 위치. 없으면 글자 로고 |
 | regular_weekday | 선택(월~일) | 선택 | 정기 운동 요일 (1개만) |
 | regular_start_time | 시각 | 선택 | 정기 운동 시작. 요일과 함께 입력 |
-| regular_end_time | 시각 | 선택 | 정기 운동 종료. 시작보다 늦어야 함 |
+| regular_end_time | 시각 | 선택(정기 운동일이 있으면 필수) | 정기 운동 종료. 시작보다 늦어야 함. 화면은 시작 2시간 뒤로 기본 채움 `[결정됨 Q-073 8번]` |
 | venue_name | 글자 | 선택 | 지정 풋살장 이름 (카카오맵 검색 결과 또는 직접 입력) |
 | venue_address | 글자 | 선택 | 주소 |
 | venue_lat / venue_lng | 숫자(소수) | 선택 | 위치 좌표 (지도 검색으로 골랐을 때) |

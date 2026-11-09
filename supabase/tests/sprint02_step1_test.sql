@@ -326,13 +326,17 @@ insert into t_vars select 'G', public.create_team('지FC', 3::smallint, '10:00',
 -- 팀 H: 금 22:00~00:30 (자정 넘김), 정원 10
 insert into t_vars select 'H', public.create_team('에이치FC', 5::smallint, '22:00', '00:30')::text;
 select public.update_team_settings(pg_temp.vid('H'), 10, 2, 6, '09:00', 2);
--- 팀 N: 종료 시각 없음 / 팀 W: 요일만
-insert into t_vars select 'N', public.create_team('엔FC', 3::smallint, '10:00', null)::text;
+-- 팀 N: 종료 시각 없음(Q-073 8번 이후 새로 정할 수 없어 이전 데이터로 흉내, 아래) / 팀 W: 요일만
+insert into t_vars select 'N', public.create_team('엔FC', 3::smallint, null, null)::text;
 insert into t_vars select 'W', public.create_team('더블유FC', 3::smallint, null, null)::text;
 -- 팀 T: 수 10:00~12:00, 13일 전 생성 → 한 번에 두 주
 insert into t_vars select 'T', public.create_team('티FC', 3::smallint, '10:00', '12:00')::text;
 select public.update_team_settings(pg_temp.vid('T'), null, 2, 13, '09:00', 2);
 reset role;
+-- 팀 N: 종료 시각이 비어 있는 이전 데이터 (202611050034 전에 저장된 팀)
+alter table public.teams disable trigger teams_regular_end_required;
+update public.teams set regular_start_time = '10:00' where id = pg_temp.vid('N');
+alter table public.teams enable trigger teams_regular_end_required;
 
 -- 2027-01-06(수) 경기 → 생성 2026-12-31(목) 09:00, 마감 2027-01-06 08:00
 select pg_temp.check(private.generate_auto_matches_for_team(pg_temp.vid('G'), '2026-12-31 08:59+09') = 0, 'G: before create time → none');

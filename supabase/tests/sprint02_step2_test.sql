@@ -283,9 +283,7 @@ insert into t_vars select 'g3', public.add_match_guest(pg_temp.vid('m1'), '여�
 insert into t_vars select 'g4', public.add_match_guest(pg_temp.vid('m1'), '👨‍👩‍👧가족')::text;
 -- 이름 규칙 (SB-42)
 select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), '아홉글자이름입니다')$$, 'invalid_guest_name');
-select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), '   ')$$, 'invalid_guest_name');
-select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), chr(8203))$$, 'invalid_guest_name');
-select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), null)$$, 'invalid_guest_name');
+-- (Q-073 2번) 이름을 비우면(공백만·보이지 않는 문자만·null) 이제 "게스트N" 으로 추가된다 → sprint02_step4_test.sql
 select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), '줄'||chr(10)||'바꿈')$$, 'invalid_guest_name');
 -- 포지션 4개·중복 (SB-41)
 select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('m1'), '넷', array['goalkeeper', 'defender', 'winger', 'forward']::public.play_position[])$$, 'invalid_positions');

@@ -57,6 +57,12 @@ enum ServerErrorCode {
   guestLimitReached('guest_limit_reached'),
   duplicateGuestName('duplicate_guest_name'),
   reservedGuestName('reserved_guest_name'),
+  // 팀 배치 (save_lineup)
+  lineupNotOpen('lineup_not_open'),
+  matchAlreadyEnded('match_already_ended'),
+  lineupConflict('lineup_conflict'),
+  invalidLineup('invalid_lineup'),
+  invalidLineupSlot('invalid_lineup_slot'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

@@ -138,6 +138,10 @@ class Entitlements {
       case AttendanceListInfo():
         return true;
 
+      case LineupInfo(:final confirmed):
+        // 팀장·운영진은 작성 중(초안)도, 팀원은 확정된 배치만 (스프린트 03 1-1, 서버 권한 규칙과 같음).
+        return confirmed || role.isStaff;
+
       case VoteWinnerInfo():
         return true;
 

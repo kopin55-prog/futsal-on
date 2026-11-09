@@ -25,8 +25,10 @@ import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
 import 'package:futsal_on/shared/domain/venue.dart';
 
+import 'lineup_fakes.dart';
 import 'schedule_fakes.dart';
 
+export 'lineup_fakes.dart';
 export 'schedule_fakes.dart';
 
 /// 화면 테스트용 메모리 저장소. 서버 규칙은 필요한 만큼만 흉내 낸다.
@@ -88,6 +90,15 @@ class FakeTeamRepository implements TeamRepository {
     positions: [Position.forward],
     isDedicatedGk: false,
   );
+
+  /// 팀 나누기 계산용 선호 포지션·전문 골키퍼 (테스트가 채움)
+  final Map<String, PlayPrefs> playPrefs = {};
+
+  @override
+  Future<Map<String, PlayPrefs>> listPlayPrefs(List<String> userIds) async => {
+    for (final id in userIds)
+      if (playPrefs[id] case final p?) id: p,
+  };
 
   @override
   Future<void> leaveTeam(String teamId) async {
@@ -454,6 +465,7 @@ class TestServices {
   final matches = FakeMatchRepository();
   late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId);
   final guests = FakeGuestRepository();
+  final lineups = FakeLineupRepository();
 
   /// 휴대폰 푸시 (없으면 푸시 없음)
   PushController? push;
@@ -475,6 +487,7 @@ class TestServices {
     matches: matches,
     attendance: attendance,
     guests: guests,
+    lineups: lineups,
     push: push,
   );
 }

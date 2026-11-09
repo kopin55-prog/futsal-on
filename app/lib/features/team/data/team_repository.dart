@@ -26,6 +26,9 @@ abstract interface class TeamRepository {
   /// 선호 포지션·전문 골키퍼. 권한이 없으면(일반 팀원이 남의 것) null.
   Future<PlayPrefs?> getPlayPrefs(String userId);
 
+  /// 여러 사람의 선호 포지션·전문 골키퍼 (팀 나누기 계산용, 관리자만 읽힘). 읽을 수 없는 사람은 빠진다.
+  Future<Map<String, PlayPrefs>> listPlayPrefs(List<String> userIds);
+
   Future<void> leaveTeam(String teamId);
 
   Future<void> dissolveTeam(String teamId, String confirmName);
@@ -149,6 +152,24 @@ class SupabaseTeamRepository implements TeamRepository {
       ],
       isDedicatedGk: row['is_dedicated_gk'] as bool,
     );
+  });
+
+  @override
+  Future<Map<String, PlayPrefs>> listPlayPrefs(List<String> userIds) => guardServer(() async {
+    if (userIds.isEmpty) return const {};
+    final rows = await _client
+        .from('profile_play_prefs')
+        .select('user_id, positions, is_dedicated_gk')
+        .inFilter('user_id', userIds);
+    return {
+      for (final row in rows)
+        row['user_id'] as String: PlayPrefs(
+          positions: [
+            for (final p in row['positions'] as List) Position.values.byName(p as String),
+          ],
+          isDedicatedGk: row['is_dedicated_gk'] as bool,
+        ),
+    };
   });
 
   @override

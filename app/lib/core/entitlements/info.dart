@@ -78,6 +78,13 @@ final class LineupChangeHistoryInfo extends Info {
   const LineupChangeHistoryInfo();
 }
 
+/// 일정의 팀 배치 (팀 블록·교체 블록 명단). [confirmed] = 확정된 배치인지.
+/// 실력 등급·점수·전문 GK 표시는 배치에 없다 (Q-075 5·6번).
+final class LineupInfo extends Info {
+  const LineupInfo({required this.confirmed});
+  final bool confirmed;
+}
+
 /// 게스트의 포지션. 팀 단위.
 final class GuestPositionInfo extends Info {
   const GuestPositionInfo();

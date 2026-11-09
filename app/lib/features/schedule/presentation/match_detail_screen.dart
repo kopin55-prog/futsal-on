@@ -7,6 +7,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_texts.dart';
+import '../../lineup/domain/lineup_models.dart';
+import '../../lineup/presentation/lineup_editor_screen.dart';
+import '../../lineup/presentation/lineup_section.dart';
 import '../../profile/presentation/profile_texts.dart';
 import '../../team/domain/team_models.dart';
 import '../domain/attendance_models.dart';
@@ -24,6 +27,7 @@ import 'schedule_texts.dart';
 /// - 게스트: 이름 뒤 "게스트" 상자. 포지션·대략 실력은 팀장·운영진만 (GuestPositionInfo).
 /// - 운영진 버튼(일정 취소·게스트 추가·삭제)은 TeamAction.manageSchedule 일 때만.
 /// - 취소된 일정은 "취소됨 + 사유" (Q-073 4번).
+/// - 팀 배치 (스프린트 03 3-1·3-4): [LineupSection]. 운영진은 [LineupEditorScreen] 으로 팀 나누기.
 class MatchDetailScreen extends StatefulWidget {
   const MatchDetailScreen({
     required this.services,
@@ -55,6 +59,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   Map<String, String> _members = const {};
   List<MatchGuest> _guests = const [];
   Map<String, MatchGuestDetail> _guestDetails = const {};
+  Lineup? _lineup;
   bool _loading = true;
   bool _missing = false;
   bool _failed = false;
@@ -87,6 +92,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       final members = await _s.teams.listMembers(match.teamId);
       final guests = await _s.guests.listGuests(match.id);
       final details = _canSeeGuestDetails ? await _s.guests.listGuestDetails(match.id) : const <MatchGuestDetail>[];
+      final lineup = await _s.lineups.getLineup(match.id);
       if (!mounted) return;
       setState(() {
         _match = match;
@@ -94,6 +100,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         _members = {for (final m in members) m.userId: m.displayName};
         _guests = guests;
         _guestDetails = {for (final d in details) d.id: d};
+        _lineup = lineup;
         _missing = false;
       });
     } on ServerFailure {
@@ -147,6 +154,30 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       builder: (_) => GuestAddSheet(guests: _s.guests, matchId: m.id, existing: _guests),
     );
     if (added == true) await _load();
+  }
+
+  Future<void> _openLineupEditor() async {
+    final m = _match;
+    if (m == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LineupEditorScreen(
+          services: _s,
+          team: widget.team,
+          viewer: widget.viewer,
+          match: m,
+          now: widget.now,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  String _lineupName(LineupPerson p) {
+    if (p.isGuest) {
+      return _guests.where((g) => g.id == p.guestId).firstOrNull?.displayName ?? ScheduleTexts.guest;
+    }
+    return _members[p.userId] ?? ScheduleTexts.leftMember;
   }
 
   Future<void> _removeGuest(MatchGuest g) async {
@@ -362,6 +393,17 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.xs),
           child: Text(ScheduleTexts.guestNote, style: theme.textTheme.bodySmall),
+        ),
+        // ---- 팀 배치
+        AppSpacing.sectionGap,
+        LineupSection(
+          match: m,
+          lineup: _lineup,
+          viewer: widget.viewer,
+          entitlements: _e,
+          nameOf: _lineupName,
+          now: now,
+          onOpenEditor: _openLineupEditor,
         ),
         // ---- 운영진: 일정 취소
         if (canManage && m.canBeCancelledAt(now)) ...[

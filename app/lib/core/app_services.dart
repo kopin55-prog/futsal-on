@@ -1,5 +1,6 @@
 import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
+import '../features/lineup/data/lineup_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/notifications/data/notification_repository.dart';
 import '../features/notifications/data/push_controller.dart';
@@ -30,6 +31,7 @@ class AppServices {
     required this.matches,
     required this.attendance,
     required this.guests,
+    required this.lineups,
     this.push,
     this.entitlements = const Entitlements(),
   });
@@ -63,6 +65,9 @@ class AppServices {
 
   /// 게스트 (이름: 팀원, 포지션·대략 실력·추가·삭제: 관리자)
   final GuestRepository guests;
+
+  /// 팀 배치 (읽기: 관리자는 항상·팀원은 확정만, 저장·확정·수정: 관리자)
+  final LineupRepository lineups;
 
   /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
   final PushController? push;

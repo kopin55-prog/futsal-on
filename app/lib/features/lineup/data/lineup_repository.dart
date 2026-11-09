@@ -13,6 +13,10 @@ abstract interface class LineupRepository {
   /// 그 일정의 배치. 없거나 읽을 수 없으면 null.
   Future<Lineup?> getLineup(String matchId);
 
+  /// 팀 수·팀당 인원 처음 값용 (Q-075 7번 (4)): 이 팀에서 [before] 전에 시작한 다른 일정 중 가장 최근 배치의 값.
+  /// 없으면 null. 관리자만 읽힌다 (초안 포함).
+  Future<({int teams, int players})?> lastLineupSize(String teamId, {required DateTime before, required String excludeMatchId});
+
   /// 통째로 저장. [expectedUpdatedAt] = 마지막으로 읽은 [Lineup.updatedAt] (처음 만들 때 null).
   /// [confirm] 이면 확정 (이미 확정이면 무시, 확정 취소는 없음).
   Future<LineupSaveResult> saveLineup(
@@ -46,6 +50,27 @@ class SupabaseLineupRepository implements LineupRepository {
         .select(Lineup.slotColumns)
         .eq('lineup_id', lineupId);
     return Lineup.fromRows(row, squads, slots);
+  });
+
+  @override
+  Future<({int teams, int players})?> lastLineupSize(
+    String teamId, {
+    required DateTime before,
+    required String excludeMatchId,
+  }) => guardServer(() async {
+    final rows = await _client
+        .from('lineups')
+        .select('match_id, team_count, players_per_team, matches!inner(team_id, starts_at)')
+        .eq('matches.team_id', teamId)
+        .lt('matches.starts_at', before.toUtc().toIso8601String())
+        .neq('match_id', excludeMatchId);
+    // 일정 시작 시각 순 정렬은 앱에서 (최근 10경기 정리로 줄 수가 적다)
+    DateTime startsAt(Map<String, dynamic> r) =>
+        DateTime.parse((r['matches'] as Map<String, dynamic>)['starts_at'] as String);
+    final sorted = [...rows]..sort((a, b) => startsAt(b).compareTo(startsAt(a)));
+    if (sorted.isEmpty) return null;
+    final r = sorted.first;
+    return (teams: r['team_count'] as int, players: r['players_per_team'] as int);
   });
 
   @override

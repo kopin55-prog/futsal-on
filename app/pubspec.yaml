@@ -26,6 +26,10 @@ dependencies:
   # 로고 사진 고르기·정사각형 자르기 (Q-068 1번 승인). 위치 정보 제거·축소는 앱 코드(dart:ui)로 다시 인코딩.
   image_picker: ^1.2.4
   image_cropper: ^12.2.1
+  # 안드로이드 푸시 받기 (Q-031 허용). 설정 파일 android/app/google-services.json 은 git 제외.
+  # 설정 파일이 없으면(테스트·CI) 푸시만 꺼지고 앱은 그대로 동작한다 (FirebasePushMessaging.tryCreate).
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
 
 dev_dependencies:
   flutter_test:

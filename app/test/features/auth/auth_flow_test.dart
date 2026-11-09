@@ -69,8 +69,16 @@ class FakeProfileRepository implements ProfileRepository {
       throw UnimplementedError();
 }
 
-Widget _app(AuthRepository auth, ProfileRepository profile) => MaterialApp(
-  home: AuthGate(authRepository: auth, profileRepository: profile),
+Widget _app(
+  AuthRepository auth,
+  ProfileRepository profile, {
+  Future<void> Function()? onProfileCreated,
+}) => MaterialApp(
+  home: AuthGate(
+    authRepository: auth,
+    profileRepository: profile,
+    onProfileCreated: onProfileCreated,
+  ),
 );
 
 void _tallScreen(WidgetTester tester) {
@@ -303,5 +311,47 @@ void main() {
     await tester.tap(find.text(AuthTempTexts.signOut));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('login-kakao')), findsOneWidget);
+  });
+
+  group('알림 권한 요청 (Q-071 13번)', () {
+    testWidgets('프로필 만든 직후 한 번 요청하고 홈으로. 요청이 실패해도 홈', (tester) async {
+      _tallScreen(tester);
+      var asked = 0;
+      await tester.pumpWidget(
+        _app(
+          FakeAuthRepository(currentUserId: 'u'),
+          FakeProfileRepository(),
+          onProfileCreated: () async {
+            asked++;
+            throw StateError('permission dialog failed');
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(asked, 0);
+      await _tapVisible(tester, find.byKey(const Key('consent-all')));
+      await _tapVisible(tester, find.byKey(const Key('consent-next')));
+      expect(asked, 0);
+      await tester.enterText(find.byKey(const Key('profile-name')), '철수');
+      await _tapVisible(tester, find.byKey(const Key('profile-position-forward')));
+      await _tapVisible(tester, find.byKey(const Key('profile-submit')));
+      expect(asked, 1);
+      expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+    });
+
+    testWidgets('이미 프로필이 있는 계정(다음 실행·재로그인)은 묻지 않는다', (tester) async {
+      _tallScreen(tester);
+      var asked = 0;
+      await tester.pumpWidget(
+        _app(
+          FakeAuthRepository(currentUserId: 'u'),
+          FakeProfileRepository(hasProfile: true),
+          onProfileCreated: () async => asked++,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+      expect(asked, 0);
+    });
   });
 }

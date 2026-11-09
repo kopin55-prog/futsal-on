@@ -2,6 +2,7 @@ import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/notifications/data/notification_repository.dart';
+import '../features/notifications/data/push_controller.dart';
 import '../features/profile/data/profile_repository.dart';
 import '../features/schedule/data/attendance_repository.dart';
 import '../features/schedule/data/guest_repository.dart';
@@ -29,6 +30,7 @@ class AppServices {
     required this.matches,
     required this.attendance,
     required this.guests,
+    this.push,
     this.entitlements = const Entitlements(),
   });
 
@@ -61,6 +63,9 @@ class AppServices {
 
   /// 게스트 (이름: 팀원, 포지션·대략 실력·추가·삭제: 관리자)
   final GuestRepository guests;
+
+  /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
+  final PushController? push;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

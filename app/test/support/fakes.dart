@@ -19,6 +19,7 @@ import 'package:futsal_on/features/team/data/recent_team_store.dart';
 import 'package:futsal_on/features/team/data/team_logo_repository.dart';
 import 'package:futsal_on/features/team/data/team_repository.dart';
 import 'package:futsal_on/features/team/domain/team_models.dart';
+import 'package:futsal_on/features/notifications/data/push_controller.dart';
 import 'package:futsal_on/features/venue/data/place_search_repository.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
@@ -408,6 +409,10 @@ class FakeNotificationRepository implements NotificationRepository {
       ([...items]..sort((a, b) => b.createdAt.compareTo(a.createdAt))).take(limit).toList();
 
   @override
+  Future<AppNotification?> getNotification(String notificationId) async =>
+      items.where((n) => n.id == notificationId).firstOrNull;
+
+  @override
   Future<int> unreadCount() async => items.where((n) => !n.isRead).length;
 
   @override
@@ -450,6 +455,9 @@ class TestServices {
   late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId);
   final guests = FakeGuestRepository();
 
+  /// 휴대폰 푸시 (없으면 푸시 없음)
+  PushController? push;
+
   /// 참석 응답을 하는 로그인 사용자 (화면 테스트)
   String currentUserId = 'me';
 
@@ -467,5 +475,6 @@ class TestServices {
     matches: matches,
     attendance: attendance,
     guests: guests,
+    push: push,
   );
 }

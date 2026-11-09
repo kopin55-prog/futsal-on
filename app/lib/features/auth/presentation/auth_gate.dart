@@ -22,6 +22,7 @@ class AuthGate extends StatefulWidget {
     required this.authRepository,
     required this.profileRepository,
     this.homeBuilder,
+    this.onProfileCreated,
     super.key,
   });
 
@@ -31,6 +32,10 @@ class AuthGate extends StatefulWidget {
   /// 가입을 마친 뒤 첫 화면 (팀 홈). 없으면 자리 화면.
   final Widget Function(String userId, Future<void> Function() signOut)?
   homeBuilder;
+
+  /// 프로필을 만든 직후 한 번 (홈으로 가기 전). 알림 권한 요청에 쓴다 (Q-071 13번).
+  /// 실패해도 홈으로 간다.
+  final Future<void> Function()? onProfileCreated;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -86,6 +91,15 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _signOut() => widget.authRepository.signOut();
 
+  Future<void> _afterProfileCreated() async {
+    try {
+      await widget.onProfileCreated?.call();
+    } catch (_) {
+      // 권한 요청이 실패해도 가입은 끝났다
+    }
+    if (mounted) setState(() => _stage = _Stage.home);
+  }
+
   @override
   Widget build(BuildContext context) {
     return switch (_stage) {
@@ -109,7 +123,7 @@ class _AuthGateState extends State<AuthGate> {
         child: ProfileCreateScreen(
           profileRepository: widget.profileRepository,
           consent: _consent,
-          onCreated: () => setState(() => _stage = _Stage.home),
+          onCreated: () => unawaited(_afterProfileCreated()),
         ),
       ),
       _Stage.home =>

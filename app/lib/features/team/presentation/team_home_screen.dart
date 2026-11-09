@@ -9,7 +9,10 @@ import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_tab.dart';
 import '../../membership/presentation/team_find_screen.dart';
+import '../../notifications/domain/notification_models.dart';
+import '../../notifications/domain/push_message.dart';
 import '../../notifications/presentation/notification_inbox_screen.dart';
+import '../../notifications/presentation/notification_navigation.dart';
 import '../../profile/presentation/my_tab.dart';
 import '../../schedule/presentation/schedule_tab.dart';
 import '../../schedule/presentation/schedule_texts.dart';
@@ -26,6 +29,9 @@ import 'team_texts.dart';
 /// - 있으면 가장 최근에 본 팀을 연다. 팀 이름을 누르면 팀 전환.
 /// - 팀을 떠나거나 해체하면 가장 최근에 본 다른 팀, 없으면 홈 (Q-067 6번).
 /// - 위쪽 종 모양: 모든 팀 알림의 안 읽은 개수. 화면을 열 때·알림함에서 돌아올 때·팀 목록을 다시 읽을 때 갱신 (4-3).
+/// - 휴대폰 푸시 (5-1·5-3): 이 화면이 열릴 때(= 로그인할 때마다) 기기를 등록하고, 로그아웃·회원 탈퇴 직전에 해제한다.
+///   앱 사용 중 도착한 푸시는 앱 안 짧은 안내 + 안 읽은 개수 갱신 (Q-071 13번).
+///   휴대폰 알림을 눌러 들어오면 알림함과 같은 이동 + 읽음 처리 ([openNotification]).
 class TeamHomeScreen extends StatefulWidget {
   const TeamHomeScreen({
     required this.services,
@@ -53,12 +59,91 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
   String? _openTab;
   int _shellNonce = 0;
 
+  /// 팀 목록을 읽기 전에 누른 푸시 (읽은 뒤 처리)
+  PushMessage? _pendingPush;
+  final List<StreamSubscription<PushMessage>> _pushSubs = [];
+
   AppServices get _s => widget.services;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _startPush();
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _pushSubs) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+
+  void _startPush() {
+    final push = _s.push;
+    if (push == null) return;
+    unawaited(push.start());
+    _pushSubs
+      ..add(push.foregroundMessages.listen(_onForegroundPush))
+      ..add(push.openedMessages.listen((m) => unawaited(_openPush(m))));
+    unawaited(
+      push.takeInitialMessage().then((m) {
+        if (m != null) return _openPush(m);
+      }),
+    );
+  }
+
+  /// 로그아웃·회원 탈퇴: 이 기기 주소를 먼저 지운다 (로그인 상태여야 본인 줄을 지울 수 있다).
+  Future<void> _signOut() async {
+    await _s.push?.stop();
+    await widget.onSignOut();
+  }
+
+  /// 앱 사용 중 도착: 휴대폰 알림 대신 앱 안 짧은 안내 + 안 읽은 개수 갱신 (Q-071 13번).
+  void _onForegroundPush(PushMessage m) {
+    if (!mounted) return;
+    final text = m.inAppText;
+    if (text.isNotEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(key: const Key('push-in-app'), content: Text(text)));
+    }
+    unawaited(_refreshUnread());
+  }
+
+  /// 휴대폰 알림을 눌러 들어옴: 알림함 줄을 다시 읽어 알림함과 같은 이동 + 읽음 처리.
+  Future<void> _openPush(PushMessage m) async {
+    if (!mounted) return;
+    final teams = _teams;
+    if (teams == null) {
+      _pendingPush = m;
+      return;
+    }
+    AppNotification? n;
+    try {
+      n = await _s.notifications.getNotification(m.notificationId);
+    } on ServerFailure {
+      n = null;
+    }
+    if (!mounted) return;
+    if (n != null) {
+      // 다른 화면 위에 있었으면 팀 화면으로 돌아와서 연다 (알림함에서 누른 것과 같게)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      final target = await openNotification(
+        context,
+        services: _s,
+        userId: widget.userId,
+        myTeams: teams,
+        notification: n,
+      );
+      if (target != null && mounted) {
+        _openTab = target.openAdmin ? _TeamShell.adminTab : null;
+        _shellNonce++;
+        await _switchTo(target.teamId);
+      }
+    }
+    await _refreshUnread();
   }
 
   /// 팀 목록을 다시 읽는다. [open] 이 있으면 그 팀을, [forget] 이 있으면 그 팀을 기록에서 빼고 고른다.
@@ -82,6 +167,9 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
         _recent = recent;
         _currentId = picked;
       });
+      final pending = _pendingPush;
+      _pendingPush = null;
+      if (pending != null) unawaited(_openPush(pending));
     } on ServerFailure {
       if (mounted) setState(() => _failed = true);
     }
@@ -209,7 +297,7 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
       return _NoTeamView(
         onCreate: _openCreate,
         onFind: _openFind,
-        onSignOut: widget.onSignOut,
+        onSignOut: _signOut,
         bell: NotificationBell(unread: _unread, onPressed: _openInbox),
       );
     }
@@ -225,7 +313,7 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
       onTapTitle: _showSwitcher,
       onLeftTeam: () => _load(forget: current.id),
       onTeamChanged: _load,
-      onSignOut: widget.onSignOut,
+      onSignOut: _signOut,
     );
   }
 }

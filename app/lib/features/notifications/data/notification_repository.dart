@@ -15,6 +15,9 @@ abstract interface class NotificationRepository {
   /// 알림함 보관 기간 (Q-041).
   static const int keepDays = 30;
 
+  /// 알림 하나 (휴대폰 푸시를 눌렀을 때). 내 알림이 아니거나 이미 지워졌으면 null.
+  Future<AppNotification?> getNotification(String notificationId);
+
   /// 안 읽은 알림 수 (모든 팀 합계).
   Future<int> unreadCount();
 
@@ -43,6 +46,16 @@ class SupabaseNotificationRepository implements NotificationRepository {
         .order('id')
         .limit(limit);
     return [for (final r in rows) AppNotification.fromRow(r)];
+  });
+
+  @override
+  Future<AppNotification?> getNotification(String notificationId) => guardServer(() async {
+    final row = await _client
+        .from('notifications')
+        .select(AppNotification.columns)
+        .eq('id', notificationId)
+        .maybeSingle();
+    return row == null ? null : AppNotification.fromRow(row);
   });
 
   @override

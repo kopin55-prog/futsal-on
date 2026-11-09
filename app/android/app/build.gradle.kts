@@ -4,6 +4,13 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") apply false
+}
+
+// 푸시(FCM): google-services.json(git 제외, docs/dev-accounts.md 5장)이 있을 때만 적용한다.
+// 없으면(테스트·CI) 빌드는 되고 앱은 푸시 없이 동작한다 (FirebasePushMessaging.tryCreate).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 // --dart-define(-from-file) 값은 Flutter 가 base64 로 묶어 "dart-defines" 속성으로 넘긴다.

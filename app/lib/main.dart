@@ -11,7 +11,10 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/auth_texts.dart';
 import 'features/membership/data/membership_repository.dart';
+import 'features/notifications/data/device_token_repository.dart';
 import 'features/notifications/data/notification_repository.dart';
+import 'features/notifications/data/push_controller.dart';
+import 'features/notifications/data/push_messaging.dart';
 import 'features/profile/data/profile_repository.dart';
 import 'features/schedule/data/attendance_repository.dart';
 import 'features/schedule/data/guest_repository.dart';
@@ -43,6 +46,11 @@ Future<void> main() async {
     publishableKey: config.supabaseAnonKey,
   );
   final client = Supabase.instance.client;
+  // 푸시: google-services.json 이 없는 환경이면 푸시만 꺼진다 (5-1)
+  final push = PushController(
+    messaging: await FirebasePushMessaging.tryCreate(),
+    tokens: SupabaseDeviceTokenRepository(client),
+  );
 
   runApp(
     FutsalOnApp(
@@ -64,6 +72,7 @@ Future<void> main() async {
         matches: SupabaseMatchRepository(client),
         attendance: SupabaseAttendanceRepository(client),
         guests: SupabaseGuestRepository(client),
+        push: push,
       ),
       logoImages: (path) => _logoImage(client, config, path),
     ),
@@ -107,6 +116,7 @@ class FutsalOnApp extends StatelessWidget {
       home: AuthGate(
         authRepository: authRepository,
         profileRepository: services.profiles,
+        onProfileCreated: services.push?.requestPermission,
         homeBuilder: (userId, signOut) => TeamHomeScreen(
           key: ValueKey(userId),
           services: services,

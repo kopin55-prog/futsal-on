@@ -116,6 +116,19 @@ void main() {
     });
   });
 
+  group('일정 추가 종료 기본값: 시작 2시간 뒤 (Q-074 4번)', () {
+    test('같은 날', () {
+      expect(MatchInput.defaultEndTime(const ClockTime(19, 30)), const ClockTime(21, 30));
+      expect(MatchInput.defaultEndDate(const CalendarDate(2026, 1, 31), const ClockTime(21, 59)), const CalendarDate(2026, 1, 31));
+    });
+    test('자정을 넘기면 종료 날짜는 다음날 (월·해 넘김 포함)', () {
+      expect(MatchInput.defaultEndTime(const ClockTime(23, 0)), const ClockTime(1, 0));
+      expect(MatchInput.defaultEndDate(const CalendarDate(2026, 1, 31), const ClockTime(22, 0)), const CalendarDate(2026, 2, 1));
+      expect(MatchInput.defaultEndDate(const CalendarDate(2026, 1, 31), const ClockTime(23, 59)), const CalendarDate(2026, 2, 1));
+      expect(MatchInput.defaultEndDate(const CalendarDate(2026, 12, 31), const ClockTime(23, 0)), const CalendarDate(2027, 1, 1));
+    });
+  });
+
   group('직접 추가 화면 검사 (서버 create_match 와 같은 규칙)', () {
     // 2027-01-06 09:00 KST = 2027-01-06 00:00 UTC
     final now = DateTime.utc(2027, 1, 6);

@@ -79,7 +79,7 @@ class _GuestAddSheetState extends State<GuestAddSheet> {
     final errors = _errors;
     final nameError = errors
         .where((e) => e == GuestInputError.nameTooLong || e == GuestInputError.nameHasLineBreak ||
-            e == GuestInputError.duplicateName)
+            e == GuestInputError.reservedName || e == GuestInputError.duplicateName)
         .map(ScheduleTexts.guestError)
         .firstOrNull;
     return Padding(

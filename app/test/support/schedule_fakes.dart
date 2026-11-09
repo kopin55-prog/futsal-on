@@ -177,6 +177,9 @@ class FakeGuestRepository implements GuestRepository {
     if (errors.contains(GuestInputError.tooManyGuests)) {
       throw const ServerFailure(ServerErrorCode.guestLimitReached);
     }
+    if (errors.contains(GuestInputError.reservedName)) {
+      throw const ServerFailure(ServerErrorCode.reservedGuestName);
+    }
     if (errors.contains(GuestInputError.duplicateName)) {
       throw const ServerFailure(ServerErrorCode.duplicateGuestName);
     }

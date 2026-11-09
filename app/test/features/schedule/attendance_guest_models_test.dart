@@ -143,12 +143,26 @@ void main() {
     test('같은 일정 안 같은 표시 이름 불가, 최대 12명 (Q-073 3번)', () {
       final existing = [_guest(1), _guest(2, '김 철수')];
       expect(const GuestInput(name: ' 김  철수').validate(existing: existing), {GuestInputError.duplicateName});
-      expect(const GuestInput(name: '게스트1').validate(existing: existing), {GuestInputError.duplicateName});
+      expect(const GuestInput(name: '게스트1').validate(existing: existing),
+          {GuestInputError.reservedName, GuestInputError.duplicateName});
       expect(const GuestInput().validate(existing: existing), isEmpty);
       // 다음 번호(3) 의 기본 이름 "게스트3" 을 누가 이미 쓰고 있으면 이름을 적어야 한다
       expect(const GuestInput().validate(existing: [_guest(1), _guest(2, '게스트3')]), {GuestInputError.duplicateName});
       final full = [for (var i = 1; i <= 12; i++) _guest(i, '이름$i')];
       expect(const GuestInput(name: '열셋').validate(existing: full), {GuestInputError.tooManyGuests});
+    });
+
+    test('"게스트+숫자" 모양 이름 불가 (Q-074 2번): 정리 후 공백을 빼고 판단', () {
+      for (final n in ['게스트6', ' 게스트 6 ', '게스트​12', '게스트06', '게스트0', '게스트６', '게스트　７']) {
+        expect(isReservedGuestName(n), isTrue, reason: n);
+        expect(GuestInput(name: n).validate(), {GuestInputError.reservedName}, reason: n);
+      }
+      for (final n in ['게스트', '게스트A', '게스트6번', '김게스트6', '6게스트', '게 스트']) {
+        expect(isReservedGuestName(n), isFalse, reason: n);
+        expect(GuestInput(name: n).validate(), isEmpty, reason: n);
+      }
+      // 지금 그 번호의 게스트가 없어도 불가
+      expect(const GuestInput(name: '게스트9').validate(existing: const []), {GuestInputError.reservedName});
     });
 
     test('이름 규칙: 선택, 적으면 정리 후 1~8자, 줄바꿈 불가', () {

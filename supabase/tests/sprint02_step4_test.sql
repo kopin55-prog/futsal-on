@@ -150,19 +150,32 @@ select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '�
 select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '줄'||chr(10)||'바꿈')$$, 'invalid_guest_name');
 -- 같은 표시 이름 불가: 적은 이름끼리, 적은 이름과 "게스트N"
 select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '김 철수')$$, 'duplicate_guest_name');
-select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '게스트2')$$, 'duplicate_guest_name');
--- 5번에 "게스트6" 이라는 이름을 적으면, 다음 이름 없는 게스트(6번 = "게스트6")는 겹쳐서 이름을 적어야 한다
-insert into t_vars select 'g5', public.add_match_guest(pg_temp.vid('g'), '게스트6')::text;
-select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), null)$$, 'duplicate_guest_name');
+-- "게스트+숫자" 모양 이름 불가 (Q-074 2번): 정리 뒤 공백을 빼고 판단, 전각 숫자 포함. 지금 있든 없든 불가
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '게스트2')$$, 'reserved_guest_name');
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '게스트6')$$, 'reserved_guest_name');
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '  게스트 6 ')$$, 'reserved_guest_name');
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), chr(8203)||'게스트'||chr(8203)||'12')$$, 'reserved_guest_name');
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '게스트06')$$, 'reserved_guest_name');
+select pg_temp.expect_error($$select public.add_match_guest(pg_temp.vid('g'), '게스트６')$$, 'reserved_guest_name');
+reset role;
+select pg_temp.check(private.is_reserved_guest_name('게스트 6') and not private.is_reserved_guest_name('게스트')
+  and not private.is_reserved_guest_name('게스트A') and not private.is_reserved_guest_name('게스트6번')
+  and not private.is_reserved_guest_name('김게스트6'), 'reserved shape rule');
+-- 서버 권한 직접 넣기도 표 검사로 거절
+select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name, added_by)
+  values (pg_temp.vid('g'), pg_temp.vid('P'), '게스트9', pg_temp.u(2))$$, '%match_guests_name_not_reserved%');
+set local role authenticated;
+select pg_temp.login(pg_temp.u(2));
+-- 비슷하지만 다른 모양은 가능
+insert into t_vars select 'g5', public.add_match_guest(pg_temp.vid('g'), '게스트6번')::text;
 -- 게스트1 을 지워도 나머지 번호는 그대로, 새 게스트는 다음 번호. 8자 이름 가능
 select public.remove_match_guest(pg_temp.vid('g1'));
 insert into t_vars select 'g6', public.add_match_guest(pg_temp.vid('g'), '여덟글자이름이야')::text;
 reset role;
-select pg_temp.check(pg_temp.guests('g') = '2=-,3=김 철수,4=-,5=게스트6,6=여덟글자이름이야', 'numbers fixed after delete');
--- 게스트1 이 지워졌으므로 "게스트1" 이름은 이제 쓸 수 있다 (지금 있는 표시 이름 기준)
+select pg_temp.check(pg_temp.guests('g') = '2=-,3=김 철수,4=-,5=게스트6번,6=여덟글자이름이야', 'numbers fixed after delete');
 set local role authenticated;
 select pg_temp.login(pg_temp.u(2));
-insert into t_vars select 'g7', public.add_match_guest(pg_temp.vid('g'), '게스트1')::text;
+insert into t_vars select 'g7', public.add_match_guest(pg_temp.vid('g'), '일곱째')::text;
 -- 최대 12명 (지금 6명 → 6명 더, 13번째 거절)
 select public.add_match_guest(pg_temp.vid('g'), '추가' || n) from generate_series(1, 6) n;
 reset role;

@@ -196,6 +196,16 @@ class MatchInput {
   /// 마감 시간 상한 (경기 설정과 같음).
   static const int maxDeadlineHours = 720;
 
+  /// 일정 추가 화면의 종료 기본값: 시작 2시간 뒤 (Q-074 4번).
+  static const defaultLength = Duration(hours: 2);
+
+  /// 시작 시각 [startTime] 의 기본 종료 시각.
+  static ClockTime defaultEndTime(ClockTime startTime) => startTime.plusMinutes(defaultLength.inMinutes);
+
+  /// 시작 날짜 [startDate] 의 기본 종료 날짜: 기본 종료 시각이 자정을 넘기면 다음날.
+  static CalendarDate defaultEndDate(CalendarDate startDate, ClockTime startTime) =>
+      defaultEndTime(startTime).compareTo(startTime) < 0 ? startDate.plusDays(1) : startDate;
+
   DateTime get startsAt => Kst.toInstant(startDate, startTime);
   DateTime get endsAt => Kst.toInstant(endDate, endTime);
 

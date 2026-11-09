@@ -8,6 +8,14 @@ String guestDisplayName(String? name, int guestNo) => name ?? '$guestDefaultName
 /// 이름을 비운 게스트의 기본 이름 앞부분 (서버와 같은 글자).
 const guestDefaultNamePrefix = '게스트';
 
+/// 직접 적는 이름이 "게스트+숫자" 모양인지 (Q-074 2번, 서버 private.is_reserved_guest_name 과 같음).
+/// 보이지 않는 문자·공백을 정리하고 남은 공백도 모두 뺀 뒤 판단한다: "게스트6", "게스트 6", "게스트06", "게스트６" 모두 해당.
+/// "게스트", "게스트A", "게스트6번", "김게스트6" 은 해당하지 않는다.
+bool isReservedGuestName(String name) =>
+    _reservedGuestName.hasMatch(removeWhitespace(normalizeSingleLineName(name)));
+
+final RegExp _reservedGuestName = RegExp('^$guestDefaultNamePrefix[0-9０-９]+\$');
+
 /// 게스트 (match_guests). 팀원 전체가 읽는 칸만 (번호·이름). 포지션·대략 실력은 [MatchGuestDetail] (관리자만, Q-017).
 class MatchGuest {
   const MatchGuest({
@@ -89,6 +97,9 @@ class MatchGuestDetail {
 enum GuestInputError {
   nameTooLong,
   nameHasLineBreak,
+
+  /// "게스트+숫자" 모양 이름 (이름 없는 게스트의 표시 이름과 겹침, Q-074 2번)
+  reservedName,
   tooManyPositions,
   duplicatePositions,
 
@@ -103,7 +114,7 @@ enum GuestInputError {
 ///
 /// 이름은 선택 (Q-073 2번): 비우면 "게스트N", 적으면 팀에서 쓸 이름과 같은 규칙(정리 후 1~8자).
 /// 포지션은 선택, 최대 3개. 대략 실력은 선택 (실력 등급 5단계, 미정이면 저장하지 않음).
-/// 한 일정 최대 12명, 같은 일정 안 같은 표시 이름 불가 (Q-073 3번). 서버도 같은 규칙으로 다시 거절한다.
+/// 한 일정 최대 12명, 같은 일정 안 같은 표시 이름 불가 (Q-073 3번). "게스트+숫자" 모양 이름 불가 (Q-074 2번). 서버도 같은 규칙으로 다시 거절한다.
 class GuestInput {
   const GuestInput({this.name = '', this.positions = const [], this.skillLevel});
 
@@ -132,6 +143,7 @@ class GuestInput {
     if (normalized != null) {
       if (countChars(normalized) > maxNameLength) errors.add(GuestInputError.nameTooLong);
       if (containsLineBreak(normalized)) errors.add(GuestInputError.nameHasLineBreak);
+      if (isReservedGuestName(normalized)) errors.add(GuestInputError.reservedName);
     }
     if (positions.length > maxPositions) errors.add(GuestInputError.tooManyPositions);
     if (positions.toSet().length != positions.length) errors.add(GuestInputError.duplicatePositions);

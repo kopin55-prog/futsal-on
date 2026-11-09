@@ -97,6 +97,8 @@ abstract final class ScheduleTexts {
   static String guestError(GuestInputError e) => switch (e) {
     GuestInputError.nameTooLong => '이름은 8자까지 쓸 수 있어요',
     GuestInputError.nameHasLineBreak => '이름은 한 줄로 써주세요',
+    // 임시 문구 (Q-074 2번, 확정 전)
+    GuestInputError.reservedName => '"게스트+숫자" 이름은 쓸 수 없어요. 비우면 자동으로 붙어요',
     GuestInputError.tooManyPositions => guestMaxPositions,
     GuestInputError.duplicatePositions => '포지션이 겹쳐요',
     GuestInputError.duplicateName => '이 일정에 같은 이름의 게스트가 있어요',
@@ -148,6 +150,7 @@ abstract final class ScheduleTexts {
     ServerErrorCode.invalidPositions => guestMaxPositions,
     ServerErrorCode.guestLimitReached => guestError(GuestInputError.tooManyGuests),
     ServerErrorCode.duplicateGuestName => guestError(GuestInputError.duplicateName),
+    ServerErrorCode.reservedGuestName => guestError(GuestInputError.reservedName),
     ServerErrorCode.invalidVenue => '장소 정보를 확인해 주세요',
     _ => AdminTexts.serverError(code),
   };

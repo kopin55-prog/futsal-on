@@ -16,6 +16,8 @@ import 'schedule_texts.dart';
 /// 일정 직접 추가 (운영진, 4-2 / 1-4·1-5).
 ///
 /// - 시작 날짜·시각, 종료 날짜·시각 필수 (자정을 넘기면 종료 날짜를 다음날로). 장소는 선택.
+/// - 시작을 고르면 종료를 시작 2시간 뒤로 미리 채운다(자정을 넘기면 종료 날짜도 다음날). 종료를 직접 고르기
+///   전까지는 시작을 바꿀 때마다 따라간다. 장소는 팀 지정 풋살장으로 미리 채운다. 둘 다 바꾸거나 비울 수 있다 (Q-074 4번).
 /// - 마감(경기 몇 시간 전)·미투표 알림(마감 몇 시간 전·끄기)은 이 일정만 고른다. 팀 경기 설정 값이 먼저 채워진다 (Q-072 1번).
 /// - 정원은 팀 경기 설정을 따른다 (입력 없음).
 /// - 화면 검사는 서버와 같다 (지난 시각 불가, 종료는 시작보다 늦고 24시간 이하). 마감이 이미 지났으면 서버가 마감 = 시작으로 저장.
@@ -37,8 +39,11 @@ class _MatchCreateScreenState extends State<MatchCreateScreen> {
   ClockTime? _startTime;
   CalendarDate? _endDate;
   ClockTime? _endTime;
-  Venue? _venue;
+  late Venue? _venue = widget.team.venue;
   int? _reminderHours;
+
+  /// 종료가 아직 미리 채운 값인지 (종료 날짜·시각을 직접 고르면 false).
+  bool _endAuto = true;
   bool _loaded = false;
   bool _submitted = false;
   bool _saving = false;
@@ -108,10 +113,21 @@ class _MatchCreateScreenState extends State<MatchCreateScreen> {
         final oldStart = _startDate;
         _startDate = d;
         if (_endDate == null || _endDate == oldStart) _endDate = d;
+        _fillDefaultEnd();
       } else {
         _endDate = d;
+        _endAuto = false;
       }
     });
+  }
+
+  /// 종료가 미리 채운 값이면 시작 2시간 뒤로 다시 맞춘다 (Q-074 4번).
+  void _fillDefaultEnd() {
+    final st = _startTime;
+    if (!_endAuto || st == null) return;
+    _endTime = MatchInput.defaultEndTime(st);
+    final sd = _startDate;
+    if (sd != null) _endDate = MatchInput.defaultEndDate(sd, st);
   }
 
   Future<void> _pickTime({required bool start}) async {
@@ -122,7 +138,15 @@ class _MatchCreateScreenState extends State<MatchCreateScreen> {
     );
     if (picked == null) return;
     final t = ClockTime(picked.hour, picked.minute);
-    setState(() => start ? _startTime = t : _endTime = t);
+    setState(() {
+      if (start) {
+        _startTime = t;
+        _fillDefaultEnd();
+      } else {
+        _endTime = t;
+        _endAuto = false;
+      }
+    });
   }
 
   Future<void> _save() async {

@@ -15,6 +15,7 @@ import 'package:futsal_on/features/team/presentation/team_home_screen.dart';
 import 'package:futsal_on/features/team/presentation/team_texts.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
+import 'package:futsal_on/shared/domain/venue.dart';
 import 'package:futsal_on/shared/presentation/common_widgets.dart';
 
 import '../../support/fakes.dart';
@@ -266,12 +267,12 @@ void main() {
       expect(find.widgetWithText(GuestNameLabel, '게스트1'), findsOneWidget);
       expect(find.text('${'공격'} · ${'미정'}'), findsOneWidget);
 
-      // "게스트1" 이라는 이름은 이미 있다 → 저장 버튼 꺼짐 + 안내
+      // "게스트+숫자" 모양 이름은 못 쓴다 (Q-074 2번) → 저장 버튼 꺼짐 + 안내
       await tester.tap(find.byKey(const Key('guest-add')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('guest-name')), '게스트1');
+      await tester.enterText(find.byKey(const Key('guest-name')), ' 게스트 7');
       await tester.pump();
-      expect(find.text(ScheduleTexts.guestError(GuestInputError.duplicateName)), findsOneWidget);
+      expect(find.text(ScheduleTexts.guestError(GuestInputError.reservedName)), findsOneWidget);
       expect(tester.widget<PrimaryButton>(find.byKey(const Key('guest-save'))).onPressed, isNull);
       // 포지션 4번째는 선택되지 않고 안내
       for (final p in ['goalkeeper', 'defender', 'midfielder', 'winger']) {
@@ -328,6 +329,58 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('match-error-timeRequired')), findsOneWidget);
       expect(t.matches.calls, isEmpty);
+    });
+  });
+
+  group('일정 추가 기본값 (Q-074 4번)', () {
+    // 2026-01-10 09:00 KST
+    DateTime now() => DateTime.utc(2026, 1, 10, 0, 0);
+    const venue = Venue.manual(name: '코코구장', address: '서울');
+
+    Future<TestServices> openCreate(WidgetTester tester) async {
+      _tall(tester);
+      final t = TestServices(teams: [_team('a', '코코FC', TeamRole.owner)], members: {'a': _members});
+      const team = TeamSummary(
+        id: 'a', name: '코코FC', teamCode: 'KOKO22', logoText: '코코', myRole: TeamRole.owner,
+        isRecruiting: true, venue: venue,
+      );
+      await tester.pumpWidget(MaterialApp(home: MatchCreateScreen(services: t.services, team: team, now: now)));
+      await tester.pumpAndSettle();
+      return t;
+    }
+
+    Future<void> pickDefault(WidgetTester tester, String key) async {
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('시작을 고르면 종료는 2시간 뒤, 장소는 팀 지정 풋살장으로 미리 채워 저장', (tester) async {
+      final t = await openCreate(tester);
+      expect(find.text('코코구장'), findsOneWidget);
+      await pickDefault(tester, 'match-start-date'); // 1월 10일
+      await pickDefault(tester, 'match-start-time'); // 기본 20:00
+      expect(find.text('${ScheduleTexts.endTime}  22:00'), findsOneWidget);
+      expect(find.text('${ScheduleTexts.endDate}  ${ScheduleTexts.date(const CalendarDate(2026, 1, 10))}'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('match-save')));
+      await tester.pumpAndSettle();
+      final input = t.matches.lastInput!;
+      expect(input.endDate, const CalendarDate(2026, 1, 10));
+      expect(input.endTime.hhmm, '22:00');
+      expect(input.venue?.name, '코코구장');
+    });
+
+    testWidgets('미리 채운 장소는 비울 수 있다', (tester) async {
+      final t = await openCreate(tester);
+      await tester.tap(find.byKey(const Key('venue-clear')));
+      await tester.pump();
+      expect(find.text('코코구장'), findsNothing);
+      await pickDefault(tester, 'match-start-date');
+      await pickDefault(tester, 'match-start-time');
+      await tester.tap(find.byKey(const Key('match-save')));
+      await tester.pumpAndSettle();
+      expect(t.matches.lastInput!.venue, isNull);
     });
   });
 

@@ -71,6 +71,27 @@ void main() {
     });
   });
 
+  group('내보내기는 팀장만 (Q-074 덧붙임, permissions.md)', () {
+    testWidgets('팀장: 팀원 메뉴에 내보내기가 있다', (tester) async {
+      await _openAdmin(tester);
+      await tester.ensureVisible(find.byKey(const Key('manage-menu-u1')));
+      await tester.tap(find.byKey(const Key('manage-menu-u1')));
+      await tester.pumpAndSettle();
+      expect(find.text(TeamTexts.removeMember), findsOneWidget);
+    });
+    testWidgets('운영진: 팀원 목록·메뉴·내보내기 버튼이 없다', (tester) async {
+      await _openAdmin(tester, role: TeamRole.manager, userId: 'm1');
+      expect(find.byKey(const Key('manage-u1')), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('manage-menu-'),
+        ),
+        findsNothing,
+      );
+      expect(find.text(TeamTexts.removeMember), findsNothing);
+    });
+  });
+
   group('팀 정보 수정', () {
     testWidgets('팀장: 이름을 바꾸면 로고 미리보기가 따라가고, 로고 글자는 보내지 않는다 (Q-047 서버 트리거)', (tester) async {
       final t = await _openAdmin(tester);

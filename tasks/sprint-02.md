@@ -20,8 +20,8 @@
 | 작업 | 담당 | 완료 기준 | 상태 |
 | --- | --- | --- | --- |
 | 0-1 질문 후보 S2-01~S2-13 kopn 질문 | lead | 답을 decisions.md에 기록, 이 표의 BLOCKED 상태 갱신 | 완료 (Q-071 답변, 후속 Q-072 대기) |
-| 0-2 Firebase 개발 프로젝트 | kopn (lead 안내) | dev-accounts.md 5장 1~4 완료. `app/android/app/google-services.json`, `.secrets/firebase-service-account.json`이 제자리에 있고 Git 추적 파일에 없음 | 대기 (5단계 시작 전까지) |
-| 0-3 푸시 발송 비밀값 등록 | lead | 서비스 계정 값을 서버 비밀값으로 등록(저장소·DB에 없음). 예약 작업 → notifier 호출은 스프린트 01과 같은 전용 비밀값 방식 | BLOCKED (0-2) |
+| 0-2 Firebase 개발 프로젝트 | kopn (lead 안내) | dev-accounts.md 5장 1~4 완료. `app/android/app/google-services.json`, `.secrets/firebase-service-account.json`이 제자리에 있고 Git 추적 파일에 없음 | 완료 (74258a9) |
+| 0-3 푸시 발송 비밀값 등록 | lead | 서비스 계정 값을 서버 비밀값으로 등록(저장소·DB에 없음). 예약 작업 → notifier 호출은 스프린트 01과 같은 전용 비밀값 방식 | 스크립트 준비(setup_push.ps1), kopn 실행 대기 |
 
 ### 1단계 — 일정 (Firebase 불필요)
 | 작업 | 담당 | 완료 기준 | 상태 |
@@ -64,9 +64,9 @@
 ### 5단계 — 푸시 (Firebase 필요)
 | 작업 | 담당 | 완료 기준 | 상태 |
 | --- | --- | --- | --- |
-| 5-1 앱 Firebase 연결·기기 주소 등록 | builder | firebase_core·firebase_messaging(Q-031 허용). 로그인할 때마다 등록(register_device_token), 토큰이 바뀌면 다시 등록, 로그아웃 시 그 기기 주소 삭제. 권한 요청 시점은 S2-13 | BLOCKED (0-2, S2-13) |
-| 5-2 발송 서버 함수(notifier) | builder | 예약 작업이 send_at이 지난 pending을 FCM(HTTP v1)으로 발송, 사람의 모든 기기로. 성공 sent, FCM이 "등록되지 않은 토큰"이면 그 기기 주소 삭제(2-4). 푸시 문구는 알림함 줄과 같음. 실패해도 알림함은 그대로. 비밀값 없는 호출 401. 13:00에 하나씩 보내고 의미 없어진 것은 푸시만 건너뜀(Q-071 11번) | BLOCKED (0-2, 0-3, S2-11) |
-| 5-3 앱에서 푸시 받기 | builder | 앱이 꺼져 있거나 백그라운드일 때 휴대폰 알림으로 보이고, 누르면 알림함과 같은 이동(읽음 처리). 앱 사용 중 도착 시 표시는 S2-13 | BLOCKED (0-2, S2-13) |
+| 5-1 앱 Firebase 연결·기기 주소 등록 | builder | firebase_core·firebase_messaging(Q-031 허용). 로그인할 때마다 등록(register_device_token), 토큰이 바뀌면 다시 등록, 로그아웃 시 그 기기 주소 삭제. 권한 요청 시점은 S2-13 | 완료 (74258a9) |
+| 5-2 발송 서버 함수(notifier) | builder | 예약 작업이 send_at이 지난 pending을 FCM(HTTP v1)으로 발송, 사람의 모든 기기로. 성공 sent, FCM이 "등록되지 않은 토큰"이면 그 기기 주소 삭제(2-4). 푸시 문구는 알림함 줄과 같음. 실패해도 알림함은 그대로. 비밀값 없는 호출 401. 13:00에 하나씩 보내고 의미 없어진 것은 푸시만 건너뜀(Q-071 11번) | 완료 (74258a9) |
+| 5-3 앱에서 푸시 받기 | builder | 앱이 꺼져 있거나 백그라운드일 때 휴대폰 알림으로 보이고, 누르면 알림함과 같은 이동(읽음 처리). 앱 사용 중 도착 시 표시는 S2-13 | 완료 (74258a9) |
 | 5-4 iOS 푸시 | builder | APNs 키 등록 후 아이폰에서 같은 동작 | BLOCKED (유료 애플 계정, Q-005-2 → 04 이월) |
 
 ### 점검·테스트
@@ -222,3 +222,4 @@ qa는 아래 문장을 시나리오로 만든다. 시각은 모두 한국 시간
 - 2026-11-09: builder 3단계 완료(0b402b0). builder는 개발 DB 접속 수단이 없어(CLI v3 변경) 로컬 흉내 DB로 검증 → lead가 개발 DB에서 DB 테스트 8개 실행 ALL PASSED 후 0028~0030 db push. 예약 작업 send-rsvp-reminders(매분)·cleanup-notifications(매일) 등록 확인. analyze 문제 없음, test 292개 통과, 비밀 값 노출 0, 비로그인 알림 표 401. 알림 문구 임시안은 Q-073 11번
 - 2026-11-09: Q-073 서버 반영(480144f, 0031~0034 개발 DB 적용) + 4단계 화면(e014ea7) + 묶음 테스트 02 초안(d3c3e98). lead 확인: analyze 문제 없음, test 325개 통과, 개발 DB에서 DB 테스트 9개 ALL PASSED(적용 후), 비밀 값 노출 0. Q-074(화면 세부) 대기. 남은 것: 5단계 푸시(Firebase 필요)
 - 2026-11-09: 5단계 builder 진행 중 kopn 지시로 일시정지. 커밋 안 된 작업 파일: app/pubspec.yaml·lock, supabase/functions/notifier/(index·logic·notifier_test), migrations/202611050036_push_notifier.sql, scripts/setup_push.ps1, tests/sprint02_step5_test.sql. 개발 DB는 0035까지(0036 미적용). Firebase 파일 2개 준비 완료(lead 확인). 재개 시 builder가 이 파일들부터 이어서 완성 → lead 확인 → kopn이 setup_push.ps1 실행
+- 2026-11-09: builder 5단계 완료(74258a9). 0036 개발 DB 적용, notifier 예약 작업 매분. lead 확인: analyze 문제 없음, test 348개, Deno 30개, DB 테스트 통과, .env.local·Firebase 값 저장소 노출 0, 비로그인 발송 함수 호출 불가. setup_push.ps1 검토 완료 → kopn 실행 대기. 설치 파일 다시 만듦(푸시 포함)

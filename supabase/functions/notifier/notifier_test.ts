@@ -38,6 +38,7 @@ const row = (over: Partial<ClaimedRow> = {}): ClaimedRow => ({
   match_ends_at: '2026-11-12T03:00:00Z',
   award_poll_status: null,
   award_poll_closes_at: null,
+  lineup_status: null,
   recipient_active: true,
   recipient_left_at: null,
   tokens: ['tok-a'],
@@ -110,6 +111,21 @@ Deno.test('skipReason: 배치 미확정 알림은 경기 중이면 보내고, �
   assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T05:00:00Z' }), NOW), null);
   assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T04:00:00Z' }), NOW), 'match_ended');
   assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T03:30:00Z' }), NOW), 'match_ended');
+});
+
+Deno.test('skipReason: 배치 미확정 알림은 푸시 전에 배치가 확정됐으면 건너뜀, 초안·배치 없음이면 보낸다', () => {
+  const base = { kind: 'lineup_unconfirmed', match_starts_at: '2026-11-11T03:00:00Z', match_ends_at: '2026-11-11T05:00:00Z' };
+  assertEquals(skipReason(row({ ...base, lineup_status: 'confirmed' }), NOW), 'lineup_confirmed');
+  assertEquals(skipReason(row({ ...base, lineup_status: 'draft' }), NOW), null);
+  assertEquals(skipReason(row({ ...base, lineup_status: null }), NOW), null);
+  // 이미 읽었으면 읽음이 먼저
+  assertEquals(skipReason(row({ ...base, lineup_status: 'confirmed', read_at: '2026-11-11T03:10:00Z' }), NOW), 'read');
+});
+
+Deno.test('skipReason: 배치 확정 상태는 배치 미확정 알림에만 쓴다 (확정·변경 알림은 그대로)', () => {
+  const future = { match_starts_at: '2026-11-12T01:00:00Z', match_ends_at: '2026-11-12T03:00:00Z', lineup_status: 'confirmed' };
+  assertEquals(skipReason(row({ kind: 'lineup_confirmed', ...future }), NOW), null);
+  assertEquals(skipReason(row({ kind: 'lineup_changed', ...future }), NOW), null);
 });
 
 Deno.test('skipReason: 그 밖의 종류는 경기 시작 규칙 그대로 (배치 확정 알림 등)', () => {

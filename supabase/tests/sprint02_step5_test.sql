@@ -69,6 +69,7 @@ create temp table t_claim (
   outbox_id uuid, notification_id uuid, kind text, title text, body text, team_id uuid, ref_type text, ref_id uuid,
   notified_at timestamptz, read_at timestamptz, match_status text, match_starts_at timestamptz,
   match_ends_at timestamptz, award_poll_status text, award_poll_closes_at timestamptz,  -- 202611050050 에서 추가
+  lineup_status text,  -- 202611050052 에서 추가
   recipient_active boolean, recipient_left_at timestamptz, tokens text[]
 );
 grant all on t_claim to service_role;

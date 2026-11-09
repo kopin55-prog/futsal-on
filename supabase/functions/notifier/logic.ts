@@ -7,6 +7,7 @@
 //       · award_poll_opened / award_deadline_soon  → poll_closed: 투표가 마감됐거나 회차가 없음(해체로 폐기)
 //       · award_results_announced                  → 시작·마감을 이유로 건너뛰지 않음
 //       · lineup_unconfirmed                       → match_ended: 경기가 이미 끝남 (시작 시각에 생기는 알림)
+//                                                    lineup_confirmed: 푸시 전에 배치가 이미 확정됨 (스프린트 03 5단계)
 //   - left_team     받는 사람이 알림이 생긴 뒤 그 팀을 떠남 (지금 소속이 아니고, 마지막으로 떠난 시각이 알림보다 뒤)
 //                   → 내보내진 본인 알림·해체 알림(떠난 순간 = 알림 시각)·가입 거절 알림(소속 이력 없음)은 건너뛰지 않는다
 //   - no_device     기기 주소가 하나도 없음 (보낼 곳이 없음)
@@ -35,6 +36,8 @@ export type ClaimedRow = {
   match_ends_at: string | null;
   award_poll_status: string | null;
   award_poll_closes_at: string | null;
+  /** 대상 일정의 팀 배치 상태 draft/confirmed (배치가 없으면 null, 202611050052) */
+  lineup_status: string | null;
   recipient_active: boolean;
   recipient_left_at: string | null;
   tokens: string[] | null;
@@ -45,6 +48,7 @@ export type SkipReason =
   | 'match_cancelled'
   | 'match_started'
   | 'match_ended'
+  | 'lineup_confirmed'
   | 'poll_closed'
   | 'left_team'
   | 'no_device';
@@ -72,6 +76,7 @@ export function skipReason(row: ClaimedRow, now: number): SkipReason | null {
     } else if (row.kind === 'lineup_unconfirmed') {
       const ends = time(row.match_ends_at);
       if (ends !== null && ends <= now) return 'match_ended';
+      if (row.lineup_status === 'confirmed') return 'lineup_confirmed';
     } else {
       const starts = time(row.match_starts_at);
       if (starts !== null && starts <= now) return 'match_started';

@@ -30,6 +30,15 @@ class FakeMatchRepository implements MatchRepository {
   ]..sort((a, b) => a.startsAt.compareTo(b.startsAt));
 
   @override
+  Future<List<TeamMatch>> listPastMatches(String teamId, {required DateTime before, int limit = 50}) async {
+    final list = [
+      for (final m in items)
+        if (m.teamId == teamId && !m.endsAt.isAfter(before)) m,
+    ]..sort((a, b) => b.endsAt.compareTo(a.endsAt));
+    return list.take(limit).toList();
+  }
+
+  @override
   Future<TeamMatch?> getMatch(String matchId) async => items.where((m) => m.id == matchId).firstOrNull;
 
   @override

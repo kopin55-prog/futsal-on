@@ -1,3 +1,4 @@
+import '../../../core/entitlements/grants.dart';
 import '../../team/domain/team_validation.dart';
 
 /// POM·오늘의 골 투표 항목 (data-model.md 6-3~6-5).
@@ -9,6 +10,12 @@ enum AwardCategory {
 
   /// 서버 값
   final String code;
+
+  /// 결과·득표수 공개 판단용 (core/entitlements).
+  VoteCategory get voteCategory => switch (this) {
+    AwardCategory.pom => VoteCategory.pom,
+    AwardCategory.goalOfTheDay => VoteCategory.goalOfTheDay,
+  };
 
   static AwardCategory? fromCode(String? code) {
     for (final c in values) {

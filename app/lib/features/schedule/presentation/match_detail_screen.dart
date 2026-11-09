@@ -10,6 +10,9 @@ import '../../admin/presentation/admin_texts.dart';
 import '../../lineup/domain/lineup_models.dart';
 import '../../lineup/presentation/lineup_editor_screen.dart';
 import '../../lineup/presentation/lineup_section.dart';
+import '../../pom_vote/domain/award_models.dart';
+import '../../pom_vote/presentation/award_section.dart';
+import '../../pom_vote/presentation/award_texts.dart';
 import '../../profile/presentation/profile_texts.dart';
 import '../../team/domain/team_models.dart';
 import '../domain/attendance_models.dart';
@@ -28,6 +31,7 @@ import 'schedule_texts.dart';
 /// - 운영진 버튼(일정 취소·게스트 추가·삭제)은 TeamAction.manageSchedule 일 때만.
 /// - 취소된 일정은 "취소됨 + 사유" (Q-073 4번).
 /// - 팀 배치 (스프린트 03 3-1·3-4): [LineupSection]. 운영진은 [LineupEditorScreen] 으로 팀 나누기.
+/// - POM·오늘의 골 (스프린트 03 5-2·5-3): 투표가 열린 경기(경기 종료 뒤)만 [AwardSection].
 class MatchDetailScreen extends StatefulWidget {
   const MatchDetailScreen({
     required this.services,
@@ -60,6 +64,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   List<MatchGuest> _guests = const [];
   Map<String, MatchGuestDetail> _guestDetails = const {};
   Lineup? _lineup;
+  AwardPollView? _poll;
   bool _loading = true;
   bool _missing = false;
   bool _failed = false;
@@ -93,6 +98,10 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       final guests = await _s.guests.listGuests(match.id);
       final details = _canSeeGuestDetails ? await _s.guests.listGuestDetails(match.id) : const <MatchGuestDetail>[];
       final lineup = await _s.lineups.getLineup(match.id);
+      // 투표는 경기 종료 처리 때 열린다 (취소된 일정·끝나지 않은 일정은 없음)
+      final poll = !match.isCancelled && !widget.now().isBefore(match.endsAt)
+          ? await _s.awards.getPoll(match.id, myUserId: widget.viewer.userId)
+          : null;
       if (!mounted) return;
       setState(() {
         _match = match;
@@ -101,6 +110,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         _guests = guests;
         _guestDetails = {for (final d in details) d.id: d};
         _lineup = lineup;
+        _poll = poll;
         _missing = false;
       });
     } on ServerFailure {
@@ -171,6 +181,19 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       ),
     );
     if (mounted) await _load();
+  }
+
+  /// 한 항목 투표. 누구를 찍었는지는 어디에도 남기지 않는다 (6-4).
+  Future<void> _castVote(AwardCategory category, String candidateId) async {
+    final m = _match;
+    if (m == null) return;
+    try {
+      await _s.awards.castVote(m.id, category, candidateId);
+      if (mounted) _toast(AwardTexts.votedDone);
+    } on ServerFailure catch (e) {
+      if (mounted) _toast(AwardTexts.serverError(e.code));
+    }
+    await _load();
   }
 
   String _lineupName(LineupPerson p) {
@@ -405,6 +428,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           now: now,
           onOpenEditor: _openLineupEditor,
         ),
+        // ---- POM·오늘의 골 투표·결과
+        if (_poll case final poll?) ...[
+          AppSpacing.sectionGap,
+          AwardSection(
+            poll: poll,
+            viewer: widget.viewer,
+            entitlements: _e,
+            memberNames: _members,
+            now: now,
+            onVote: _castVote,
+          ),
+        ],
         // ---- 운영진: 일정 취소
         if (canManage && m.canBeCancelledAt(now)) ...[
           AppSpacing.sectionGap,

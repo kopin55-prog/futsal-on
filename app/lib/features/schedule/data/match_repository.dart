@@ -2,12 +2,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
 import '../domain/match_models.dart';
+import '../domain/past_matches.dart';
 
 /// 일정 (data-model.md 4-1). 읽기는 표(그 팀 팀원), 추가·취소는 서버 함수(관리자, 서버가 다시 확인).
 /// 일정 수정 기능은 1차에 없다 (Q-071 4번). 실패는 모두 [ServerFailure].
 abstract interface class MatchRepository {
   /// 팀의 일정 (취소 포함), 시작 시각 순. [from] 이 있으면 그 시각 이후에 끝나는 일정만.
   Future<List<TeamMatch>> listMatches(String teamId, {DateTime? from});
+
+  /// 종료 시각이 [before] 이전(같은 시각 포함)인 지난 일정 (취소 포함), 최근 순(종료 시각)으로 최대 [limit]개.
+  /// 화면에 보일 범위(최근 10경기)는 [PastMatches.recent] 가 정한다.
+  Future<List<TeamMatch>> listPastMatches(String teamId, {required DateTime before, int limit = PastMatches.fetchLimit});
 
   /// 일정 한 건. 볼 수 없거나(떠난 팀) 없어진 일정이면 null.
   Future<TeamMatch?> getMatch(String matchId);
@@ -31,6 +36,20 @@ class SupabaseMatchRepository implements MatchRepository {
     final rows = await query.order('starts_at');
     return [for (final r in rows) TeamMatch.fromRow(r)];
   });
+
+  @override
+  Future<List<TeamMatch>> listPastMatches(String teamId, {required DateTime before, int limit = PastMatches.fetchLimit}) =>
+      guardServer(() async {
+        final rows = await _client
+            .from('matches')
+            .select(TeamMatch.columns)
+            .eq('team_id', teamId)
+            .lte('ends_at', before.toUtc().toIso8601String())
+            .order('ends_at', ascending: false)
+            .order('starts_at', ascending: false)
+            .limit(limit);
+        return [for (final r in rows) TeamMatch.fromRow(r)];
+      });
 
   @override
   Future<TeamMatch?> getMatch(String matchId) => guardServer(() async {

@@ -8,6 +8,7 @@ class FakeAwardRepository implements AwardRepository {
   final Map<String, ClockTime> announceTimes = {};
   final Map<String, AwardPollView> polls = {};
   final List<(String, AwardCategory)> votes = [];
+  final List<String> calls = [];
 
   /// 다음 호출을 이 오류로 실패시킨다.
   ServerErrorCode? failNext;
@@ -34,13 +35,29 @@ class FakeAwardRepository implements AwardRepository {
 
   @override
   Future<AwardPollView?> getPoll(String matchId, {required String myUserId}) async {
+    calls.add('get:$matchId');
     _maybeFail();
     return polls[matchId];
   }
 
   @override
   Future<void> castVote(String matchId, AwardCategory category, String candidateId) async {
+    calls.add('cast:$matchId');
     _maybeFail();
     votes.add((matchId, category));
+    // 서버처럼 본인 참여 표시만 남긴다 (누구를 찍었는지는 기억하지 않음)
+    final p = polls[matchId];
+    if (p != null) {
+      polls[matchId] = AwardPollView(
+        matchId: p.matchId,
+        teamId: p.teamId,
+        opensAt: p.opensAt,
+        closesAt: p.closesAt,
+        status: p.status,
+        participantIds: p.participantIds,
+        myVoted: {...p.myVoted, category},
+        winners: p.winners,
+      );
+    }
   }
 }

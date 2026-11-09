@@ -20,6 +20,8 @@ class NotificationTeamTarget {
 /// 알림 하나를 눌렀을 때의 처리 한 곳 (알림함·휴대폰 푸시 공통, 4-3·5-3).
 ///
 /// 읽음 처리 후 관련 화면으로: 일정 알림 → 일정 상세(취소된 일정도 "취소됨 + 사유", Q-073 4번)를 열고 닫힐 때까지 기다린다.
+/// 배치(lineup_confirmed·lineup_changed·lineup_unconfirmed)·POM(award_poll_opened·award_results_announced) 알림도
+/// ref_type = match 라 같은 일정 상세로 간다 (투표·결과는 상세 안, 스프린트 03 5단계).
 /// 가입 신청 → 그 팀 관리 탭, 그 밖의 팀 알림 → 그 팀: [NotificationTeamTarget] 을 돌려준다(부른 쪽이 팀 전환).
 /// 지금 소속이 아닌 팀(떠난 팀·해체된 팀)이나 사라진 대상은 이동하지 않는다 (Q-041, Entitlements.canOpenNotificationTarget).
 Future<NotificationTeamTarget?> openNotification(

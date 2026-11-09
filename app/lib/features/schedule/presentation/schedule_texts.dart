@@ -24,6 +24,8 @@ abstract final class ScheduleTexts {
   static const tabSchedule = '일정';
   static const upcoming = '다가오는 일정';
   static const noUpcoming = '다가오는 일정이 없어요';
+  static const pastMatches = '지난 경기';
+  static const noPastMatches = '지난 경기가 없어요';
   static const addMatch = '일정 추가';
   static const matchDetail = '일정';
   static const matchUnavailable = '볼 수 없는 일정이에요';

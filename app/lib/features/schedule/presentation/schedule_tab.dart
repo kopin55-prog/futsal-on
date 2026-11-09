@@ -7,11 +7,13 @@ import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../team/domain/team_models.dart';
 import '../domain/match_models.dart';
+import '../domain/past_matches.dart';
 import 'match_create_screen.dart';
 import 'match_detail_screen.dart';
 import 'schedule_texts.dart';
 
 /// 일정 탭 (임시, 스프린트 02 4-1). 다가오는 일정(아직 끝나지 않은 일정)을 시작 순으로, 취소된 일정도 "취소됨"으로 보여준다.
+/// 아래에 임시 "지난 경기" 목록 (스프린트 03 5-1, S3-16): 최근 10경기(+그 사이 취소된 일정), 최근 순. 누르면 일정 상세(투표·결과).
 /// 일정 추가 버튼은 팀장·운영진에게만 (Entitlements: TeamAction.manageSchedule). 정식 화면은 스프린트 04.
 class ScheduleTab extends StatefulWidget {
   const ScheduleTab({
@@ -35,6 +37,7 @@ class ScheduleTab extends StatefulWidget {
 
 class _ScheduleTabState extends State<ScheduleTab> {
   List<TeamMatch>? _matches;
+  List<TeamMatch> _past = const [];
   bool _failed = false;
 
   @override
@@ -46,8 +49,15 @@ class _ScheduleTabState extends State<ScheduleTab> {
   Future<void> _load() async {
     setState(() => _failed = false);
     try {
-      final list = await widget.services.matches.listMatches(widget.team.id, from: widget.now());
-      if (mounted) setState(() => _matches = list);
+      final now = widget.now();
+      final list = await widget.services.matches.listMatches(widget.team.id, from: now);
+      final past = await widget.services.matches.listPastMatches(widget.team.id, before: now);
+      if (mounted) {
+        setState(() {
+          _matches = list;
+          _past = PastMatches.recent(past);
+        });
+      }
     } on ServerFailure {
       if (mounted) setState(() => _failed = true);
     }
@@ -118,6 +128,16 @@ class _ScheduleTabState extends State<ScheduleTab> {
               _MatchCard(match: m, onTap: () => _openDetail(m)),
               const SizedBox(height: AppSpacing.sm),
             ],
+          // ---- 임시 "지난 경기" (5-1)
+          AppSpacing.sectionGap,
+          const SectionHeader(ScheduleTexts.pastMatches),
+          if (_past.isEmpty)
+            const EmptyState(icon: Icons.history, message: ScheduleTexts.noPastMatches, compact: true)
+          else
+            for (final m in _past) ...[
+              _MatchCard(match: m, keyPrefix: 'past-match', onTap: () => _openDetail(m)),
+              const SizedBox(height: AppSpacing.sm),
+            ],
         ],
       ),
     );
@@ -125,9 +145,10 @@ class _ScheduleTabState extends State<ScheduleTab> {
 }
 
 class _MatchCard extends StatelessWidget {
-  const _MatchCard({required this.match, required this.onTap});
+  const _MatchCard({required this.match, required this.onTap, this.keyPrefix = 'match'});
 
   final TeamMatch match;
+  final String keyPrefix;
   final VoidCallback onTap;
 
   @override
@@ -137,7 +158,7 @@ class _MatchCard extends StatelessWidget {
     final cancelled = match.isCancelled;
     return Card(
       child: ListTile(
-        key: Key('match-${match.id}'),
+        key: Key('$keyPrefix-${match.id}'),
         onTap: onTap,
         leading: Icon(cancelled ? Icons.event_busy_outlined : Icons.event_outlined),
         title: Text(

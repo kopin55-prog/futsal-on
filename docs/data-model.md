@@ -1,6 +1,6 @@
 # 데이터 구조
 
-상태: **승인됨 (2026-11-05, v4.2, kopn)** (남은 보류: M-44 → Q-065, 애플 테스트 때) — **v4.4 추가 승인 2026-11-09 kopn (Q-073 2·3번)**: `match_guests.name` 선택, `guest_no`(일정 안 게스트 번호, 고정) 추가, 일정당 게스트 12명·같은 이름 불가 — **v4.3 추가 승인 2026-11-05 kopn (Q-072)**: `matches.cancel_reason`·`rsvp_reminder_at`, `team_settings.rsvp_reminder_hours`, 직접 추가 시 마감·알림 일정마다 선택 — v1 작성 2026-11-04 architect / v1 security 검토 2026-11-04 (13장) / v2·v3 수정 2026-11-04 architect / v4 수정 2026-11-05 architect / v4.1 수정 2026-11-05 lead (Q-060·Q-061 반영, 7-6·7-7 추가) / v4.2 수정 2026-11-05 architect (Q-063·Q-062 3번 반영)
+상태: **승인됨 (2026-11-05, v4.2, kopn)** (남은 보류: M-44 → Q-065, 애플 테스트 때) — **v4.5 추가 승인 2026-11-09 kopn (Q-075·Q-076)**: `team_settings.award_announce_time`(투표 설정, 기본 15:00), 투표 마감 = 경기 다음날 발표 시각, 알림 종류 `award_results_announced`·`lineup_unconfirmed` 추가, 배치 미확정 경기도 참석자 기준으로 출석·투표, POM 마감 전 알림 폐지 — **v4.4 추가 승인 2026-11-09 kopn (Q-073 2·3번)**: `match_guests.name` 선택, `guest_no`(일정 안 게스트 번호, 고정) 추가, 일정당 게스트 12명·같은 이름 불가 — **v4.3 추가 승인 2026-11-05 kopn (Q-072)**: `matches.cancel_reason`·`rsvp_reminder_at`, `team_settings.rsvp_reminder_hours`, 직접 추가 시 마감·알림 일정마다 선택 — v1 작성 2026-11-04 architect / v1 security 검토 2026-11-04 (13장) / v2·v3 수정 2026-11-04 architect / v4 수정 2026-11-05 architect / v4.1 수정 2026-11-05 lead (Q-060·Q-061 반영, 7-6·7-7 추가) / v4.2 수정 2026-11-05 architect (Q-063·Q-062 3번 반영)
 
 architect가 작성 → lead를 통해 kopn 승인 후 상태를 `승인됨 (날짜)`로 바꾼다. security 점검은 kopn이 요청할 때와 출시 직전에만 한다(v2~v4 변경분은 그때 함께 본다). 1차 검토(13장) 권고는 계속 지킨다.
 승인 전에는 builder가 테이블을 만들지 않는다. 이 문서의 SQL 마이그레이션은 아직 없다.
@@ -392,6 +392,7 @@ v4.2(Q-063): 인증된 같은 이메일로 들어온 로그인 방법은 모두 
 | team_id | ID | 필수 | |
 | capacity | 숫자 | 선택 | 정원. 비어 있으면 "정원 없음". 값이 있으면 초과 인원은 대기 순번 |
 | rsvp_deadline_hours | 숫자 | 필수 | 참석 투표 마감 = 경기 시작 몇 시간 전 (자동 생성 일정에 쓰고, 직접 추가 화면의 기본값) |
+| award_announce_time | 시각 | 필수 | (v4.5) POM·오늘의 골 발표 시각(경기 종료일 다음날), 기본 15:00, 자유 선택. 화면은 "투표 설정"으로 따로 `[결정됨 Q-076 1번]` |
 | rsvp_reminder_hours | 숫자 | 선택 | (v4.3) 미투표 알림 = 마감 몇 시간 전(1·2·3·6·12·24), 비면 끄기, 기본 2. 직접 추가 화면의 기본값 `[결정됨 Q-072 1번]` |
 | auto_create_days_before | 숫자 | 필수 | 자동 생성 = 경기 며칠 전. 기본 6 |
 | auto_create_time | 시각 | 필수 | 자동 생성 시각. 기본 09:00 (한국 시간) |
@@ -725,10 +726,10 @@ v4에서 Q-058로 바뀐 점: "출석·수상 보존"은 **카운트(7-3)와 월
 | match_id | ID | 필수 | |
 | team_id | ID | 필수 | 권한 확인용 |
 | opens_at | 날짜·시간 | 필수 | 경기 종료 시각 |
-| closes_at | 날짜·시간 | 필수 | 오픈 + 24시간 |
+| closes_at | 날짜·시간 | 필수 | 발표 시각 = 경기 종료일 다음날의 팀 투표 설정 시각(기본 15:00), 투표가 열릴 때 정함 `[결정됨 Q-076 1번]` (v4.5, 이전: 오픈 + 24시간) |
 | status | 선택(open, closed) | 필수 | 진행 중 / 마감(결과 확정) |
 
-- 경기 종료 시 서버 예약 작업이 생성. **취소된 경기, 배치가 확정되지 않은 경기는 만들지 않음** `[결정됨 Q-027 M-09]`.
+- 경기 종료 시 서버 예약 작업이 생성. **취소된 경기는 만들지 않음.** 배치가 확정되지 않은 경기도 만들고, 대상자는 경기 종료 시각에 "참석"인 팀원 `[결정됨 Q-076 3번, Q-027 M-09 변경]`. 대상자 2명 미만이면 만들지 않음(Q-075 13번). 팀 해체 시 진행 중 투표는 무효(수상 반영 없음, Q-076 5번).
 - 읽기: 그 팀 팀원. 쓰기: 서버만.
 
 ### 6-2. 투표 대상자 `award_participants`
@@ -998,7 +999,7 @@ v4.2: "내 기록"에는 **참석 투표 참여율**(퍼센트, 7-7에서 계산
 **조용한 시간(00:00~08:00)에도 알림함에는 바로 쌓고, 푸시만 13:00에 보낸다** `[결정됨 Q-033, 시각은 Q-071 11번으로 08:00→13:00]`. 새 팀원 합류 알림은 푸시 없이 알림함에만 `[결정됨 Q-071 9번]`.
 
 알림 종류(`kind`) 목록 = docs/notifications.md 목록 + Q-022 추가 4종:
-`match_created`(일정 생성·참석 투표 오픈), `rsvp_deadline_soon`, `waitlist_promoted`, `match_cancelled`, `lineup_confirmed`, `lineup_changed`, `award_poll_opened`, `award_deadline_soon`, `join_request_received`, `join_request_decided`, `member_left`, `team_dissolved`, `injury_return_check`, **`manager_assigned`, `manager_unassigned`, `ownership_received`, `member_removed`** (Q-022), **`member_joined`**(합류, 알림함만, Q-071 9번), **`member_account_deleted`**(회원 탈퇴, 이름 남김, Q-072 3번), **`join_request_auto_declined`**(해체로 자동 거절, Q-067 8번), (2차) `monthly_report`. `rsvp_deadline_soon`은 일정의 rsvp_reminder_at에 보냄(Q-072 1번).
+`match_created`(일정 생성·참석 투표 오픈), `rsvp_deadline_soon`, `waitlist_promoted`, `match_cancelled`, `lineup_confirmed`, `lineup_changed`, `award_poll_opened`, `award_deadline_soon`, `join_request_received`, `join_request_decided`, `member_left`, `team_dissolved`, `injury_return_check`, **`manager_assigned`, `manager_unassigned`, `ownership_received`, `member_removed`** (Q-022), **`member_joined`**(합류, 알림함만, Q-071 9번), **`member_account_deleted`**(회원 탈퇴, 이름 남김, Q-072 3번), **`join_request_auto_declined`**(해체로 자동 거절, Q-067 8번), **`award_results_announced`**(결과 발표, Q-076 2번), **`lineup_unconfirmed`**(배치 미확정, Q-075 15번), (2차) `monthly_report`. `award_deadline_soon`은 쓰지 않음(Q-075 14번). `rsvp_deadline_soon`은 일정의 rsvp_reminder_at에 보냄(Q-072 1번).
 
 ### 9-1. 알림 발송 대기열 `notification_outbox`
 

@@ -120,7 +120,7 @@ select pg_temp.check((select regular_weekday is null and regular_start_time is n
 -- ================================================================ 시작 시각 변경과 경기 설정 저장 규칙
 select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '20:00', '22:00', true, null);
 -- 0일 전 09:00 자동 생성, 10시간 전 마감 → 20:00 경기면 10:00 마감이라 허용
-select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 10, 0, '09:00');
+select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 10, 0, '09:00', 2);
 -- 시작을 18:00 으로 당기면 마감 08:00 < 생성 09:00 → 거절
 select pg_temp.expect_error($$select public.update_team_info((select v::uuid from t_vars where k = 'team'), '구름FC', 3::smallint, '18:00', '22:00', true, null)$$, 'deadline_before_auto_create');
 -- 표 직접 수정 경로도 같은 규칙

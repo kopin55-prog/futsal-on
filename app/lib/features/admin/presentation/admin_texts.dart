@@ -53,6 +53,9 @@ abstract final class AdminTexts {
   static const capacityLabel = '정원 (명)';
   static const capacityNote = '정원을 넘으면 대기 순번으로 받아요';
   static const deadlineLabel = '참석 투표 마감 (경기 시작 몇 시간 전)';
+  // 미투표 알림 (Q-072 1번, 임시 문구)
+  static const reminderLabel = '미투표 알림';
+  static String reminderOption(int? hours) => hours == null ? '끄기' : '마감 $hours시간 전';
   static const autoCreateSection = '일정 자동 생성';
   static const autoCreateDaysLabel = '경기 며칠 전';
   static String autoCreateTimeButton(String hhmm) => '생성 시각 $hhmm';
@@ -65,6 +68,7 @@ abstract final class AdminTexts {
     MatchSettingsError.autoCreateDaysRange =>
       '자동 생성은 0~${MatchSettings.maxAutoCreateDaysBefore}일 전으로 정해 주세요',
     MatchSettingsError.deadlineBeforeAutoCreate => deadlineBeforeAutoCreate,
+    MatchSettingsError.reminderRange => '미투표 알림 시간을 골라 주세요',
   };
 
   static const deadlineBeforeAutoCreate = '참석 투표 마감이 일정 자동 생성보다 늦어야 해요';

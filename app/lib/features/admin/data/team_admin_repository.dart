@@ -78,7 +78,7 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
   Future<MatchSettings> getMatchSettings(String teamId) => guardServer(() async {
     final row = await _client
         .from('team_settings')
-        .select('capacity, rsvp_deadline_hours, auto_create_days_before, auto_create_time')
+        .select('capacity, rsvp_deadline_hours, auto_create_days_before, auto_create_time, rsvp_reminder_hours')
         .eq('team_id', teamId)
         .maybeSingle();
     if (row == null) return MatchSettings.defaults;
@@ -87,6 +87,7 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
       rsvpDeadlineHours: row['rsvp_deadline_hours'] as int,
       autoCreateDaysBefore: row['auto_create_days_before'] as int,
       autoCreateTime: ClockTime.parse(row['auto_create_time'] as String),
+      rsvpReminderHours: row['rsvp_reminder_hours'] as int?,
     );
   });
 
@@ -100,6 +101,7 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
         'p_rsvp_deadline_hours': s.rsvpDeadlineHours,
         'p_auto_create_days_before': s.autoCreateDaysBefore,
         'p_auto_create_time': s.autoCreateTime.hhmm,
+        'p_rsvp_reminder_hours': s.rsvpReminderHours,
       },
     ),
   );

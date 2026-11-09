@@ -162,6 +162,21 @@ void main() {
       expect(find.text(AdminTexts.saved), findsOneWidget);
     });
 
+    testWidgets('미투표 알림: 기본 2시간 전, 끄기로 바꿔 저장 (Q-072 1번)', (tester) async {
+      final t = await _openAdmin(tester, start: const ClockTime(20, 0));
+      await tester.tap(find.byKey(const Key('open-match-settings')));
+      await tester.pumpAndSettle();
+      expect(find.text(AdminTexts.reminderOption(2)), findsOneWidget);
+      await tester.tap(find.byKey(const Key('settings-reminder')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AdminTexts.reminderOption(null)).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settings-save')));
+      await tester.pumpAndSettle();
+      expect(t.admin.savedSettings?.rsvpReminderHours, isNull);
+      expect(t.admin.savedSettings?.rsvpDeadlineHours, 2);
+    });
+
     testWidgets('마감이 자동 생성보다 앞서면 안내하고 저장 버튼이 꺼진다', (tester) async {
       final t = await _openAdmin(tester, start: const ClockTime(20, 0));
       await tester.tap(find.byKey(const Key('open-match-settings')));

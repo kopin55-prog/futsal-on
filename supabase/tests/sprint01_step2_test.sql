@@ -86,19 +86,19 @@ select pg_temp.expect_error($$update public.team_settings set rsvp_deadline_hour
 select pg_temp.expect_error($$insert into public.team_settings (team_id) values (gen_random_uuid())$$, 'permission denied%');
 
 -- 경기 설정 바꾸기
-select public.update_team_settings((select v::uuid from t_vars where k = 'team'), 12, 24, 6, '09:00');
+select public.update_team_settings((select v::uuid from t_vars where k = 'team'), 12, 24, 6, '09:00', 2);
 select pg_temp.check((select capacity = 12 and rsvp_deadline_hours = 24 and updated_by = auth.uid()
   from public.team_settings where team_id = (select v::uuid from t_vars where k = 'team')), 'settings updated');
 -- 마감(경기 20:00 - 40h = 이틀 전 04:00)이 자동 생성(0일 전 09:00)보다 앞섬 → 거절
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 40, 0, '09:00')$$, 'deadline_before_auto_create');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 40, 0, '09:00', 2)$$, 'deadline_before_auto_create');
 -- 경계: 0일 전 09:00 생성, 20:00 경기, 11시간 전 마감 = 09:00 → 같으면 거절, 10시간이면 허용
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 11, 0, '09:00')$$, 'deadline_before_auto_create');
-select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 10, 0, '09:00');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 11, 0, '09:00', 2)$$, 'deadline_before_auto_create');
+select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 10, 0, '09:00', 2);
 -- 정기 운동 시작 시각이 없는 팀은 자동 생성이 없으므로 검사 없음
-select public.update_team_settings((select v::uuid from t_vars where k = 'team0'), null, 40, 0, '09:00');
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), 0, 2, 6, '09:00')$$, 'invalid_team_settings');
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, -1, 6, '09:00')$$, 'invalid_team_settings');
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, null, 6, '09:00')$$, 'invalid_team_settings');
+select public.update_team_settings((select v::uuid from t_vars where k = 'team0'), null, 40, 0, '09:00', 2);
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), 0, 2, 6, '09:00', 2)$$, 'invalid_team_settings');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, -1, 6, '09:00', 2)$$, 'invalid_team_settings');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, null, 6, '09:00', 2)$$, 'invalid_team_settings');
 
 -- ================================================================ 팀원 모으기: b2·b3·b4·b5 가입
 insert into t_vars select 'code', team_code from public.teams where id = (select v::uuid from t_vars where k = 'team');
@@ -106,7 +106,7 @@ select pg_temp.login('00000000-0000-4000-8000-0000000000b2');
 insert into t_vars select 'r2', public.request_join((select v from t_vars where k = 'code'), 'code')::text;
 -- 팀 밖에서는 경기 설정을 못 본다
 select pg_temp.check((select count(*) = 0 from public.team_settings), 'outsider cannot read settings');
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00')$$, 'not_permitted');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00', 2)$$, 'not_permitted');
 select pg_temp.login('00000000-0000-4000-8000-0000000000b3');
 insert into t_vars select 'r3', public.request_join((select v from t_vars where k = 'code'), 'code')::text;
 select pg_temp.login('00000000-0000-4000-8000-0000000000b4');
@@ -123,10 +123,10 @@ select public.appoint_manager((select v::uuid from t_vars where k = 'team'), '00
 -- 팀원은 경기 설정을 읽지만 고치지 못한다
 select pg_temp.login('00000000-0000-4000-8000-0000000000b3');
 select pg_temp.check((select count(*) = 1 from public.team_settings), 'member reads settings');
-select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00')$$, 'not_permitted');
+select pg_temp.expect_error($$select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00', 2)$$, 'not_permitted');
 -- 운영진은 고칠 수 있다
 select pg_temp.login('00000000-0000-4000-8000-0000000000b2');
-select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00');
+select public.update_team_settings((select v::uuid from t_vars where k = 'team'), null, 2, 6, '09:00', 2);
 
 -- ================================================================ 실력 등급 (3-4)
 select pg_temp.login('00000000-0000-4000-8000-0000000000b1');

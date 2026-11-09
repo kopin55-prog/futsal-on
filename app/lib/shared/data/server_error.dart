@@ -44,6 +44,12 @@ enum ServerErrorCode {
   dissolveConfirmationMismatch('dissolve_confirmation_mismatch'),
   invalidVenue('invalid_venue'),
   invalidLogoImage('invalid_logo_image'),
+  invalidMatchTime('invalid_match_time'),
+  matchInPast('match_in_past'),
+  invalidMatchSettings('invalid_match_settings'),
+  matchAlreadyCancelled('match_already_cancelled'),
+  matchAlreadyStarted('match_already_started'),
+  invalidCancelReason('invalid_cancel_reason'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

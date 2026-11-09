@@ -11,6 +11,9 @@ enum MatchSettingsError {
   /// 자동 생성 날짜가 0~[MatchSettings.maxAutoCreateDaysBefore] 밖
   autoCreateDaysRange,
 
+  /// 미투표 알림이 [MatchSettings.reminderHourOptions] 밖 (끄기는 null)
+  reminderRange,
+
   /// 참석 투표 마감 시각이 일정 자동 생성 시각보다 앞서거나 같음 (3-2 저장 규칙)
   deadlineBeforeAutoCreate,
 }
@@ -22,6 +25,7 @@ class MatchSettings {
     required this.rsvpDeadlineHours,
     required this.autoCreateDaysBefore,
     required this.autoCreateTime,
+    this.rsvpReminderHours = defaultReminderHours,
   });
 
   /// 새 팀 기본값: 정원 없음, 경기 2시간 전 마감 (Q-066), 6일 전 09:00 자동 생성.
@@ -37,6 +41,10 @@ class MatchSettings {
   static const int maxDeadlineHours = 720;
   static const int maxAutoCreateDaysBefore = 30;
 
+  /// 미투표 알림 선택지: 마감 몇 시간 전 (Q-072 1번). null 은 끄기. 서버 검사와 같다.
+  static const List<int> reminderHourOptions = [1, 2, 3, 6, 12, 24];
+  static const int defaultReminderHours = 2;
+
   /// 정원. null 이면 "정원 없음". 값이 있으면 넘는 인원은 대기 순번.
   final int? capacity;
 
@@ -49,6 +57,9 @@ class MatchSettings {
   /// 일정 자동 생성 시각 (한국 시간)
   final ClockTime autoCreateTime;
 
+  /// 미투표 알림 = 마감 몇 시간 전. null 이면 끄기. 자동 생성 일정에 쓰고 직접 추가 화면의 기본값.
+  final int? rsvpReminderHours;
+
   bool get hasCapacity => capacity != null;
 
   MatchSettings copyWith({
@@ -56,11 +67,13 @@ class MatchSettings {
     int? rsvpDeadlineHours,
     int? autoCreateDaysBefore,
     ClockTime? autoCreateTime,
+    int? Function()? rsvpReminderHours,
   }) => MatchSettings(
     capacity: capacity == null ? this.capacity : capacity(),
     rsvpDeadlineHours: rsvpDeadlineHours ?? this.rsvpDeadlineHours,
     autoCreateDaysBefore: autoCreateDaysBefore ?? this.autoCreateDaysBefore,
     autoCreateTime: autoCreateTime ?? this.autoCreateTime,
+    rsvpReminderHours: rsvpReminderHours == null ? this.rsvpReminderHours : rsvpReminderHours(),
   );
 
   @override
@@ -69,11 +82,12 @@ class MatchSettings {
       other.capacity == capacity &&
       other.rsvpDeadlineHours == rsvpDeadlineHours &&
       other.autoCreateDaysBefore == autoCreateDaysBefore &&
-      other.autoCreateTime == autoCreateTime;
+      other.autoCreateTime == autoCreateTime &&
+      other.rsvpReminderHours == rsvpReminderHours;
 
   @override
   int get hashCode =>
-      Object.hash(capacity, rsvpDeadlineHours, autoCreateDaysBefore, autoCreateTime);
+      Object.hash(capacity, rsvpDeadlineHours, autoCreateDaysBefore, autoCreateTime, rsvpReminderHours);
 }
 
 /// 경기 설정 검사. 서버(update_team_settings, private.team_settings_deadline_ok)가 같은 규칙으로 다시 검사한다.
@@ -113,6 +127,10 @@ abstract final class MatchSettingsValidator {
     final daysOk = s.autoCreateDaysBefore >= 0 &&
         s.autoCreateDaysBefore <= MatchSettings.maxAutoCreateDaysBefore;
     if (!daysOk) errors.add(MatchSettingsError.autoCreateDaysRange);
+    final reminder = s.rsvpReminderHours;
+    if (reminder != null && !MatchSettings.reminderHourOptions.contains(reminder)) {
+      errors.add(MatchSettingsError.reminderRange);
+    }
     if (deadlineOk &&
         daysOk &&
         !deadlineAfterAutoCreate(

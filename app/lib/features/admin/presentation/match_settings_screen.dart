@@ -12,7 +12,7 @@ import '../domain/match_settings.dart';
 import 'admin_texts.dart';
 
 /// 경기 설정 (팀장·운영진, data-model.md 3-2): 정원 없음 / 정원(넘으면 대기 순번),
-/// 참석 투표 마감(경기 몇 시간 전), 일정 자동 생성 시점(며칠 전·시각).
+/// 참석 투표 마감(경기 몇 시간 전), 미투표 알림(마감 몇 시간 전·끄기, Q-072 1번), 일정 자동 생성 시점(며칠 전·시각).
 /// 마감이 자동 생성보다 앞서면 저장 버튼 대신 안내를 보여준다 (서버도 다시 거절).
 /// 저장하면 true 로 닫힌다.
 class MatchSettingsScreen extends StatefulWidget {
@@ -31,6 +31,7 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
   final _days = TextEditingController();
   bool _hasCapacity = false;
   ClockTime _autoTime = MatchSettings.defaults.autoCreateTime;
+  int? _reminderHours = MatchSettings.defaultReminderHours;
   bool _loaded = false;
   bool _saving = false;
   String? _error;
@@ -59,6 +60,7 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
         _deadline.text = '${s.rsvpDeadlineHours}';
         _days.text = '${s.autoCreateDaysBefore}';
         _autoTime = s.autoCreateTime;
+        _reminderHours = s.rsvpReminderHours;
         _loaded = true;
         _error = null;
       });
@@ -73,6 +75,7 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
     rsvpDeadlineHours: int.tryParse(_deadline.text) ?? -1,
     autoCreateDaysBefore: int.tryParse(_days.text) ?? -1,
     autoCreateTime: _autoTime,
+    rsvpReminderHours: _reminderHours,
   );
 
   Set<MatchSettingsError> get _errors =>
@@ -168,6 +171,18 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
             AppSpacing.sectionGap,
             // ---- 참석 투표 마감
             _numberField(const Key('settings-deadline'), _deadline, AdminTexts.deadlineLabel),
+            AppSpacing.fieldGap,
+            // ---- 미투표 알림 (마감 몇 시간 전, 끄기)
+            DropdownButtonFormField<int?>(
+              key: const Key('settings-reminder'),
+              initialValue: _reminderHours,
+              decoration: const InputDecoration(labelText: AdminTexts.reminderLabel),
+              items: [
+                for (final h in [...MatchSettings.reminderHourOptions, null])
+                  DropdownMenuItem<int?>(value: h, child: Text(AdminTexts.reminderOption(h))),
+              ],
+              onChanged: (v) => setState(() => _reminderHours = v),
+            ),
             AppSpacing.sectionGap,
             // ---- 일정 자동 생성
             const SectionHeader(AdminTexts.autoCreateSection),

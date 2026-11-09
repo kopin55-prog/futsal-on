@@ -915,7 +915,7 @@ v4.2: "내 기록"에는 **참석 투표 참여율**(퍼센트, 7-7에서 계산
 | user_id | ID | 필수 | 회원 탈퇴 시 같이 삭제 |
 | month | 날짜 | 필수 | 그 달 1일(경기 시작일 기준, 한국 시간) |
 | attendance_vote_eligible | 숫자 | 필수 | 참석 투표 대상 횟수: **경기 시작 시각**에 그 팀 팀원이고 마감 전에 가입한 사람이면 +1 `[결정됨 Q-071 14번]` |
-| attendance_vote_responded | 숫자 | 필수 | 그중 마감 전에 참석/불참을 눌렀거나, **마감 시각에 부상 중**이었던 횟수(부상 중이면 투표한 것으로 봄) `[결정됨 Q-062 2번]` |
+| attendance_vote_responded | 숫자 | 필수 | 그중 마감 전에 참석/불참을 눌렀거나, **마감 시각에 부상 중**이었던 횟수(셈 자체는 경기 시작 때, Q-071 14번)(부상 중이면 투표한 것으로 봄) `[결정됨 Q-062 2번]` |
 
 - (팀, 사람, 월) 조합당 한 줄. **경기 시작 시각의 참여율 처리**(예약 작업, Q-071 14번: 마감이 아니라 시작 때 세므로 시작 전에 취소된 일정은 처음부터 안 셈 → Q-064 1번 되돌림 불필요, 마감과 시작 사이에 떠난 사람은 안 셈)에서 올리고, 경기마다 `matches.attendance_closed_out_at` 표시로 두 번 세지 않는다. 취소된 일정은 세지 않는다.
 - 팀을 떠나도 남는다(7-4와 같음). 숫자는 0 이상, 응답 ≤ 대상.
@@ -996,7 +996,7 @@ v4.2: "내 기록"에는 **참석 투표 참여율**(퍼센트, 7-7에서 계산
 **조용한 시간(00:00~08:00)에도 알림함에는 바로 쌓고, 푸시만 13:00에 보낸다** `[결정됨 Q-033, 시각은 Q-071 11번으로 08:00→13:00]`. 새 팀원 합류 알림은 푸시 없이 알림함에만 `[결정됨 Q-071 9번]`.
 
 알림 종류(`kind`) 목록 = docs/notifications.md 목록 + Q-022 추가 4종:
-`match_created`(일정 생성·참석 투표 오픈), `rsvp_deadline_soon`, `waitlist_promoted`, `match_cancelled`, `lineup_confirmed`, `lineup_changed`, `award_poll_opened`, `award_deadline_soon`, `join_request_received`, `join_request_decided`, `member_left`, `team_dissolved`, `injury_return_check`, **`manager_assigned`, `manager_unassigned`, `ownership_received`, `member_removed`** (Q-022), (2차) `monthly_report`.
+`match_created`(일정 생성·참석 투표 오픈), `rsvp_deadline_soon`, `waitlist_promoted`, `match_cancelled`, `lineup_confirmed`, `lineup_changed`, `award_poll_opened`, `award_deadline_soon`, `join_request_received`, `join_request_decided`, `member_left`, `team_dissolved`, `injury_return_check`, **`manager_assigned`, `manager_unassigned`, `ownership_received`, `member_removed`** (Q-022), **`member_joined`**(합류, 알림함만, Q-071 9번), **`member_account_deleted`**(회원 탈퇴, 이름 남김, Q-072 3번), **`join_request_auto_declined`**(해체로 자동 거절, Q-067 8번), (2차) `monthly_report`. `rsvp_deadline_soon`은 일정의 rsvp_reminder_at에 보냄(Q-072 1번).
 
 ### 9-1. 알림 발송 대기열 `notification_outbox`
 

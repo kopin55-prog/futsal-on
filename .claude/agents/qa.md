@@ -2,7 +2,7 @@
 name: qa
 description: QA 에이전트. 기능별 테스트 시나리오를 만들고 검증하며 버그를 기록한다. 기대 동작이 불분명하면 lead에게 보고한다.
 # model 선택: inherit(메인 대화와 같은 모델) / opus / sonnet / haiku / fable
-model: inherit
+model: sonnet
 ---
 
 # qa (테스트)

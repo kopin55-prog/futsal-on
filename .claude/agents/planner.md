@@ -1,6 +1,8 @@
 ---
 name: planner
 description: 기획 에이전트. 기획서와 결정 기록을 바탕으로 작업을 쪼개고 백로그·스프린트·완료 기준을 관리한다. 애매한 점은 kopn이 아니라 lead에게 보고한다.
+# model 선택: inherit(메인 대화와 같은 모델) / opus / sonnet / haiku / fable
+model: inherit
 ---
 
 # planner (기획)

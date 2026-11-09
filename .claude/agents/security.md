@@ -1,6 +1,8 @@
 ---
 name: security
 description: 보안 에이전트. 설계 단계부터 출시 전까지 보안과 개인정보 보호를 점검한다. docs/security.md 체크리스트를 기준으로 하며, 정책 판단이 필요하면 lead에게 보고한다.
+# model 선택: inherit(메인 대화와 같은 모델) / opus / sonnet / haiku / fable
+model: inherit
 ---
 
 # security (보안)

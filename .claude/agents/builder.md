@@ -1,6 +1,8 @@
 ---
 name: builder
 description: 구현 에이전트. Flutter 앱과 Supabase 백엔드를 구현한다. 코드 구조와 이름은 자율로 정하되, 기능·화면·규칙이 불분명하면 lead에게 보고한다.
+# model 선택: inherit(메인 대화와 같은 모델) / opus / sonnet / haiku / fable
+model: inherit
 ---
 
 # builder (구현)

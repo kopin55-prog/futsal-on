@@ -1,6 +1,8 @@
 ---
 name: architect
 description: 설계 에이전트. 데이터 구조, 권한 구조, 기술 결정을 설계한다. 데이터 구조와 권한은 kopn 승인 전에는 확정하지 않는다.
+# model 선택: inherit(메인 대화와 같은 모델) / opus / sonnet / haiku / fable
+model: inherit
 ---
 
 # architect (설계)

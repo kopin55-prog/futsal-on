@@ -35,6 +35,9 @@ const row = (over: Partial<ClaimedRow> = {}): ClaimedRow => ({
   read_at: null,
   match_status: 'scheduled',
   match_starts_at: '2026-11-12T01:00:00Z',
+  match_ends_at: '2026-11-12T03:00:00Z',
+  award_poll_status: null,
+  award_poll_closes_at: null,
   recipient_active: true,
   recipient_left_at: null,
   tokens: ['tok-a'],
@@ -64,6 +67,54 @@ Deno.test('skipReason: 대상 일정이 이미 시작 (정각 포함). 취소 �
     'match_started',
   );
   assertEquals(skipReason(row({ kind: 'waitlist_promoted', match_starts_at: '2026-11-11T01:00:00Z' }), NOW), 'match_started');
+});
+
+// ---------------------------------------------------------------- 종류별 규칙 (스프린트 03 4-7)
+// 끝난 경기(한국 11월 11일 10:00~12:00)의 투표, 지금은 한국 13:00
+const ended = { match_starts_at: '2026-11-11T01:00:00Z', match_ends_at: '2026-11-11T03:00:00Z' };
+
+Deno.test('skipReason: 투표 오픈 알림은 경기가 시작·종료돼도 투표가 진행 중이면 보낸다', () => {
+  const r = row({ kind: 'award_poll_opened', ...ended, award_poll_status: 'open', award_poll_closes_at: '2026-11-12T06:00:00Z' });
+  assertEquals(skipReason(r, NOW), null);
+});
+
+Deno.test('skipReason: 투표 오픈 알림은 투표가 마감됐거나(정각 포함) 회차가 없으면 건너뜀', () => {
+  const base = { kind: 'award_poll_opened', ...ended };
+  assertEquals(skipReason(row({ ...base, award_poll_status: 'closed', award_poll_closes_at: '2026-11-12T06:00:00Z' }), NOW), 'poll_closed');
+  assertEquals(skipReason(row({ ...base, award_poll_status: 'open', award_poll_closes_at: '2026-11-11T04:00:00Z' }), NOW), 'poll_closed');
+  assertEquals(skipReason(row({ ...base, award_poll_status: 'open', award_poll_closes_at: '2026-11-11T03:59:59Z' }), NOW), 'poll_closed');
+  assertEquals(skipReason(row({ ...base, award_poll_status: null, award_poll_closes_at: null }), NOW), 'poll_closed');
+  assertEquals(
+    skipReason(row({ kind: 'award_deadline_soon', ...ended, award_poll_status: 'closed', award_poll_closes_at: '2026-11-11T04:00:00Z' }), NOW),
+    'poll_closed',
+  );
+});
+
+Deno.test('skipReason: 결과 발표 알림은 시작·마감을 이유로 건너뛰지 않는다', () => {
+  const r = row({ kind: 'award_results_announced', ...ended, award_poll_status: 'closed', award_poll_closes_at: '2026-11-11T04:00:00Z' });
+  assertEquals(skipReason(r, NOW), null);
+});
+
+Deno.test('skipReason: POM 알림도 읽음·떠난 팀·기기 없음 규칙은 그대로', () => {
+  const open = { kind: 'award_poll_opened', ...ended, award_poll_status: 'open', award_poll_closes_at: '2026-11-12T06:00:00Z' };
+  assertEquals(skipReason(row({ ...open, read_at: '2026-11-11T03:30:00Z' }), NOW), 'read');
+  assertEquals(skipReason(row({ ...open, recipient_active: false, recipient_left_at: '2026-11-11T03:30:00Z' }), NOW), 'left_team');
+  const results = { kind: 'award_results_announced', ...ended, award_poll_status: 'closed' };
+  assertEquals(skipReason(row({ ...results, read_at: '2026-11-11T03:30:00Z' }), NOW), 'read');
+  assertEquals(skipReason(row({ ...results, recipient_active: false, recipient_left_at: '2026-11-11T03:30:00Z' }), NOW), 'left_team');
+  assertEquals(skipReason(row({ ...results, tokens: [] }), NOW), 'no_device');
+});
+
+Deno.test('skipReason: 배치 미확정 알림은 경기 중이면 보내고, 끝났으면(정각 포함) 건너뜀', () => {
+  const base = { kind: 'lineup_unconfirmed', match_starts_at: '2026-11-11T03:00:00Z' };
+  assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T05:00:00Z' }), NOW), null);
+  assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T04:00:00Z' }), NOW), 'match_ended');
+  assertEquals(skipReason(row({ ...base, match_ends_at: '2026-11-11T03:30:00Z' }), NOW), 'match_ended');
+});
+
+Deno.test('skipReason: 그 밖의 종류는 경기 시작 규칙 그대로 (배치 확정 알림 등)', () => {
+  assertEquals(skipReason(row({ kind: 'lineup_confirmed', ...ended }), NOW), 'match_started');
+  assertEquals(skipReason(row({ kind: 'lineup_changed', ...ended, award_poll_status: 'open' }), NOW), 'match_started');
 });
 
 Deno.test('skipReason: 일정이 아닌 알림은 일정 조건을 보지 않는다', () => {

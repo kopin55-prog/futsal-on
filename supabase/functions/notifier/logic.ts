@@ -3,7 +3,10 @@
 // 건너뛰기 (Q-071 11번, Q-073 5번): 푸시만 건너뛰고 알림함 줄은 남긴다 (status = skipped).
 //   - read          이미 읽은 알림
 //   - match_cancelled 대상 일정이 취소됨 (일정 취소 알림 자체는 제외: 취소를 알리는 알림이므로)
-//   - match_started 대상 일정이 이미 시작함
+//   - match_started 대상 일정이 이미 시작함 (아래 종류는 이 규칙 대신 종류별 규칙, 스프린트 03 4-7)
+//       · award_poll_opened / award_deadline_soon  → poll_closed: 투표가 마감됐거나 회차가 없음(해체로 폐기)
+//       · award_results_announced                  → 시작·마감을 이유로 건너뛰지 않음
+//       · lineup_unconfirmed                       → match_ended: 경기가 이미 끝남 (시작 시각에 생기는 알림)
 //   - left_team     받는 사람이 알림이 생긴 뒤 그 팀을 떠남 (지금 소속이 아니고, 마지막으로 떠난 시각이 알림보다 뒤)
 //                   → 내보내진 본인 알림·해체 알림(떠난 순간 = 알림 시각)·가입 거절 알림(소속 이력 없음)은 건너뛰지 않는다
 //   - no_device     기기 주소가 하나도 없음 (보낼 곳이 없음)
@@ -29,12 +32,25 @@ export type ClaimedRow = {
   read_at: string | null;
   match_status: string | null;
   match_starts_at: string | null;
+  match_ends_at: string | null;
+  award_poll_status: string | null;
+  award_poll_closes_at: string | null;
   recipient_active: boolean;
   recipient_left_at: string | null;
   tokens: string[] | null;
 };
 
-export type SkipReason = 'read' | 'match_cancelled' | 'match_started' | 'left_team' | 'no_device';
+export type SkipReason =
+  | 'read'
+  | 'match_cancelled'
+  | 'match_started'
+  | 'match_ended'
+  | 'poll_closed'
+  | 'left_team'
+  | 'no_device';
+
+/** POM·오늘의 골 투표를 하라는 알림 (투표가 마감되면 의미가 없음). */
+const AWARD_POLL_KINDS = new Set(['award_poll_opened', 'award_deadline_soon']);
 
 const time = (iso: string | null): number | null => {
   if (!iso) return null;
@@ -48,8 +64,18 @@ export function skipReason(row: ClaimedRow, now: number): SkipReason | null {
 
   if (row.ref_type === 'match') {
     if (row.match_status === 'cancelled' && row.kind !== 'match_cancelled') return 'match_cancelled';
-    const starts = time(row.match_starts_at);
-    if (starts !== null && starts <= now) return 'match_started';
+    if (AWARD_POLL_KINDS.has(row.kind)) {
+      const closes = time(row.award_poll_closes_at);
+      if (row.award_poll_status !== 'open' || closes === null || closes <= now) return 'poll_closed';
+    } else if (row.kind === 'award_results_announced') {
+      // 결과 발표는 경기가 끝난 뒤의 알림이므로 시작·마감으로 건너뛰지 않는다
+    } else if (row.kind === 'lineup_unconfirmed') {
+      const ends = time(row.match_ends_at);
+      if (ends !== null && ends <= now) return 'match_ended';
+    } else {
+      const starts = time(row.match_starts_at);
+      if (starts !== null && starts <= now) return 'match_started';
+    }
   }
 
   if (row.team_id && !row.recipient_active) {

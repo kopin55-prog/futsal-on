@@ -4,6 +4,7 @@ import '../features/lineup/data/lineup_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/notifications/data/notification_repository.dart';
 import '../features/notifications/data/push_controller.dart';
+import '../features/pom_vote/data/award_repository.dart';
 import '../features/profile/data/profile_repository.dart';
 import '../features/schedule/data/attendance_repository.dart';
 import '../features/schedule/data/guest_repository.dart';
@@ -32,6 +33,7 @@ class AppServices {
     required this.attendance,
     required this.guests,
     required this.lineups,
+    required this.awards,
     this.push,
     this.entitlements = const Entitlements(),
   });
@@ -68,6 +70,9 @@ class AppServices {
 
   /// 팀 배치 (읽기: 관리자는 항상·팀원은 확정만, 저장·확정·수정: 관리자)
   final LineupRepository lineups;
+
+  /// POM·오늘의 골 투표와 투표 설정 (읽기: 팀원, 투표: 대상자, 설정 바꾸기: 관리자)
+  final AwardRepository awards;
 
   /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
   final PushController? push;

@@ -11,6 +11,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_gate.dart';
 import 'features/auth/presentation/auth_texts.dart';
 import 'features/lineup/data/lineup_repository.dart';
+import 'features/pom_vote/data/award_repository.dart';
 import 'features/membership/data/membership_repository.dart';
 import 'features/notifications/data/device_token_repository.dart';
 import 'features/notifications/data/notification_repository.dart';
@@ -74,6 +75,7 @@ Future<void> main() async {
         attendance: SupabaseAttendanceRepository(client),
         guests: SupabaseGuestRepository(client),
         lineups: SupabaseLineupRepository(client),
+        awards: SupabaseAwardRepository(client),
         push: push,
       ),
       logoImages: (path) => _logoImage(client, config, path),

@@ -18,8 +18,9 @@ import 'lineup_texts.dart';
 /// 팀 나누기 (운영진, 스프린트 03 3-1~3-3). 일정 상세에서 연다.
 ///
 /// - 팀 수·팀당 인원 (처음 값: 저장된 배치 → 지난 경기에 쓴 값 → 2팀·인원÷2 올림, Q-075 7번 (4)).
-/// - [자동 나누기]: 참석자·게스트를 계산 함수로 나눈다. 이미 배치가 있으면 그 배치에 있는 사람으로 다시 나누고,
-///   직접 추가한 팀원(참석자가 아닌 사람)은 교체 블록에 그대로 둔다.
+/// - [자동 나누기]: 참석자·게스트를 계산 함수로 나눈다. 이미 배치가 있으면 그 배치에 있는 사람으로 다시 나눈다.
+///   운영진이 직접 넣은 팀원(참석자가 아닌 사람)도 계산에 넣어 팀에 배정한다 (Q-076 6번).
+///   계산 정보가 없는 사람(경기 시작 뒤 팀을 떠난 사람)만 교체 블록에 그대로 둔다.
 /// - [재조합]: 다음으로 좋은 배치. 직접 옮긴 뒤면 확인 창, 후보를 다 보면 "모든 조합을 봤어요" (Q-075 7번 (1)(2)).
 /// - 끌어 옮기기(길게 눌러 끌기) 또는 이름을 눌러 옮길 곳 고르기: 팀 ↔ 팀 ↔ 교체 블록, 배치에서 빼기(Q-046).
 ///   규칙이 깨져도 막지 않고 경고만 (Q-075 7번 (3)).
@@ -179,8 +180,9 @@ class _LineupEditorScreenState extends State<LineupEditorScreen> {
 
     final current = _board;
     final people = current?.people ?? [...pool.autoPeople];
-    // 계산하는 사람 = 참석자·게스트 중 배치에 있는 사람. 그 밖(직접 추가한 팀원 등)은 교체 블록에 둔다.
-    final auto = [for (final p in people) if (pool.autoPeople.contains(p) && pool.candidates.containsKey(p)) p]..sort();
+    // 계산하는 사람 = 배치에 있는 사람 중 계산 정보가 있는 사람 (참석자·게스트 + 운영진이 직접 넣은 팀원, Q-076 6번).
+    // 계산 정보가 없는 사람(경기 시작 뒤 팀을 떠나 팀원 목록에 없는 사람)만 교체 블록에 그대로 둔다.
+    final auto = [for (final p in people) if (pool.candidates.containsKey(p)) p]..sort();
     final extras = [for (final p in people) if (!auto.contains(p)) p];
     final key = '$_teams/$_players/${auto.map((p) => p.key).join(',')}';
 

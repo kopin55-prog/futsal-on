@@ -38,6 +38,7 @@ class Entitlements {
       case TeamAction.editTeamInfo:
       case TeamAction.setSkillLevel:
       case TeamAction.editMatchSettings:
+      case TeamAction.editAwardSettings:
       case TeamAction.editGroupRivalRules:
       case TeamAction.manageSchedule:
       case TeamAction.manageLineup:

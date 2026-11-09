@@ -369,7 +369,7 @@ void main() {
       expect(t.lineups.savedDrafts.single.squads.map((q) => q.bibColor), [BibColor.noBib, BibColor.blue]);
     });
 
-    testWidgets('팀원 추가: 배치에 없는 팀원(불참·미투표)을 상태와 함께 보여 주고 교체 블록에 넣음', (tester) async {
+    testWidgets('팀원 추가: 배치에 없는 팀원(불참·미투표)을 상태와 함께 보여 주고 교체 블록에 넣음, 다시 나누면 계산에 들어감', (tester) async {
       final t = await _open(tester);
       await _openEditor(tester);
       await _tapKey(tester, 'lineup-auto');
@@ -388,12 +388,16 @@ void main() {
       await tester.tap(find.byKey(const Key('add-member-m1')));
       await tester.pumpAndSettle();
       expect(_namesIn(tester, 'lineup-bench'), ['운영']);
-      // 다시 나눠도 직접 추가한 사람은 교체 블록에 남음
+      // 다시 나누면 직접 추가한 사람도 계산에 들어가 팀에 배정됨 (Q-076 6번): 7명 + 1명 = 2팀 × 4명, 교체 없음
       await _tapKey(tester, 'lineup-reshuffle');
       await _tapKey(tester, 'lineup-discard-confirm');
-      expect(_namesIn(tester, 'lineup-bench'), ['운영']);
+      expect(_namesIn(tester, 'lineup-bench'), isEmpty);
+      expect(find.text(LineupTexts.squadTitle(BibColor.red, 4)), findsOneWidget);
+      expect(find.text(LineupTexts.squadTitle(BibColor.blue, 4)), findsOneWidget);
       await _tapKey(tester, 'lineup-save-draft');
-      expect(t.lineups.savedDrafts.single.bench, [_p('m1')]);
+      final saved = t.lineups.savedDrafts.single;
+      expect(saved.bench, isEmpty);
+      expect(saved.squads.expand((q) => q.people), contains(_p('m1')));
     });
 
     testWidgets('다른 운영진이 먼저 저장 → "다른 운영진이 먼저 바꿨어요" 후 새로 불러옴', (tester) async {

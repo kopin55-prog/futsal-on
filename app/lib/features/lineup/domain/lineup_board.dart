@@ -148,7 +148,7 @@ class LineupBoard {
   );
 
   /// 계산 결과로 만든다. [colors] 가 팀 수와 같으면 그 색을 그대로 쓰고(다시 나눠도 조끼 색 유지), 아니면 자동 배정 순서.
-  /// [extraBench] = 계산에 넣지 않고 교체 블록에 두는 사람 (직접 추가한 팀원 등).
+  /// [extraBench] = 계산에 넣지 않고 교체 블록에 두는 사람 (계산 정보가 없는 사람, 예: 경기 시작 뒤 팀을 떠난 사람).
   static LineupBoard fromPlan(
     TeamSplitPlan plan, {
     required int playersPerTeam,

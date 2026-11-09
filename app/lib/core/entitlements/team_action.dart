@@ -15,6 +15,9 @@ enum TeamAction {
   /// 경기 설정 (정원·마감·자동 생성 시점)
   editMatchSettings,
 
+  /// 투표 설정 (POM·오늘의 골 발표 시각, Q-076 1번). 경기 설정과 따로
+  editAwardSettings,
+
   /// 그룹·라이벌 설정
   editGroupRivalRules,
 

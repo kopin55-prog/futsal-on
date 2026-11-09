@@ -63,6 +63,15 @@ enum ServerErrorCode {
   lineupConflict('lineup_conflict'),
   invalidLineup('invalid_lineup'),
   invalidLineupSlot('invalid_lineup_slot'),
+  // 투표 설정·POM·오늘의 골 투표 (update_award_settings, cast_award_vote)
+  invalidAwardSettings('invalid_award_settings'),
+  awardPollNotFound('award_poll_not_found'),
+  awardNotParticipant('award_not_participant'),
+  awardPollClosed('award_poll_closed'),
+  awardInvalidCategory('award_invalid_category'),
+  awardSelfVote('award_self_vote'),
+  awardInvalidCandidate('award_invalid_candidate'),
+  awardAlreadyVoted('award_already_voted'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

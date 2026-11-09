@@ -24,6 +24,9 @@ enum NotificationKind {
   memberAccountDeleted('member_account_deleted'),
   joinRequestAutoDeclined('join_request_auto_declined'),
   monthlyReport('monthly_report'),
+  // v4.5 (202611050041): 결과 발표, 배치 미확정. 누르면 일정 상세 (ref_type = match)
+  awardResultsAnnounced('award_results_announced'),
+  lineupUnconfirmed('lineup_unconfirmed'),
 
   /// 앱이 모르는 종류.
   unknown('');

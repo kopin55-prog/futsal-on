@@ -25,6 +25,7 @@ import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
 import 'package:futsal_on/shared/domain/venue.dart';
 
+import 'award_fakes.dart';
 import 'lineup_fakes.dart';
 import 'schedule_fakes.dart';
 
@@ -466,6 +467,7 @@ class TestServices {
   late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId);
   final guests = FakeGuestRepository();
   final lineups = FakeLineupRepository();
+  final awards = FakeAwardRepository();
 
   /// 휴대폰 푸시 (없으면 푸시 없음)
   PushController? push;
@@ -488,6 +490,7 @@ class TestServices {
     attendance: attendance,
     guests: guests,
     lineups: lineups,
+    awards: awards,
     push: push,
   );
 }

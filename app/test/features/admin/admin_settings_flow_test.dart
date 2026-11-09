@@ -57,15 +57,15 @@ Future<TestServices> _openAdmin(
 
 void main() {
   group('관리 탭 팀 설정 메뉴 (Entitlements)', () {
-    testWidgets('팀장·운영진은 네 메뉴가 모두 보인다', (tester) async {
+    testWidgets('팀장·운영진은 다섯 메뉴가 모두 보인다', (tester) async {
       await _openAdmin(tester);
-      for (final k in ['open-team-info', 'open-match-settings', 'open-skill-levels', 'open-pairing-rules']) {
+      for (final k in ['open-team-info', 'open-match-settings', 'open-award-settings', 'open-skill-levels', 'open-pairing-rules']) {
         expect(find.byKey(Key(k)), findsOneWidget, reason: k);
       }
     });
     testWidgets('운영진도 같다', (tester) async {
       await _openAdmin(tester, role: TeamRole.manager, userId: 'm1');
-      for (final k in ['open-team-info', 'open-match-settings', 'open-skill-levels', 'open-pairing-rules']) {
+      for (final k in ['open-team-info', 'open-match-settings', 'open-award-settings', 'open-skill-levels', 'open-pairing-rules']) {
         expect(find.byKey(Key(k)), findsOneWidget, reason: k);
       }
     });

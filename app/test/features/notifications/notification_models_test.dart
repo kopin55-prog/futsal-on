@@ -43,6 +43,9 @@ void main() {
     test('종류 목록은 서버 enum 과 같다', () {
       final block = RegExp(r'create type public\.notification_kind as enum \(([^)]*)\)').firstMatch(schema)!.group(1)!;
       final server = RegExp(r"'([a-z_]+)'").allMatches(block).map((m) => m.group(1)!).toList();
+      // 나중에 추가한 값 (alter type ... add value)
+      final added = File('../supabase/migrations/202611050041_notification_kinds_v45.sql').readAsStringSync();
+      server.addAll(RegExp(r"add value if not exists '([a-z_]+)'").allMatches(added).map((m) => m.group(1)!));
       final app = [for (final k in NotificationKind.values) if (k != NotificationKind.unknown) k.code];
       expect(app, server);
     });

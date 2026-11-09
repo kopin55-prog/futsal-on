@@ -6,6 +6,8 @@ import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../pom_vote/presentation/award_settings_screen.dart';
+import '../../pom_vote/presentation/award_texts.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/roster_tab.dart' show RoleBadge;
@@ -16,7 +18,7 @@ import 'pairing_rules_screen.dart';
 import 'skill_levels_screen.dart';
 import 'team_info_edit_screen.dart';
 
-/// 관리 탭 (팀장·운영진): 팀 설정(팀 정보·경기 설정·실력 등급·그룹·라이벌), 초대 코드 발급, 가입 신청 승인·거절,
+/// 관리 탭 (팀장·운영진): 팀 설정(팀 정보·경기 설정·투표 설정·실력 등급·그룹·라이벌), 초대 코드 발급, 가입 신청 승인·거절,
 /// 팀원 관리(운영진 지정·해제, 위임, 내보내기 — 팀장만), 팀 해체(팀장만).
 /// 버튼 노출은 Entitlements 로만 판단하고, 서버가 같은 규칙으로 다시 거절한다.
 ///
@@ -226,6 +228,19 @@ class _AdminTabState extends State<AdminTab> {
     }
   }
 
+  Future<void> _openAwardSettings() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AwardSettingsScreen(awards: _s.awards, team: widget.team),
+      ),
+    );
+    if ((saved ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AwardTexts.saved)),
+      );
+    }
+  }
+
   Future<void> _openSkillLevels() => Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => SkillLevelsScreen(
@@ -252,6 +267,8 @@ class _AdminTabState extends State<AdminTab> {
         (const Key('open-team-info'), Icons.edit_outlined, AdminTexts.teamInfo, _openTeamInfo),
       if (_e.canPerform(v, TeamAction.editMatchSettings))
         (const Key('open-match-settings'), Icons.event_note_outlined, AdminTexts.matchSettings, _openMatchSettings),
+      if (_e.canPerform(v, TeamAction.editAwardSettings))
+        (const Key('open-award-settings'), Icons.emoji_events_outlined, AwardTexts.awardSettings, _openAwardSettings),
       if (_e.canPerform(v, TeamAction.setSkillLevel))
         (const Key('open-skill-levels'), Icons.leaderboard_outlined, AdminTexts.skillLevels, _openSkillLevels),
       if (_e.canPerform(v, TeamAction.editGroupRivalRules) &&

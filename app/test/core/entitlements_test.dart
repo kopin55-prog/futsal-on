@@ -19,6 +19,7 @@ void main() {
       TeamAction.editTeamInfo,
       TeamAction.setSkillLevel,
       TeamAction.editMatchSettings,
+      TeamAction.editAwardSettings,
       TeamAction.editGroupRivalRules,
       TeamAction.manageSchedule,
       TeamAction.manageLineup,

@@ -9,6 +9,9 @@ abstract interface class MatchRepository {
   /// 팀의 일정 (취소 포함), 시작 시각 순. [from] 이 있으면 그 시각 이후에 끝나는 일정만.
   Future<List<TeamMatch>> listMatches(String teamId, {DateTime? from});
 
+  /// 일정 한 건. 볼 수 없거나(떠난 팀) 없어진 일정이면 null.
+  Future<TeamMatch?> getMatch(String matchId);
+
   /// 직접 추가. 새 일정 ID.
   Future<String> createMatch(String teamId, MatchInput input);
 
@@ -27,6 +30,12 @@ class SupabaseMatchRepository implements MatchRepository {
     if (from != null) query = query.gt('ends_at', from.toUtc().toIso8601String());
     final rows = await query.order('starts_at');
     return [for (final r in rows) TeamMatch.fromRow(r)];
+  });
+
+  @override
+  Future<TeamMatch?> getMatch(String matchId) => guardServer(() async {
+    final row = await _client.from('matches').select(TeamMatch.columns).eq('id', matchId).maybeSingle();
+    return row == null ? null : TeamMatch.fromRow(row);
   });
 
   @override

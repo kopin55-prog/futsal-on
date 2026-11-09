@@ -11,7 +11,8 @@ import '../data/team_admin_repository.dart';
 import '../domain/match_settings.dart';
 import 'admin_texts.dart';
 
-/// 경기 설정 (팀장·운영진, data-model.md 3-2): 정원 없음 / 정원(넘으면 대기 순번),
+/// 경기 설정 (팀장·운영진, data-model.md 3-2): 정원은 "대기 사용" 스위치 + 참석 인원 입력으로 보여준다
+/// (Q-073 7번 참고: 대기를 끄면 정원 없음 = 모두 참석, 켜면 그 인원까지 참석하고 다음 사람부터 대기 순번. 저장은 capacity 그대로),
 /// 참석 투표 마감(경기 몇 시간 전), 미투표 알림(마감 몇 시간 전·끄기, Q-072 1번), 일정 자동 생성 시점(며칠 전·시각).
 /// 마감이 자동 생성보다 앞서면 저장 버튼 대신 안내를 보여준다 (서버도 다시 거절).
 /// 저장하면 true 로 닫힌다.
@@ -143,31 +144,28 @@ class _MatchSettingsScreenState extends State<MatchSettingsScreen> {
         child: ListView(
           padding: AppSpacing.page,
           children: [
-            // ---- 정원
+            // ---- 정원: 대기 사용 스위치 + 참석 인원 (끄면 정원 없음 = 모두 참석)
             const SectionHeader(AdminTexts.capacitySection),
-            RadioGroup<bool>(
-              groupValue: _hasCapacity,
-              onChanged: (v) => setState(() => _hasCapacity = v ?? false),
-              child: const Column(
-                children: [
-                  RadioListTile<bool>(
-                    key: Key('settings-no-capacity'),
-                    contentPadding: EdgeInsets.zero,
-                    value: false,
-                    title: Text(AdminTexts.noCapacity),
-                  ),
-                  RadioListTile<bool>(
-                    key: Key('settings-has-capacity'),
-                    contentPadding: EdgeInsets.zero,
-                    value: true,
-                    title: Text(AdminTexts.setCapacity),
-                    subtitle: Text(AdminTexts.capacityNote),
-                  ),
-                ],
-              ),
+            SwitchListTile(
+              key: const Key('settings-waitlist'),
+              contentPadding: EdgeInsets.zero,
+              value: _hasCapacity,
+              title: const Text(AdminTexts.useWaitlist),
+              subtitle: Text(_hasCapacity ? AdminTexts.useWaitlistOnNote : AdminTexts.useWaitlistOffNote),
+              onChanged: (v) => setState(() => _hasCapacity = v),
             ),
-            if (_hasCapacity)
+            if (_hasCapacity) ...[
               _numberField(const Key('settings-capacity'), _capacity, AdminTexts.capacityLabel),
+              if (int.tryParse(_capacity.text) case final n? when n >= 1 && n <= MatchSettings.maxCapacity)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Text(
+                    AdminTexts.waitlistFrom(n),
+                    key: const Key('settings-waitlist-from'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+            ],
             AppSpacing.sectionGap,
             // ---- 참석 투표 마감
             _numberField(const Key('settings-deadline'), _deadline, AdminTexts.deadlineLabel),

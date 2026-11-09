@@ -115,4 +115,46 @@ void main() {
       expect(sql.contains('rsvp_reminder_hours in (${MatchSettings.reminderHourOptions.join(', ')})'), isTrue);
     });
   });
+
+  group('직접 추가 화면 검사 (서버 create_match 와 같은 규칙)', () {
+    // 2027-01-06 09:00 KST = 2027-01-06 00:00 UTC
+    final now = DateTime.utc(2027, 1, 6);
+    MatchInput input(CalendarDate sd, ClockTime st, CalendarDate ed, ClockTime et, {int? deadline}) =>
+        MatchInput(startDate: sd, startTime: st, endDate: ed, endTime: et, rsvpDeadlineHours: deadline);
+    const d6 = CalendarDate(2027, 1, 6);
+    const d7 = CalendarDate(2027, 1, 7);
+
+    test('한국 시간 날짜·시각 → 절대 시각', () {
+      expect(Kst.toInstant(d6, const ClockTime(10, 0)), DateTime.utc(2027, 1, 6, 1));
+      expect(Kst.dateOf(DateTime.utc(2027, 1, 6, 15)), d7);
+      expect(Kst.timeOf(DateTime.utc(2027, 1, 6, 15, 30)), const ClockTime(0, 30));
+      expect(d6.weekday, 3);
+      expect(const CalendarDate(2026, 12, 31).plusDays(1), const CalendarDate(2027, 1, 1));
+    });
+
+    test('정상 / 자정 넘김은 종료 날짜로', () {
+      expect(input(d6, const ClockTime(20, 0), d6, const ClockTime(22, 0)).validate(now), isEmpty);
+      expect(input(d6, const ClockTime(22, 0), d7, const ClockTime(0, 30)).validate(now), isEmpty);
+    });
+
+    test('종료가 시작과 같거나 이르면 불가 (같은 날짜 10:00~09:00)', () {
+      expect(input(d6, const ClockTime(10, 0), d6, const ClockTime(10, 0)).validate(now), {MatchInputError.endNotAfterStart});
+      expect(input(d6, const ClockTime(22, 0), d6, const ClockTime(0, 30)).validate(now), {MatchInputError.endNotAfterStart});
+    });
+
+    test('24시간 초과 불가, 24시간 정확히는 가능 (Q-073 9번)', () {
+      expect(input(d6, const ClockTime(10, 0), d7, const ClockTime(10, 0)).validate(now), isEmpty);
+      expect(input(d6, const ClockTime(10, 0), d7, const ClockTime(10, 1)).validate(now), {MatchInputError.tooLong});
+    });
+
+    test('지난 시각 불가 (지금 09:00)', () {
+      expect(input(d6, const ClockTime(9, 0), d6, const ClockTime(11, 0)).validate(now), {MatchInputError.startInPast});
+      expect(input(d6, const ClockTime(9, 1), d6, const ClockTime(11, 0)).validate(now), isEmpty);
+    });
+
+    test('마감 0~720시간', () {
+      expect(input(d6, const ClockTime(20, 0), d6, const ClockTime(22, 0), deadline: 721).validate(now), {MatchInputError.deadlineRange});
+      expect(input(d6, const ClockTime(20, 0), d6, const ClockTime(22, 0), deadline: 0).validate(now), isEmpty);
+    });
+  });
 }

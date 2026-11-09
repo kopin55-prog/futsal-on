@@ -3,6 +3,9 @@ import '../features/auth/data/account_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/notifications/data/notification_repository.dart';
 import '../features/profile/data/profile_repository.dart';
+import '../features/schedule/data/attendance_repository.dart';
+import '../features/schedule/data/guest_repository.dart';
+import '../features/schedule/data/match_repository.dart';
 import '../features/team/data/logo_picker.dart';
 import '../features/team/data/recent_team_store.dart';
 import '../features/team/data/team_logo_repository.dart';
@@ -23,6 +26,9 @@ class AppServices {
     required this.logoPicker,
     required this.places,
     required this.notifications,
+    required this.matches,
+    required this.attendance,
+    required this.guests,
     this.entitlements = const Entitlements(),
   });
 
@@ -44,8 +50,17 @@ class AppServices {
   /// 지정 풋살장 검색 (서버 함수 place-search)
   final PlaceSearchRepository places;
 
-  /// 알림함 (본인 알림만, 화면은 스프린트 02 4단계)
+  /// 알림함 (본인 알림만)
   final NotificationRepository notifications;
+
+  /// 일정 (읽기: 팀원, 추가·취소: 관리자)
+  final MatchRepository matches;
+
+  /// 참석 투표 (본인 응답, 명단은 팀원 전체)
+  final AttendanceRepository attendance;
+
+  /// 게스트 (이름: 팀원, 포지션·대략 실력·추가·삭제: 관리자)
+  final GuestRepository guests;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

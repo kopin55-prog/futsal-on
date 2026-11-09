@@ -62,6 +62,12 @@ class TeamMatch {
   /// 관리자가 취소할 수 있는 상태인지 (권한 판단은 core/entitlements 에서 따로 한다).
   bool canBeCancelledAt(DateTime now) => !isCancelled && now.isBefore(startsAt);
 
+  /// 참석 투표를 받을 수 있는지: 예정 상태이고 마감 전 (마감 정각부터 불가, 서버 시각으로 다시 확인).
+  bool isRsvpOpenAt(DateTime now) => !isCancelled && now.isBefore(rsvpDeadlineAt);
+
+  /// 게스트를 추가·삭제할 수 있는 상태인지: 예정 상태이고 경기 시작 전 (Q-071 6번).
+  bool canEditGuestsAt(DateTime now) => !isCancelled && now.isBefore(startsAt);
+
   /// 서버 select 칸 목록 (matches 표, 팀원 읽기).
   static const columns =
       'id, team_id, source, status, starts_at, ends_at, rsvp_deadline_at, rsvp_reminder_at, capacity, '
@@ -86,6 +92,30 @@ class TeamMatch {
   static DateTime? _time(Object? v) => v == null ? null : DateTime.parse(v as String);
 }
 
+/// 한국 시간 표시·계산 (Q-027 M-18). 한국은 서머타임이 없어 항상 UTC+9.
+abstract final class Kst {
+  static const offset = Duration(hours: 9);
+
+  /// 절대 시각 → 한국 시간의 달력·시각 값 (필드만 쓴다, 시간대 정보 없음).
+  static DateTime fields(DateTime t) => t.toUtc().add(offset);
+
+  /// 한국 시간 날짜·시각 → 절대 시각.
+  static DateTime toInstant(CalendarDate date, ClockTime time) =>
+      DateTime.utc(date.year, date.month, date.day, time.hour, time.minute).subtract(offset);
+
+  /// 절대 시각의 한국 날짜.
+  static CalendarDate dateOf(DateTime t) {
+    final f = fields(t);
+    return CalendarDate(f.year, f.month, f.day);
+  }
+
+  /// 절대 시각의 한국 시각.
+  static ClockTime timeOf(DateTime t) {
+    final f = fields(t);
+    return ClockTime(f.hour, f.minute);
+  }
+}
+
 /// 날짜만 (한국 시간 기준 달력 날짜).
 class CalendarDate {
   const CalendarDate(this.year, this.month, this.day);
@@ -104,6 +134,32 @@ class CalendarDate {
 
   @override
   int get hashCode => Object.hash(year, month, day);
+
+  /// ISO 요일 (1=월 … 7=일)
+  int get weekday => DateTime.utc(year, month, day).weekday;
+
+  CalendarDate plusDays(int days) {
+    final d = DateTime.utc(year, month, day).add(Duration(days: days));
+    return CalendarDate(d.year, d.month, d.day);
+  }
+}
+
+/// 일정 직접 추가 입력 오류 (서버 create_match 와 같은 규칙, 1-5·Q-071 2번).
+enum MatchInputError {
+  /// 시작 날짜·시각 또는 종료 날짜·시각이 비어 있음
+  timeRequired,
+
+  /// 종료가 시작과 같거나 이름 (자정 넘김은 종료 날짜로 표현)
+  endNotAfterStart,
+
+  /// 일정 길이가 24시간을 넘음 (Q-073 9번)
+  tooLong,
+
+  /// 이미 지난 시각 (서버 시각으로 다시 확인)
+  startInPast,
+
+  /// 마감 시간이 0~720 밖
+  deadlineRange,
 }
 
 /// 일정 직접 추가 입력 (서버 함수 create_match).
@@ -133,6 +189,31 @@ class MatchInput {
   final Venue? venue;
   final int? rsvpDeadlineHours;
   final int? rsvpReminderHours;
+
+  /// 일정 최대 길이 (서버 matches_ends_after_start 와 같음, Q-073 9번).
+  static const maxLength = Duration(hours: 24);
+
+  /// 마감 시간 상한 (경기 설정과 같음).
+  static const int maxDeadlineHours = 720;
+
+  DateTime get startsAt => Kst.toInstant(startDate, startTime);
+  DateTime get endsAt => Kst.toInstant(endDate, endTime);
+
+  /// 화면 검사. 서버가 같은 규칙으로 다시 거절한다. 마감이 이미 지났으면 서버가 마감 = 시작으로 저장한다 (Q-071 2번).
+  Set<MatchInputError> validate(DateTime now) {
+    final errors = <MatchInputError>{};
+    final starts = startsAt;
+    final ends = endsAt;
+    if (!ends.isAfter(starts)) {
+      errors.add(MatchInputError.endNotAfterStart);
+    } else if (ends.difference(starts) > maxLength) {
+      errors.add(MatchInputError.tooLong);
+    }
+    if (!starts.isAfter(now)) errors.add(MatchInputError.startInPast);
+    final d = rsvpDeadlineHours;
+    if (d != null && (d < 0 || d > maxDeadlineHours)) errors.add(MatchInputError.deadlineRange);
+    return errors;
+  }
 
   Map<String, Object?> toServerParams(String teamId) => {
     'p_team_id': teamId,

@@ -24,6 +24,10 @@ import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
 import 'package:futsal_on/shared/domain/venue.dart';
 
+import 'schedule_fakes.dart';
+
+export 'schedule_fakes.dart';
+
 /// 화면 테스트용 메모리 저장소. 서버 규칙은 필요한 만큼만 흉내 낸다.
 class FakeTeamRepository implements TeamRepository {
   FakeTeamRepository({List<TeamSummary>? teams, Map<String, List<MemberEntry>>? members})
@@ -442,6 +446,12 @@ class TestServices {
   final logoPicker = FakeLogoPicker();
   final places = FakePlaceSearchRepository();
   final notifications = FakeNotificationRepository();
+  final matches = FakeMatchRepository();
+  late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId);
+  final guests = FakeGuestRepository();
+
+  /// 참석 응답을 하는 로그인 사용자 (화면 테스트)
+  String currentUserId = 'me';
 
   AppServices get services => AppServices(
     profiles: profiles,
@@ -454,5 +464,8 @@ class TestServices {
     logoPicker: logoPicker,
     places: places,
     notifications: notifications,
+    matches: matches,
+    attendance: attendance,
+    guests: guests,
   );
 }

@@ -107,6 +107,8 @@ void main() {
     );
     await tester.pumpWidget(_home(t, userId: 'u1'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text(TeamTexts.tabMembers));
+    await tester.pumpAndSettle();
     expect(find.text('운영'), findsOneWidget);
     expect(find.text('반가워요'), findsOneWidget);
     expect(find.text(TeamTexts.owner), findsOneWidget);
@@ -125,6 +127,8 @@ void main() {
       members: {'a': _members},
     );
     await tester.pumpWidget(_home(t));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(TeamTexts.tabMembers));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('member-u1')));
     await tester.pumpAndSettle();

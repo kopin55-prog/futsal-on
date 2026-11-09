@@ -115,6 +115,7 @@ abstract final class TeamTexts {
     RegularScheduleError.weekdayRequired => '요일을 먼저 골라주세요',
     RegularScheduleError.startRequired => '시작 시각을 먼저 골라주세요',
     RegularScheduleError.sameStartEnd => '시작과 종료 시각이 같아요',
+    RegularScheduleError.endRequired => '종료 시각도 골라주세요',
   };
 
   // 팀 찾기

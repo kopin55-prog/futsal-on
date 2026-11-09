@@ -56,7 +56,8 @@ class AttendanceResponse {
 
 /// 한 일정의 응답 모음. 대기 순번은 서버와 같은 기준(waitlisted_at, 같으면 id)으로 센다.
 ///
-/// 참석·불참·미투표 명단의 표시 순서는 화면 단계에서 정한다 (Q-073 6번 대기).
+/// 명단 순서 (Q-073 7번): 참석·불참은 마지막으로 바꾼 시각 순(대기에서 자동 참석도 참석이 된 시각 = updated_at),
+/// 대기는 순번, 미투표는 이름 가나다순 ([notRespondedSorted]).
 class AttendanceRoster {
   AttendanceRoster(Iterable<AttendanceResponse> responses)
     : _byUser = {for (final r in responses) r.userId: r},
@@ -87,6 +88,27 @@ class AttendanceRoster {
   /// 참석 인원 (게스트는 세지 않음, 정원과 별도).
   int get attendingCount =>
       _byUser.values.where((r) => r.state == AttendanceState.attending).length;
+
+  /// 참석 명단, 마지막으로 바꾼 시각 순 (같으면 id 순).
+  List<AttendanceResponse> get attending => _ofState(AttendanceState.attending);
+
+  /// 불참 명단, 마지막으로 바꾼 시각 순 (같으면 id 순).
+  List<AttendanceResponse> get declined => _ofState(AttendanceState.declined);
+
+  List<AttendanceResponse> _ofState(AttendanceState state) => [
+    for (final r in _byUser.values)
+      if (r.state == state) r,
+  ]..sort((a, b) {
+      final byTime = a.updatedAt.compareTo(b.updatedAt);
+      return byTime != 0 ? byTime : a.id.compareTo(b.id);
+    });
+
+  /// 미투표 명단: [members] (userId → 이름) 중 응답 없는 사람, 이름 가나다순 (같으면 userId 순).
+  List<String> notRespondedSorted(Map<String, String> members) =>
+      notRespondedAmong(members.keys)..sort((a, b) {
+        final byName = members[a]!.compareTo(members[b]!);
+        return byName != 0 ? byName : a.compareTo(b);
+      });
 
   /// 응답하지 않은 사람 (미투표 명단 재료). [memberIds] 는 지금 팀원.
   List<String> notRespondedAmong(Iterable<String> memberIds) =>

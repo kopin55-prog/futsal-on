@@ -13,6 +13,9 @@ import 'features/auth/presentation/auth_texts.dart';
 import 'features/membership/data/membership_repository.dart';
 import 'features/notifications/data/notification_repository.dart';
 import 'features/profile/data/profile_repository.dart';
+import 'features/schedule/data/attendance_repository.dart';
+import 'features/schedule/data/guest_repository.dart';
+import 'features/schedule/data/match_repository.dart';
 import 'features/team/data/logo_picker.dart';
 import 'features/team/data/recent_team_store.dart';
 import 'features/team/data/team_logo_repository.dart';
@@ -58,6 +61,9 @@ Future<void> main() async {
         logoPicker: DeviceLogoPicker(),
         places: SupabasePlaceSearchRepository(client),
         notifications: SupabaseNotificationRepository(client),
+        matches: SupabaseMatchRepository(client),
+        attendance: SupabaseAttendanceRepository(client),
+        guests: SupabaseGuestRepository(client),
       ),
       logoImages: (path) => _logoImage(client, config, path),
     ),

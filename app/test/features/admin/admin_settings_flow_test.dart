@@ -141,14 +141,19 @@ void main() {
   });
 
   group('경기 설정', () {
-    testWidgets('정원 정하기 → 값 저장', (tester) async {
+    testWidgets('대기 사용 켜고 참석 인원 → 정원으로 저장 (Q-073 7번)', (tester) async {
       final t = await _openAdmin(tester, start: const ClockTime(20, 0));
       await tester.tap(find.byKey(const Key('open-match-settings')));
       await tester.pumpAndSettle();
-      expect(find.text(AdminTexts.noCapacity), findsOneWidget);
-      await tester.tap(find.byKey(const Key('settings-has-capacity')));
+      // 기본: 대기 사용 꺼짐 = 정원 없음(모두 참석)
+      expect(tester.widget<SwitchListTile>(find.byKey(const Key('settings-waitlist'))).value, isFalse);
+      expect(find.text(AdminTexts.useWaitlistOffNote), findsOneWidget);
+      expect(find.byKey(const Key('settings-capacity')), findsNothing);
+      await tester.tap(find.byKey(const Key('settings-waitlist')));
       await tester.pump();
       await tester.enterText(find.byKey(const Key('settings-capacity')), '12');
+      await tester.pump();
+      expect(find.text(AdminTexts.waitlistFrom(12)), findsOneWidget);
       await tester.enterText(find.byKey(const Key('settings-deadline')), '24');
       await tester.pump();
       await tester.tap(find.byKey(const Key('settings-save')));
@@ -195,11 +200,24 @@ void main() {
       expect(t.admin.calls, ['settings:a']);
     });
 
+    testWidgets('대기 사용을 끄면 정원 없음으로 저장', (tester) async {
+      final t = await _openAdmin(tester, start: const ClockTime(20, 0));
+      t.admin.settings = MatchSettings.defaults.copyWith(capacity: () => 10);
+      await tester.tap(find.byKey(const Key('open-match-settings')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(find.byKey(const Key('settings-waitlist'))).value, isTrue);
+      await tester.tap(find.byKey(const Key('settings-waitlist')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('settings-save')));
+      await tester.pumpAndSettle();
+      expect(t.admin.savedSettings?.capacity, isNull);
+    });
+
     testWidgets('정원 0명은 막는다', (tester) async {
       await _openAdmin(tester);
       await tester.tap(find.byKey(const Key('open-match-settings')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('settings-has-capacity')));
+      await tester.tap(find.byKey(const Key('settings-waitlist')));
       await tester.pump();
       await tester.enterText(find.byKey(const Key('settings-capacity')), '0');
       await tester.pump();

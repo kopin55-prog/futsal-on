@@ -85,6 +85,10 @@ class Entitlements {
     };
   }
 
+  /// 알림을 눌렀을 때 그 팀의 화면(일정 상세 등)으로 이동할 수 있는지: 지금 그 팀 팀원일 때만.
+  /// 떠난 팀·해체된 팀의 알림은 남지만 이동하지 않는다 (Q-041). [viewer] 는 알림의 팀 기준.
+  bool canOpenNotificationTarget(Viewer viewer) => viewer.isTeamMember;
+
   /// 팀 식별코드를 볼 수 있는지: 팀원 전체 (Q-051).
   bool canViewTeamCode(Viewer viewer) => viewer.isTeamMember;
 

@@ -20,6 +20,9 @@ enum RegularScheduleError {
 
   /// 시작과 종료가 같음 (자정 넘김은 허용: 22:00~00:30)
   sameStartEnd,
+
+  /// 시작 시각이 있는데 종료 시각이 없음 (Q-073 8번: 종료 필수)
+  endRequired,
 }
 
 /// 시·분만 쓰는 시각. Flutter 의 TimeOfDay 에 기대지 않으려고 domain 에 둔다.
@@ -42,6 +45,12 @@ class ClockTime implements Comparable<ClockTime> {
       '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
   int get _minutes => hour * 60 + minute;
+
+  /// [minutes] 분 뒤 시각 (자정을 넘기면 다음 날 시각으로 돈다).
+  ClockTime plusMinutes(int minutes) {
+    final total = ((_minutes + minutes) % (24 * 60) + 24 * 60) % (24 * 60);
+    return ClockTime(total ~/ 60, total % 60);
+  }
 
   @override
   int compareTo(ClockTime other) => _minutes.compareTo(other._minutes);
@@ -137,7 +146,14 @@ class TeamValidator {
     return {};
   }
 
-  /// 정기 운동일: 요일 → 시작 → 종료 순으로 짝이 맞아야 한다. 모두 선택 항목.
+  /// 정기 운동 종료 기본값: 시작 2시간 뒤 (Q-073 8번). 화면이 시작을 고를 때 종료가 비어 있으면 채운다.
+  static const Duration defaultRegularLength = Duration(hours: 2);
+
+  static ClockTime defaultRegularEnd(ClockTime start) =>
+      start.plusMinutes(defaultRegularLength.inMinutes);
+
+  /// 정기 운동일: 요일 → 시작 → 종료 순으로 짝이 맞아야 한다. 요일만 정하는 것은 가능하고,
+  /// 시작을 정하면 종료도 필수 (Q-073 8번, 서버 teams_regular_end_required 와 같음).
   /// 종료가 시작보다 이르면 다음 날로 본다 (자정 넘김 허용, Q-067 4번). 같으면 불가.
   static Set<RegularScheduleError> validateRegularSchedule({
     int? weekday,
@@ -153,6 +169,9 @@ class TeamValidator {
     }
     if (start != null && end != null && start == end) {
       errors.add(RegularScheduleError.sameStartEnd);
+    }
+    if (start != null && end == null) {
+      errors.add(RegularScheduleError.endRequired);
     }
     return errors;
   }

@@ -49,9 +49,12 @@ abstract final class AdminTexts {
 
   // 경기 설정
   static const capacitySection = '정원';
-  static const setCapacity = '정원 정하기';
-  static const capacityLabel = '정원 (명)';
-  static const capacityNote = '정원을 넘으면 대기 순번으로 받아요';
+  // 대기 사용 (Q-073 7번 참고, 저장은 정원 capacity 그대로)
+  static const useWaitlist = '대기 사용';
+  static const useWaitlistOffNote = '$noCapacity: 투표한 사람 모두 참석이에요';
+  static const useWaitlistOnNote = '정한 인원이 차면 다음 사람부터 대기 순번이 붙어요';
+  static const capacityLabel = '참석 인원 (몇 명까지 참석)';
+  static String waitlistFrom(int capacity) => '$capacity명까지 참석, ${capacity + 1}번째부터 대기';
   static const deadlineLabel = '참석 투표 마감 (경기 시작 몇 시간 전)';
   // 미투표 알림 (Q-072 1번, 임시 문구)
   static const reminderLabel = '미투표 알림';

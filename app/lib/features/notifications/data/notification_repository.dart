@@ -9,8 +9,11 @@ import '../domain/notification_models.dart';
 /// 본인은 읽음 표시만 할 수 있고, 읽은 시각은 서버 시각으로 기록된다. 개별 삭제·안 읽음 되돌리기는 없다.
 /// 실패는 모두 [ServerFailure].
 abstract interface class NotificationRepository {
-  /// 내 알림, 최신순.
+  /// 내 알림, 최신순, 최근 [keepDays]일 (서버 정리 작업이 하루 한 번 지우므로 화면도 같은 범위만).
   Future<List<AppNotification>> listNotifications({int limit = 200});
+
+  /// 알림함 보관 기간 (Q-041).
+  static const int keepDays = 30;
 
   /// 안 읽은 알림 수 (모든 팀 합계).
   Future<int> unreadCount();
@@ -32,6 +35,10 @@ class SupabaseNotificationRepository implements NotificationRepository {
     final rows = await _client
         .from('notifications')
         .select(AppNotification.columns)
+        .gte(
+          'created_at',
+          DateTime.now().toUtc().subtract(const Duration(days: NotificationRepository.keepDays)).toIso8601String(),
+        )
         .order('created_at', ascending: false)
         .order('id')
         .limit(limit);

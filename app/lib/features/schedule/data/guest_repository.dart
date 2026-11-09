@@ -9,7 +9,7 @@ import '../domain/guest_models.dart';
 /// Entitlements(TeamAction.manageSchedule, GuestPositionInfo)로 판단하고 서버가 다시 거절한다.
 /// 실패는 모두 [ServerFailure].
 abstract interface class GuestRepository {
-  /// 한 일정의 게스트 이름 목록 (팀원용).
+  /// 한 일정의 게스트 번호·이름 목록 (팀원용), 번호 순.
   Future<List<MatchGuest>> listGuests(String matchId);
 
   /// 관리자용: 포지션·대략 실력 포함.
@@ -33,7 +33,7 @@ class SupabaseGuestRepository implements GuestRepository {
         .from('match_guests')
         .select(MatchGuest.columns)
         .eq('match_id', matchId)
-        .order('created_at');
+        .order('guest_no');
     return [for (final r in rows) MatchGuest.fromRow(r)];
   });
 

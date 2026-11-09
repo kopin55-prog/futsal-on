@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/app_services.dart';
@@ -7,7 +9,10 @@ import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_tab.dart';
 import '../../membership/presentation/team_find_screen.dart';
+import '../../notifications/presentation/notification_inbox_screen.dart';
 import '../../profile/presentation/my_tab.dart';
+import '../../schedule/presentation/schedule_tab.dart';
+import '../../schedule/presentation/schedule_texts.dart';
 import '../domain/recent_teams.dart';
 import '../domain/team_models.dart';
 import 'roster_tab.dart';
@@ -20,6 +25,7 @@ import 'team_texts.dart';
 /// - 소속 팀이 없으면 "팀 만들기 / 팀 찾기" 홈.
 /// - 있으면 가장 최근에 본 팀을 연다. 팀 이름을 누르면 팀 전환.
 /// - 팀을 떠나거나 해체하면 가장 최근에 본 다른 팀, 없으면 홈 (Q-067 6번).
+/// - 위쪽 종 모양: 모든 팀 알림의 안 읽은 개수. 화면을 열 때·알림함에서 돌아올 때·팀 목록을 다시 읽을 때 갱신 (4-3).
 class TeamHomeScreen extends StatefulWidget {
   const TeamHomeScreen({
     required this.services,
@@ -41,6 +47,11 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
   List<String> _recent = const [];
   String? _currentId;
   bool _failed = false;
+  int _unread = 0;
+
+  /// 알림에서 팀으로 이동할 때 열 탭 (관리 탭 등). 팀 화면을 새로 만들 때 한 번 쓴다.
+  String? _openTab;
+  int _shellNonce = 0;
 
   AppServices get _s => widget.services;
 
@@ -65,6 +76,7 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
       if (picked != null) recent = RecentTeams.touch(recent, picked);
       await _s.recentTeams.save(widget.userId, recent);
       if (!mounted) return;
+      unawaited(_refreshUnread());
       setState(() {
         _teams = teams;
         _recent = recent;
@@ -73,6 +85,34 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
     } on ServerFailure {
       if (mounted) setState(() => _failed = true);
     }
+  }
+
+  /// 안 읽은 알림 수 (모든 팀 합계). 실패하면 이전 값을 둔다.
+  Future<void> _refreshUnread() async {
+    try {
+      final n = await _s.notifications.unreadCount();
+      if (mounted) setState(() => _unread = n);
+    } on ServerFailure {
+      // 다음 갱신 때 다시 읽는다
+    }
+  }
+
+  Future<void> _openInbox() async {
+    final target = await Navigator.of(context).push<NotificationTeamTarget>(
+      MaterialPageRoute(
+        builder: (_) => NotificationInboxScreen(
+          services: _s,
+          userId: widget.userId,
+          myTeams: _teams ?? const [],
+        ),
+      ),
+    );
+    if (target != null) {
+      _openTab = target.openAdmin ? _TeamShell.adminTab : null;
+      _shellNonce++;
+      await _switchTo(target.teamId);
+    }
+    await _refreshUnread();
   }
 
   Future<void> _switchTo(String teamId) async {
@@ -170,10 +210,15 @@ class _TeamHomeScreenState extends State<TeamHomeScreen> {
         onCreate: _openCreate,
         onFind: _openFind,
         onSignOut: widget.onSignOut,
+        bell: NotificationBell(unread: _unread, onPressed: _openInbox),
       );
     }
+    final openTab = _openTab;
+    _openTab = null;
     return _TeamShell(
-      key: ValueKey(current.id),
+      key: ValueKey('${current.id}-$_shellNonce'),
+      initialTab: openTab,
+      bell: NotificationBell(unread: _unread, onPressed: _openInbox),
       services: _s,
       userId: widget.userId,
       team: current,
@@ -190,17 +235,20 @@ class _NoTeamView extends StatelessWidget {
     required this.onCreate,
     required this.onFind,
     required this.onSignOut,
+    required this.bell,
   });
 
   final VoidCallback onCreate;
   final VoidCallback onFind;
   final Future<void> Function() onSignOut;
+  final Widget bell;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         actions: [
+          bell,
           TextButton(onPressed: onSignOut, child: const Text(TeamTexts.signOut)),
         ],
       ),
@@ -240,13 +288,27 @@ class _TeamShell extends StatefulWidget {
     required this.onLeftTeam,
     required this.onTeamChanged,
     required this.onSignOut,
+    required this.bell,
+    this.initialTab,
     super.key,
   });
+
+  /// 탭 이름 ([initialTab] 에 쓴다)
+  static const scheduleTab = 'schedule';
+  static const membersTab = 'members';
+  static const adminTab = 'admin';
+  static const myTab = 'my';
 
   final AppServices services;
   final String userId;
   final TeamSummary team;
   final VoidCallback onTapTitle;
+
+  /// 위쪽 종 모양 (안 읽은 알림 수)
+  final Widget bell;
+
+  /// 처음 열 탭 이름. 없으면 첫 탭(일정).
+  final String? initialTab;
 
   /// 팀 탈퇴·해체 후
   final Future<void> Function() onLeftTeam;
@@ -260,17 +322,24 @@ class _TeamShell extends StatefulWidget {
 }
 
 class _TeamShellState extends State<_TeamShell> {
-  int _tab = 0;
+  int? _tab;
 
   @override
   Widget build(BuildContext context) {
     final viewer = Viewer(userId: widget.userId, role: widget.team.myRole);
     final showAdmin = widget.services.entitlements.showAdminTab(viewer);
-    final tabs = <(String, IconData, Widget)>[
+    final tabs = <(String, IconData, Widget, String)>[
+      (
+        ScheduleTexts.tabSchedule,
+        Icons.event,
+        ScheduleTab(services: widget.services, team: widget.team, viewer: viewer),
+        _TeamShell.scheduleTab,
+      ),
       (
         TeamTexts.tabMembers,
         Icons.groups,
         RosterTab(services: widget.services, team: widget.team, viewer: viewer),
+        _TeamShell.membersTab,
       ),
       if (showAdmin)
         (
@@ -283,6 +352,7 @@ class _TeamShellState extends State<_TeamShell> {
             onTeamChanged: widget.onTeamChanged,
             onDissolved: widget.onLeftTeam,
           ),
+          _TeamShell.adminTab,
         ),
       (
         TeamTexts.tabMy,
@@ -294,9 +364,11 @@ class _TeamShellState extends State<_TeamShell> {
           onLeftTeam: widget.onLeftTeam,
           onSignOut: widget.onSignOut,
         ),
+        _TeamShell.myTab,
       ),
     ];
-    final index = _tab.clamp(0, tabs.length - 1);
+    final initial = tabs.indexWhere((t) => t.$4 == widget.initialTab);
+    final index = (_tab ??= initial < 0 ? 0 : initial).clamp(0, tabs.length - 1);
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
@@ -312,6 +384,7 @@ class _TeamShellState extends State<_TeamShell> {
             ],
           ),
         ),
+        actions: [widget.bell],
       ),
       body: tabs[index].$3,
       bottomNavigationBar: NavigationBar(

@@ -7,6 +7,7 @@ import 'team_texts.dart';
 
 /// 정기 운동일 입력 (요일 → 시작 → 종료). 팀 만들기·팀 정보 수정 공통.
 /// 요일을 지우면 시각도, 시작을 지우면 종료도 함께 지운다. 자정 넘김은 허용 (Q-067 4번).
+/// 시작을 고를 때 종료가 비어 있으면 시작 2시간 뒤로 채운다. 시작을 정하면 종료는 필수 (Q-073 8번).
 class RegularScheduleFields extends StatelessWidget {
   const RegularScheduleFields({
     required this.value,
@@ -30,7 +31,12 @@ class RegularScheduleFields extends StatelessWidget {
     final t = ClockTime(picked.hour, picked.minute);
     onChanged(
       start
-          ? RegularSchedule(weekday: value.weekday, start: t, end: value.end)
+          // 종료가 비어 있으면 시작 2시간 뒤로 채운다. 바꿀 수 있다 (Q-073 8번).
+          ? RegularSchedule(
+              weekday: value.weekday,
+              start: t,
+              end: value.end ?? TeamValidator.defaultRegularEnd(t),
+            )
           : RegularSchedule(weekday: value.weekday, start: value.start, end: t),
     );
   }

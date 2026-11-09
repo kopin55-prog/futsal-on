@@ -54,6 +54,8 @@ enum ServerErrorCode {
   matchCancelled('match_cancelled'),
   rsvpClosed('rsvp_closed'),
   invalidGuestName('invalid_guest_name'),
+  guestLimitReached('guest_limit_reached'),
+  duplicateGuestName('duplicate_guest_name'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

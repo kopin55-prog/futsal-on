@@ -27,8 +27,15 @@ void main() {
       expect(v(weekday: 5, start: t2200, end: t2200), {RegularScheduleError.sameStartEnd});
     });
     test('시각만 있고 요일 없음, 종료만 있고 시작 없음은 불가', () {
-      expect(v(start: t2000), {RegularScheduleError.weekdayRequired});
+      expect(v(start: t2000, end: t2200), {RegularScheduleError.weekdayRequired});
       expect(v(weekday: 1, end: t2200), {RegularScheduleError.startRequired});
+    });
+    test('시작을 정하면 종료도 필수 (Q-073 8번)', () {
+      expect(v(weekday: 3, start: t2000), {RegularScheduleError.endRequired});
+    });
+    test('종료 기본값은 시작 2시간 뒤, 자정을 넘기면 다음날 시각 (Q-073 8번)', () {
+      expect(TeamValidator.defaultRegularEnd(t2000), t2200);
+      expect(TeamValidator.defaultRegularEnd(const ClockTime(23, 30)), const ClockTime(1, 30));
     });
     test('표시: 자정 넘김이면 "다음날"', () {
       expect(

@@ -27,7 +27,7 @@
 ### 0. 준비
 | 작업 | 담당 | 완료 기준 | 상태 |
 | --- | --- | --- | --- |
-| 0-1 질문 후보 S3-01~S3-17 kopn 질문 | lead | 답을 decisions.md에 기록, 이 표의 BLOCKED 상태 갱신 | 대기 |
+| 0-1 질문 후보 S3-01~S3-17 kopn 질문 | lead | 답을 decisions.md에 기록, 이 표의 BLOCKED 상태 갱신 | 진행 (Q-075로 질문) |
 | 0-2 공유 라이브러리 승인 | lead → kopn | S3-11 답대로 라이브러리 허용 여부를 decisions.md에 기록(Q-031처럼) | BLOCKED (S3-11) |
 | 0-3 스프린트 02 마무리 | kopn·qa | setup_push.ps1 실행, sprint-02 시나리오·묶음 테스트 02는 03과 병행(03 작업을 막지 않음) | 대기 |
 

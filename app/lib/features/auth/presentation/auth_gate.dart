@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../shared/data/server_error.dart';
-import '../../dashboard/presentation/home_placeholder_screen.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/presentation/profile_create_screen.dart';
 import '../data/auth_repository.dart';
@@ -21,7 +20,7 @@ class AuthGate extends StatefulWidget {
   const AuthGate({
     required this.authRepository,
     required this.profileRepository,
-    this.homeBuilder,
+    required this.homeBuilder,
     this.onProfileCreated,
     super.key,
   });
@@ -29,9 +28,8 @@ class AuthGate extends StatefulWidget {
   final AuthRepository authRepository;
   final ProfileRepository profileRepository;
 
-  /// 가입을 마친 뒤 첫 화면 (팀 홈). 없으면 자리 화면.
-  final Widget Function(String userId, Future<void> Function() signOut)?
-  homeBuilder;
+  /// 가입을 마친 뒤 첫 화면 (팀 홈).
+  final Widget Function(String userId, Future<void> Function() signOut) homeBuilder;
 
   /// 프로필을 만든 직후 한 번 (홈으로 가기 전). 알림 권한 요청에 쓴다 (Q-071 13번).
   /// 실패해도 홈으로 간다.
@@ -127,8 +125,7 @@ class _AuthGateState extends State<AuthGate> {
         ),
       ),
       _Stage.home =>
-        widget.homeBuilder?.call(_userId!, _signOut) ??
-            HomePlaceholderScreen(onSignOut: _signOut),
+        widget.homeBuilder(_userId!, _signOut),
       _Stage.error => Scaffold(
         body: Center(
           child: Column(

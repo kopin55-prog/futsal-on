@@ -5,17 +5,26 @@ import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../dashboard/domain/dashboard_models.dart' show DashboardRules;
+import '../../injury/domain/injury_models.dart';
 import '../../profile/presentation/profile_texts.dart';
+import '../data/team_repository.dart' show sortMembers;
 import '../domain/team_models.dart';
 import 'team_texts.dart';
 
-/// 팀원 목록: 이름·역할 배지·자기소개. 누르면 프로필 보기.
-/// 선호 포지션·전문 골키퍼는 본인과 팀장·운영진만 본다 (Q-017, Entitlements 판단).
+/// 팀원 탭 (스프린트 04 6-1, 기획서 11장, S4-14).
+///
+/// - 위에 "팀원 N명". 순서는 팀장 → 운영진 → 팀원, 각각 이름 가나다순.
+/// - 한 줄: 이름, 역할 배지(팀장·운영진), 이름 옆 작은 "부상 2W" 표시, 한줄 자기소개.
+///   부상 메모는 목록에 보이지 않는다 (홈 부상자·프로필 보기에서만). 선호 포지션·실력 등급도 목록에 없다.
+/// - 누르면 프로필 보기. 선호 포지션·전문 골키퍼는 본인과 팀장·운영진만 본다 (Q-017, Entitlements 판단).
+/// - 부상은 서버가 "지금 같은 팀 + 동의가 유효한 진행 중 부상"만 주고, 앱 표시 판단은 Entitlements(InjuryInfo).
 class RosterTab extends StatefulWidget {
   const RosterTab({
     required this.services,
     required this.team,
     required this.viewer,
+    this.now = DateTime.now,
     super.key,
   });
 
@@ -23,19 +32,50 @@ class RosterTab extends StatefulWidget {
   final TeamSummary team;
   final Viewer viewer;
 
+  /// 남은 회복 기간 계산 기준 시각 (테스트에서 바꿔 끼운다)
+  final DateTime Function() now;
+
   @override
   State<RosterTab> createState() => _RosterTabState();
 }
 
-class _RosterTabState extends State<RosterTab> {
-  late Future<List<MemberEntry>> _members = widget.services.teams.listMembers(widget.team.id);
+class _RosterData {
+  const _RosterData(this.members, this.injuries, this.today);
 
-  Future<void> _reload() async {
-    setState(() => _members = widget.services.teams.listMembers(widget.team.id));
-    await _members.catchError((_) => const <MemberEntry>[]);
+  /// 정렬된 팀원
+  final List<MemberEntry> members;
+
+  /// userId → 진행 중 부상. 부상 표시를 볼 수 있는 것만.
+  final Map<String, Injury> injuries;
+
+  /// 남은 회복 기간 계산 기준 (한국 날짜)
+  final DateTime today;
+}
+
+class _RosterTabState extends State<RosterTab> {
+  late Future<_RosterData> _data = _read();
+
+  Future<_RosterData> _read() async {
+    final s = widget.services;
+    final members = sortMembers(await s.teams.listMembers(widget.team.id));
+    final injuries = await s.injuries.listActiveInjuries([for (final m in members) m.userId]);
+    final visible = <String, Injury>{
+      for (final i in injuries)
+        if (s.entitlements.canView(
+          widget.viewer,
+          InjuryInfo(subjectUserId: i.userId, subjectConsented: true, isActive: i.isActive),
+        ))
+          i.userId: i,
+    };
+    return _RosterData(members, visible, DashboardRules.todayKst(widget.now()));
   }
 
-  void _openMember(MemberEntry m) {
+  Future<void> _reload() async {
+    setState(() => _data = _read());
+    await _data.then<void>((_) {}, onError: (Object _) {});
+  }
+
+  void _openMember(MemberEntry m, Injury? injury, DateTime today) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -43,30 +83,46 @@ class _RosterTabState extends State<RosterTab> {
         services: widget.services,
         viewer: widget.viewer,
         member: m,
+        injury: injury,
+        injuryWeeks: injury?.remainingWeeks(today),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<MemberEntry>>(
-      future: _members,
+    return FutureBuilder<_RosterData>(
+      future: _data,
       builder: (context, snap) {
         if (snap.hasError) {
-          return Center(
-            child: TextButton(onPressed: _reload, child: const Text(TeamTexts.retry)),
+          return EmptyState(
+            icon: Icons.cloud_off_outlined,
+            message: TeamTexts.loadFailed,
+            actions: [TextButton(onPressed: _reload, child: const Text(TeamTexts.retry))],
           );
         }
-        final members = snap.data;
-        if (members == null) return const Center(child: CircularProgressIndicator());
+        final data = snap.data;
+        if (data == null) return const Center(child: CircularProgressIndicator());
+        final members = data.members;
         return RefreshIndicator(
           onRefresh: _reload,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
-            itemCount: members.length,
-            separatorBuilder: (_, _) => const Divider(indent: 72, endIndent: AppSpacing.lg),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.lg, AppSpacing.sm, AppSpacing.xxl),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: members.length + 1,
             itemBuilder: (context, i) {
-              final m = members[i];
+              if (i == 0) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: SectionHeader(
+                    TeamTexts.memberCount(members.length),
+                    key: const Key('roster-count'),
+                  ),
+                );
+              }
+              final m = members[i - 1];
+              final injury = data.injuries[m.userId];
+              final weeks = injury?.remainingWeeks(data.today);
               return ListTile(
                 key: Key('member-${m.userId}'),
                 leading: _Initial(name: m.displayName),
@@ -74,18 +130,54 @@ class _RosterTabState extends State<RosterTab> {
                   children: [
                     Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
                     if (m.role != TeamRole.member) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       RoleBadge(role: m.role),
+                    ],
+                    if (weeks != null) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      InjuryMark(weeks: weeks, key: Key('member-injury-${m.userId}')),
                     ],
                   ],
                 ),
-                subtitle: (m.bio == null || m.bio!.isEmpty) ? null : Text(m.bio!),
-                onTap: () => _openMember(m),
+                subtitle: (m.bio == null || m.bio!.isEmpty)
+                    ? null
+                    : Text(m.bio!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                onTap: () => _openMember(m, injury, data.today),
               );
             },
           ),
         );
       },
+    );
+  }
+}
+
+/// 이름 옆 작은 "부상 2W" 표시 (S4-14). 메모는 보이지 않는다.
+class InjuryMark extends StatelessWidget {
+  const InjuryMark({required this.weeks, super.key});
+
+  final int weeks;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.error),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.healing_outlined, size: 12, color: scheme.error),
+          const SizedBox(width: 2),
+          Text(
+            TeamTexts.injuryMark(weeks),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.error),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -136,17 +228,24 @@ class _Initial extends StatelessWidget {
 }
 
 /// 다른 팀원 프로필 보기. 수정은 본인만이고 "내 정보" 탭에서 한다 (Q-067 2번).
+/// 진행 중 부상이 보이면 "부상 2W" + 메모 (S4-14: 메모는 프로필 보기·홈 부상자에서만).
 class MemberProfileSheet extends StatelessWidget {
   const MemberProfileSheet({
     required this.services,
     required this.viewer,
     required this.member,
+    this.injury,
+    this.injuryWeeks,
     super.key,
   });
 
   final AppServices services;
   final Viewer viewer;
   final MemberEntry member;
+
+  /// 볼 수 있는 진행 중 부상 (Entitlements 로 이미 거른 것)
+  final Injury? injury;
+  final int? injuryWeeks;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +255,7 @@ class MemberProfileSheet extends StatelessWidget {
     );
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.gutter),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,6 +275,19 @@ class MemberProfileSheet extends StatelessWidget {
             if (member.bio != null && member.bio!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(member.bio!),
+            ],
+            if (injuryWeeks case final weeks?) ...[
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                key: const Key('member-profile-injury'),
+                children: [
+                  InjuryMark(weeks: weeks),
+                  if (injury?.memo case final memo? when memo.isNotEmpty) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Text(memo, key: const Key('member-profile-injury-memo'))),
+                  ],
+                ],
+              ),
             ],
             if (canSeePrefs) ...[
               AppSpacing.fieldGap,

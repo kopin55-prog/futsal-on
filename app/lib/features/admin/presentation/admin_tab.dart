@@ -18,8 +18,10 @@ import 'pairing_rules_screen.dart';
 import 'skill_levels_screen.dart';
 import 'team_info_edit_screen.dart';
 
-/// 관리 탭 (팀장·운영진): 팀 설정(팀 정보·경기 설정·투표 설정·실력 등급·그룹·라이벌), 초대 코드 발급, 가입 신청 승인·거절,
-/// 팀원 관리(운영진 지정·해제, 위임, 내보내기 — 팀장만), 팀 해체(팀장만).
+/// 관리 탭 (팀장·운영진). 기획서 11장 묶음대로 (스프린트 04 6-2):
+/// - "팀장·운영진": 가입 신청 승인·거절, 초대 코드 발급, 팀 설정(실력 등급·경기 설정·투표 설정·그룹·라이벌·팀 정보·모집).
+///   2차 "출석·참여 리포트" 메뉴 자리는 팀 설정 끝에 있고 1차에는 숨김(TeamReportInfo 거절).
+/// - "팀장만": 팀원 관리(운영진 지정·해제, 위임, 내보내기), 팀 해체. 운영진에게는 묶음째 안 보인다.
 /// 버튼 노출은 Entitlements 로만 판단하고, 서버가 같은 규칙으로 다시 거절한다.
 ///
 /// 역할 변경·위임·내보내기·가입 처리·해체 알림은 서버 함수가 같은 처리 안에서 만든다 (202611050029, Q-022, Q-067 8·15번).
@@ -266,18 +268,19 @@ class _AdminTabState extends State<AdminTab> {
   /// 팀 설정 메뉴. 메뉴마다 Entitlements 로만 보일지 정한다.
   List<Widget> _settingsSection(ThemeData theme) {
     final v = widget.viewer;
+    // 순서는 기획서 11장 관리 탭 목록대로
     final items = [
-      if (_e.canPerform(v, TeamAction.editTeamInfo))
-        (const Key('open-team-info'), Icons.edit_outlined, AdminTexts.teamInfo, _openTeamInfo),
+      if (_e.canPerform(v, TeamAction.setSkillLevel))
+        (const Key('open-skill-levels'), Icons.leaderboard_outlined, AdminTexts.skillLevels, _openSkillLevels),
       if (_e.canPerform(v, TeamAction.editMatchSettings))
         (const Key('open-match-settings'), Icons.event_note_outlined, AdminTexts.matchSettings, _openMatchSettings),
       if (_e.canPerform(v, TeamAction.editAwardSettings))
         (const Key('open-award-settings'), Icons.emoji_events_outlined, AwardTexts.awardSettings, _openAwardSettings),
-      if (_e.canPerform(v, TeamAction.setSkillLevel))
-        (const Key('open-skill-levels'), Icons.leaderboard_outlined, AdminTexts.skillLevels, _openSkillLevels),
       if (_e.canPerform(v, TeamAction.editGroupRivalRules) &&
           _e.canView(v, const GroupRivalSettingsInfo()))
         (const Key('open-pairing-rules'), Icons.compare_arrows, AdminTexts.groupRival, _openPairingRules),
+      if (_e.canPerform(v, TeamAction.editTeamInfo))
+        (const Key('open-team-info'), Icons.edit_outlined, AdminTexts.teamInfoMenu, _openTeamInfo),
       // 2차 "출석·참여 리포트" 메뉴 자리 (팀 구독). 1차에는 Entitlements.showTeamReportMenu 가 거절해 보이지 않는다.
       if (_e.showTeamReportMenu(v))
         (const Key('open-team-report'), Icons.insights_outlined, AdminTexts.teamReport, _openTeamReport),
@@ -298,7 +301,6 @@ class _AdminTabState extends State<AdminTab> {
             ),
         ],
       ),
-      AppSpacing.sectionGap,
     ];
   }
 
@@ -316,11 +318,141 @@ class _AdminTabState extends State<AdminTab> {
     }
   }
 
+  /// 가입 신청 목록 (팀장·운영진)
+  List<Widget> _requestsSection(List<IncomingJoinRequest>? requests) => [
+    const SectionHeader(TeamTexts.requestsSection),
+    if (requests == null)
+      const Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Center(child: CircularProgressIndicator()),
+      )
+    else if (requests.isEmpty)
+      const EmptyState(
+        icon: Icons.mark_email_read_outlined,
+        message: TeamTexts.noRequests,
+        compact: true,
+      )
+    else
+      SectionCard(
+        children: [
+          for (final r in requests)
+            ListTile(
+              key: Key('request-${r.requestId}'),
+              title: Text(r.displayName),
+              subtitle: (r.bio == null || r.bio!.isEmpty) ? null : Text(r.bio!),
+              trailing: Wrap(
+                spacing: AppSpacing.xs,
+                children: [
+                  TextButton(
+                    onPressed: _busy ? null : () => _decide(r, false),
+                    child: const Text(TeamTexts.reject),
+                  ),
+                  FilledButton(
+                    key: Key('approve-${r.requestId}'),
+                    onPressed: _busy ? null : () => _decide(r, true),
+                    child: const Text(TeamTexts.approve),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+  ];
+
+  /// 초대 코드 (팀장·운영진)
+  List<Widget> _inviteSection() => [
+    const SectionHeader(TeamTexts.inviteSection),
+    const Text(TeamTexts.issueInviteNote),
+    const SizedBox(height: AppSpacing.sm),
+    Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        key: const Key('issue-invite'),
+        onPressed: _busy ? null : _issueInvite,
+        child: const Text(TeamTexts.issueInvite),
+      ),
+    ),
+  ];
+
+  /// 팀원 관리 (팀장만)
+  List<Widget> _membersSection(List<MemberEntry> members) => [
+    const SectionHeader(TeamTexts.membersSection),
+    SectionCard(
+      children: [
+        for (final m in members)
+          Builder(
+            builder: (context) {
+              final actions = _e.memberActions(
+                widget.viewer,
+                targetUserId: m.userId,
+                targetRole: m.role,
+              );
+              return ListTile(
+                key: Key('manage-${m.userId}'),
+                title: Row(
+                  children: [
+                    Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
+                    if (m.role != TeamRole.member) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      RoleBadge(role: m.role),
+                    ],
+                  ],
+                ),
+                trailing: actions.isEmpty
+                    ? null
+                    : PopupMenuButton<TeamAction>(
+                        key: Key('manage-menu-${m.userId}'),
+                        enabled: !_busy,
+                        onSelected: (a) => _memberAction(m, a),
+                        itemBuilder: (_) => [
+                          for (final a in actions) PopupMenuItem(value: a, child: Text(_actionLabel(m, a))),
+                        ],
+                      ),
+              );
+            },
+          ),
+      ],
+    ),
+  ];
+
+  /// 팀 해체 (팀장만, Q-067 7·8번)
+  List<Widget> _dissolveSection(ThemeData theme) => [
+    const SectionHeader(TeamTexts.dissolveSection),
+    Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton(
+        key: const Key('dissolve-team'),
+        style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
+        onPressed: _busy ? null : _dissolve,
+        child: const Text(TeamTexts.dissolve),
+      ),
+    ),
+  ];
+
+  /// 섹션들 사이에 묶음 간격을 넣는다.
+  static List<Widget> _spaced(List<List<Widget>> sections) => [
+    for (var i = 0; i < sections.length; i++) ...[
+      if (i > 0) AppSpacing.sectionGap,
+      ...sections[i],
+    ],
+  ];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final requests = _requests;
+    final v = widget.viewer;
     final members = _members;
+    final staff = _spaced([
+      if (_e.canPerform(v, TeamAction.reviewJoinRequests)) ...[
+        _requestsSection(_requests),
+        _inviteSection(),
+      ],
+      _settingsSection(theme),
+    ].where((s) => s.isNotEmpty).toList());
+    final owner = _spaced([
+      if (members != null) _membersSection(members),
+      if (_e.canPerform(v, TeamAction.disbandTeam)) _dissolveSection(theme),
+    ]);
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -330,112 +462,39 @@ class _AdminTabState extends State<AdminTab> {
             Text(_error!, key: const Key('admin-error'), style: TextStyle(color: theme.colorScheme.error)),
             const SizedBox(height: AppSpacing.sm),
           ],
-          // ---- 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌)
-          ..._settingsSection(theme),
-          // ---- 초대 코드 (팀장·운영진)
-          if (_e.canPerform(widget.viewer, TeamAction.reviewJoinRequests)) ...[
-            const SectionHeader(TeamTexts.inviteSection),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(TeamTexts.issueInviteNote),
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton(
-              key: const Key('issue-invite'),
-              onPressed: _busy ? null : _issueInvite,
-              child: const Text(TeamTexts.issueInvite),
-            ),
-            AppSpacing.sectionGap,
-            // ---- 가입 신청
-            const SectionHeader(TeamTexts.requestsSection),
-            if (requests == null)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (requests.isEmpty)
-              const EmptyState(
-                icon: Icons.mark_email_read_outlined,
-                message: TeamTexts.noRequests,
-                compact: true,
-              )
-            else
-              for (final r in requests)
-                ListTile(
-                  key: Key('request-${r.requestId}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(r.displayName),
-                  subtitle: (r.bio == null || r.bio!.isEmpty) ? null : Text(r.bio!),
-                  trailing: Wrap(
-                    spacing: 4,
-                    children: [
-                      TextButton(
-                        onPressed: _busy ? null : () => _decide(r, false),
-                        child: const Text(TeamTexts.reject),
-                      ),
-                      FilledButton(
-                        key: Key('approve-${r.requestId}'),
-                        onPressed: _busy ? null : () => _decide(r, true),
-                        child: const Text(TeamTexts.approve),
-                      ),
-                    ],
-                  ),
-                ),
+          // ---- 팀장·운영진 묶음
+          if (staff.isNotEmpty) ...[
+            const _GroupTitle(AdminTexts.groupStaff, key: Key('admin-group-staff')),
+            ...staff,
           ],
-          // ---- 팀원 관리 (팀장만)
-          if (members != null) ...[
-            AppSpacing.sectionGap,
-            const SectionHeader(TeamTexts.membersSection),
-            for (final m in members)
-              Builder(
-                builder: (context) {
-                  final actions = _e.memberActions(
-                    widget.viewer,
-                    targetUserId: m.userId,
-                    targetRole: m.role,
-                  );
-                  return ListTile(
-                    key: Key('manage-${m.userId}'),
-                    contentPadding: EdgeInsets.zero,
-                    title: Row(
-                      children: [
-                        Flexible(child: Text(m.displayName)),
-                        if (m.role != TeamRole.member) ...[
-                          const SizedBox(width: 8),
-                          RoleBadge(role: m.role),
-                        ],
-                      ],
-                    ),
-                    trailing: actions.isEmpty
-                        ? null
-                        : PopupMenuButton<TeamAction>(
-                            key: Key('manage-menu-${m.userId}'),
-                            enabled: !_busy,
-                            onSelected: (a) => _memberAction(m, a),
-                            itemBuilder: (_) => [
-                              for (final a in actions)
-                                PopupMenuItem(value: a, child: Text(_actionLabel(m, a))),
-                            ],
-                          ),
-                  );
-                },
-              ),
-          ],
-          // ---- 팀 해체 (팀장만, Q-067 7·8번)
-          if (_e.canPerform(widget.viewer, TeamAction.disbandTeam)) ...[
+          // ---- 팀장만 묶음 (운영진에게는 묶음째 안 보임)
+          if (owner.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            const SectionHeader(TeamTexts.dissolveSection),
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton(
-              key: const Key('dissolve-team'),
-              style: OutlinedButton.styleFrom(foregroundColor: theme.colorScheme.error),
-              onPressed: _busy ? null : _dissolve,
-              child: const Text(TeamTexts.dissolve),
-            ),
+            const _GroupTitle(AdminTexts.groupOwner, key: Key('admin-group-owner')),
+            ...owner,
           ],
         ],
       ),
     );
   }
 }
+
+/// 관리 탭 큰 묶음 제목 ("팀장·운영진" / "팀장만").
+class _GroupTitle extends StatelessWidget {
+  const _GroupTitle(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Text(text, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
 
 /// 팀 해체 확인: 팀 이름을 입력해야 버튼이 켜진다 (Q-067 7번). 확인하면 입력값을 돌려준다.
 class _DissolveDialog extends StatefulWidget {

@@ -27,7 +27,7 @@ import 'guest_add_sheet.dart';
 import 'guest_badge.dart';
 import 'schedule_texts.dart';
 
-/// 일정 상세 (임시, 스프린트 02 4-1·4-2).
+/// 일정 상세 (스프린트 02 4-1·4-2, 일정 탭 목록·달력에서 연다).
 ///
 /// - 일시·장소·정원·마감, 내 상태(참석·대기 n번·불참·미투표), 참석/불참 버튼(마감·취소 후 잠김, 서버가 다시 거절).
 /// - 명단 4개(참석·대기·불참·미투표)는 팀원 전체 공개 (Entitlements: AttendanceListInfo).

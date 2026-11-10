@@ -7,6 +7,6 @@ Future<void> openTab(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
-/// 위쪽 팀 이름(팀 전환 버튼) 안의 [name]. 홈 대시보드 머리에도 팀 이름이 있어 위쪽만 찾는다.
+/// 위쪽 팀 이름(팀 전환 버튼) 안의 [name]. 다른 화면(팀 전환 목록 등)에도 팀 이름이 있어 위쪽만 찾는다.
 Finder teamTitle(String name) =>
     find.descendant(of: find.byKey(const Key('team-title')), matching: find.text(name));

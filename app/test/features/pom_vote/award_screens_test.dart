@@ -95,7 +95,14 @@ Future<TestServices> _open(
   return t;
 }
 
+/// 일정 탭 "지난 경기" 칸으로 바꾼다 (5-1, S4-13 두 칸 전환).
+Future<void> _showPast(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('schedule-range-past')));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openPast(WidgetTester tester, String id) async {
+  if (find.byKey(Key('past-match-$id')).evaluate().isEmpty) await _showPast(tester);
   await tester.tap(find.byKey(Key('past-match-$id')));
   await tester.pumpAndSettle();
 }
@@ -132,7 +139,7 @@ void main() {
   });
 
   group('일정 탭 지난 경기 (5-1)', () {
-    testWidgets('끝난 경기는 "지난 경기"에 최근 순, 취소된 일정은 "취소됨". 다가오는 일정은 위에 그대로', (tester) async {
+    testWidgets('끝난 경기는 "지난 경기" 칸에 최근 순, 취소된 일정은 "취소됨". 다가오는 경기는 "다가오는 경기" 칸에만', (tester) async {
       await _open(
         tester,
         matches: [
@@ -142,8 +149,10 @@ void main() {
           _match('next', endedAgo: const Duration(days: -2)),
         ],
       );
-      expect(find.text(ScheduleTexts.pastMatches), findsOneWidget);
       expect(find.byKey(const Key('match-next')), findsOneWidget);
+      expect(find.byKey(const Key('past-match-new')), findsNothing);
+      await _showPast(tester);
+      expect(find.byKey(const Key('match-next')), findsNothing);
       expect(find.byKey(const Key('past-match-next')), findsNothing);
       final ys = [
         for (final id in ['new', 'cx', 'old']) tester.getTopLeft(find.byKey(Key('past-match-$id'))).dy,
@@ -157,6 +166,7 @@ void main() {
 
     testWidgets('지난 경기가 없으면 안내', (tester) async {
       await _open(tester);
+      await _showPast(tester);
       expect(find.text(ScheduleTexts.noPastMatches), findsOneWidget);
     });
   });

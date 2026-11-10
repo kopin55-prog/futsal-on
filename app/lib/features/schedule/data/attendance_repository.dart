@@ -12,6 +12,9 @@ abstract interface class AttendanceRepository {
   /// 한 일정의 응답 전체.
   Future<List<AttendanceResponse>> listResponses(String matchId);
 
+  /// 여러 일정의 응답 전체 (일정 탭 목록의 "참석 N"·"나:" 표시, S4-13). 일정 ID → 응답 목록, 응답이 없으면 빈 목록.
+  Future<Map<String, List<AttendanceResponse>>> listResponsesFor(List<String> matchIds);
+
   /// 본인 응답. [attending] 이 true 면 참석(정원이 차면 대기), false 면 불참. 저장된 상태를 돌려준다.
   ///
   /// 진행 중 부상이 있는 사람의 참석은 서버가 [ServerErrorCode.returnConfirmationRequired] 로 거절한다(기획서 12장).
@@ -57,6 +60,21 @@ class SupabaseAttendanceRepository implements AttendanceRepository {
         .select(AttendanceResponse.columns)
         .eq('match_id', matchId);
     return [for (final r in rows) AttendanceResponse.fromRow(r)];
+  });
+
+  @override
+  Future<Map<String, List<AttendanceResponse>>> listResponsesFor(List<String> matchIds) => guardServer(() async {
+    final out = {for (final id in matchIds) id: <AttendanceResponse>[]};
+    if (matchIds.isEmpty) return out;
+    final rows = await _client
+        .from('attendance_responses')
+        .select(AttendanceResponse.columns)
+        .inFilter('match_id', matchIds);
+    for (final r in rows) {
+      final response = AttendanceResponse.fromRow(r);
+      (out[response.matchId] ??= []).add(response);
+    }
+    return out;
   });
 
   @override

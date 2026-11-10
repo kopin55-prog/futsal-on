@@ -32,6 +32,8 @@ dependencies:
   firebase_messaging: ^17.0.1
   # 공유 이미지를 휴대폰 공유 창으로 (Q-075 11번 승인, S3-11 A). path_provider 등은 share_plus 가 쓰는 패키지.
   share_plus: ^13.3.1
+  # 일정 탭 달력 보기 (S4-13, 0-3 승인). 날짜 글자는 앱 코드로 한국어 표시(intl 직접 의존 없음).
+  table_calendar: ^3.3.0
 
 dev_dependencies:
   flutter_test:

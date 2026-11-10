@@ -78,8 +78,22 @@ Widget _app(
     authRepository: auth,
     profileRepository: profile,
     onProfileCreated: onProfileCreated,
+    homeBuilder: (userId, signOut) => _TestHome(onSignOut: signOut),
   ),
 );
+
+/// 가입을 마친 뒤 첫 화면 대신 (팀 홈은 팀 화면 테스트에서 따로 본다).
+class _TestHome extends StatelessWidget {
+  const _TestHome({required this.onSignOut});
+
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    key: const Key('test-home'),
+    body: TextButton(onPressed: onSignOut, child: const Text(AuthTempTexts.signOut)),
+  );
+}
 
 void _tallScreen(WidgetTester tester) {
   tester.view.physicalSize = const Size(1080, 4000);
@@ -138,7 +152,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+    expect(find.byKey(const Key('test-home')), findsOneWidget);
     expect(find.byKey(const Key('consent-all')), findsNothing);
   });
 
@@ -196,7 +210,7 @@ void main() {
         injuryInfo: true,
       ),
     );
-    expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+    expect(find.byKey(const Key('test-home')), findsOneWidget);
   });
 
   testWidgets('전문 골키퍼: 골키퍼 자동 선택, 골키퍼 아닌 3개면 막고 안내 (Q-019, Q-035)', (
@@ -297,7 +311,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('profile-name')), '영희');
     await _tapVisible(tester, find.byKey(const Key('profile-position-winger')));
     await _tapVisible(tester, find.byKey(const Key('profile-submit')));
-    expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+    expect(find.byKey(const Key('test-home')), findsOneWidget);
   });
 
   testWidgets('서버 거절은 오류 문구, 화면 유지', (tester) async {
@@ -355,7 +369,7 @@ void main() {
       await _tapVisible(tester, find.byKey(const Key('profile-position-forward')));
       await _tapVisible(tester, find.byKey(const Key('profile-submit')));
       expect(asked, 1);
-      expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+      expect(find.byKey(const Key('test-home')), findsOneWidget);
     });
 
     testWidgets('이미 프로필이 있는 계정(다음 실행·재로그인)은 묻지 않는다', (tester) async {
@@ -369,7 +383,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text(AuthTempTexts.homePlaceholder), findsOneWidget);
+      expect(find.byKey(const Key('test-home')), findsOneWidget);
       expect(asked, 0);
     });
   });

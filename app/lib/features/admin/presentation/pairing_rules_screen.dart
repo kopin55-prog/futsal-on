@@ -9,10 +9,11 @@ import '../../team/presentation/team_texts.dart';
 import '../data/team_admin_repository.dart';
 import '../domain/pairing_rules.dart';
 import 'admin_texts.dart';
+import 'pairing_rule_edit_screen.dart';
 
 /// 그룹·라이벌 설정 (팀장·운영진, data-model.md 3-7, Q-017).
 ///
-/// - 설정 목록: 종류·묶인 사람·켜기 스위치·고치기·삭제.
+/// - 설정 목록: 종류·묶인 사람·켜기 스위치·고치기·삭제. 사람 고르기는 [PairingRuleEditScreen] (검색·이름표, 6-4).
 /// - 켜진 설정끼리 모순이면(켜진 그룹으로 이어진 두 사람이 켜진 라이벌에 함께 있음) 저장·켜기를 막고
 ///   누구와 누구 때문인지 알려준다. 서버(save_pairing_rule, set_pairing_rule_enabled)도 같은 규칙으로 다시 거절한다.
 class PairingRulesScreen extends StatefulWidget {
@@ -97,12 +98,14 @@ class _PairingRulesScreenState extends State<PairingRulesScreen> {
   }
 
   Future<void> _edit(PairingRule rule) async {
-    final result = await showDialog<PairingRule>(
-      context: context,
-      builder: (_) => _PairingRuleDialog(
-        initial: rule,
-        members: _members,
-        conflictMessage: _conflictMessage,
+    final result = await Navigator.of(context).push<PairingRule>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => PairingRuleEditScreen(
+          initial: rule,
+          members: _members,
+          conflictMessage: _conflictMessage,
+        ),
       ),
     );
     if (result == null) return;
@@ -182,7 +185,7 @@ class _PairingRulesScreenState extends State<PairingRulesScreen> {
             const SizedBox(height: AppSpacing.sm),
             if (rules == null && _error == null)
               const Padding(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (rules != null && rules.isEmpty)
@@ -220,96 +223,6 @@ class _PairingRulesScreenState extends State<PairingRulesScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 설정 하나 만들기·고치기: 사람 고르기(2명 이상) + 켜기. 저장할 설정을 돌려준다.
-class _PairingRuleDialog extends StatefulWidget {
-  const _PairingRuleDialog({
-    required this.initial,
-    required this.members,
-    required this.conflictMessage,
-  });
-
-  final PairingRule initial;
-  final List<MemberEntry> members;
-  final String? Function(PairingRule) conflictMessage;
-
-  @override
-  State<_PairingRuleDialog> createState() => _PairingRuleDialogState();
-}
-
-class _PairingRuleDialogState extends State<_PairingRuleDialog> {
-  // 지금 팀원만 고를 수 있다 (떠난 사람은 서버가 이미 뺀다).
-  late final Set<String> _picked = widget.initial.userIds
-      .where((id) => widget.members.any((m) => m.userId == id))
-      .toSet();
-  late bool _enabled = widget.initial.enabled;
-
-  PairingRule get _rule => PairingRule(
-    id: widget.initial.id,
-    kind: widget.initial.kind,
-    enabled: _enabled,
-    // 명단 순서대로 보낸다
-    userIds: [
-      for (final m in widget.members)
-        if (_picked.contains(m.userId)) m.userId,
-    ],
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final rule = _rule;
-    final membersOk = PairingRules.membersValid(rule.userIds);
-    final conflict = membersOk && _enabled ? widget.conflictMessage(rule) : null;
-    final errorColor = Theme.of(context).colorScheme.error;
-    return AlertDialog(
-      title: Text(AdminTexts.kind(rule.kind)),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final m in widget.members)
-              CheckboxListTile(
-                key: Key('pick-${m.userId}'),
-                contentPadding: EdgeInsets.zero,
-                title: Text(m.displayName),
-                value: _picked.contains(m.userId),
-                onChanged: (v) => setState(() {
-                  if (v ?? false) {
-                    _picked.add(m.userId);
-                  } else {
-                    _picked.remove(m.userId);
-                  }
-                }),
-              ),
-            SwitchListTile(
-              key: const Key('rule-dialog-enabled'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text(AdminTexts.enabled),
-              value: _enabled,
-              onChanged: (v) => setState(() => _enabled = v),
-            ),
-            if (!membersOk)
-              Text(AdminTexts.pickMembers, style: TextStyle(color: errorColor)),
-            if (conflict != null)
-              Text(conflict, key: const Key('rule-dialog-conflict'), style: TextStyle(color: errorColor)),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text(TeamTexts.cancel),
-        ),
-        FilledButton(
-          key: const Key('rule-dialog-save'),
-          onPressed: membersOk && conflict == null ? () => Navigator.of(context).pop(rule) : null,
-          child: const Text(AdminTexts.save),
-        ),
-      ],
     );
   }
 }

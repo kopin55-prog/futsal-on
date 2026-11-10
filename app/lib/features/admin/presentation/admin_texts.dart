@@ -31,6 +31,11 @@ abstract final class AdminTexts {
 
   // ---- TODO(문구 미정): 아래는 임시 ----
   static const settingsSection = '팀 설정';
+
+  // 관리 탭 묶음 (스프린트 04 6-2, 기획서 11장)
+  static const groupStaff = '팀장·운영진';
+  static const groupOwner = '팀장만';
+  static const teamInfoMenu = '팀 정보·모집';
   static const teamInfo = '팀 정보 수정';
   static const matchSettings = '경기 설정';
   static const groupRival = '그룹·라이벌';
@@ -90,6 +95,12 @@ abstract final class AdminTexts {
   static const noRules = '저장된 그룹·라이벌이 없어요';
   static const enabled = '켜기';
   static const pickMembers = '2명 이상 골라주세요';
+  // 사람 고르기 화면 (스프린트 04 6-4)
+  static const searchName = '이름 검색';
+  static const clearSearch = '검색어 지우기';
+  static const unpick = '빼기';
+  static const noNameMatch = '찾는 이름이 없어요';
+  static String pickedCount(int n) => '고른 사람 $n명';
   static String confirmDelete(String kindLabel) => '이 $kindLabel 설정을 삭제할까요?';
   static String conflict(String a, String b) =>
       '$a님과 $b님은 켜진 그룹으로 이어져 있어 라이벌로 함께 켤 수 없어요';

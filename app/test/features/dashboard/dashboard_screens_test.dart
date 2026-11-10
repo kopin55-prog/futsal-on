@@ -128,10 +128,15 @@ void main() {
   });
 
   group('헤더 (4-2)', () {
-    testWidgets('팀 로고·이름·팀원 수(팀장·운영진 포함)', (tester) async {
+    testWidgets('팀원 수(팀장·운영진 포함). 팀 이름은 위쪽 바에만 한 번 (6-3), 누르면 팀원 탭', (tester) async {
       await _open(tester);
-      expect(find.descendant(of: find.byKey(const Key('dash-header')), matching: find.text('코코FC')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('dash-header')), matching: find.text('코코FC')), findsNothing);
+      expect(find.text('코코FC'), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const Key('team-title')), matching: find.text('코코FC')), findsOneWidget);
       expect(_text(tester, 'dash-member-count'), DashboardTexts.memberCount(5));
+      await tester.tap(find.byKey(const Key('dash-header')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RosterTab), findsOneWidget);
     });
   });
 

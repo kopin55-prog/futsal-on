@@ -7,7 +7,7 @@ import '../domain/attendance_models.dart';
 import '../domain/guest_models.dart';
 import '../domain/match_models.dart';
 
-/// 일정·참석 투표·게스트 화면 문구 (스프린트 02 4단계, 기능 확인용 화면).
+/// 일정 탭·일정 상세·참석 투표·게스트 화면 문구 (스프린트 02 4단계, 일정 탭 정식 화면 스프린트 04 5단계).
 ///
 /// 문서 용어(그대로 씀): "참석", "불참", "대기", "미투표", "게스트", "정원 없음", "취소됨".
 /// 나머지는 모두 임시 매니저 말투 — TODO(문구 미정): 묶음 테스트 때 kopn 이 화면을 보며 고친다 (Q-067 0번).
@@ -23,10 +23,41 @@ abstract final class ScheduleTexts {
 
   // ---- TODO(문구 미정): 아래는 임시 ----
   static const tabSchedule = '일정';
-  static const upcoming = '다가오는 일정';
-  static const noUpcoming = '다가오는 일정이 없어요';
+  static const upcoming = '다가오는 경기';
+  static const noUpcoming = '다가오는 경기가 없어요';
   static const pastMatches = '지난 경기';
   static const noPastMatches = '지난 경기가 없어요';
+
+  // 일정 탭 보기 전환 (5-1·5-2, S4-13)
+  static const listView = '목록';
+  static const calendarView = '달력';
+  static const noMatchOnDay = '이 날은 경기가 없어요';
+  static String monthTitle(int year, int month) => '$year년 $month월';
+
+  /// 달력 요일 머리 (일요일 시작)
+  static String calendarWeekday(int dartWeekday) => TeamTexts.weekday(dartWeekday);
+
+  /// "11/18(수)"
+  static String shortDate(CalendarDate d) => '${d.month}/${d.day}(${TeamTexts.weekday(d.weekday)})';
+
+  /// 목록 한 줄의 시각: "11/18(수) 10:00~12:00", 날짜가 바뀌면 "~다음날 00:30", 그 이상이면 "~11/20(금) 01:00".
+  static String rowTime(TeamMatch m) {
+    final startDate = Kst.dateOf(m.startsAt);
+    final endDate = Kst.dateOf(m.endsAt);
+    final end = Kst.timeOf(m.endsAt).hhmm;
+    final endText = endDate == startDate
+        ? end
+        : endDate == startDate.plusDays(1)
+        ? '다음날 $end'
+        : '${shortDate(endDate)} $end';
+    return '${shortDate(startDate)} ${Kst.timeOf(m.startsAt).hhmm}~$endText';
+  }
+
+  /// 목록 한 줄의 인원: "참석 9/12", 정원 없음이면 "참석 9".
+  static String rowAttending(int n, int? capacity) => capacity == null ? '참석 $n' : '참석 $n/$capacity';
+
+  /// 목록 한 줄의 내 상태: "나: 참석", "나: 대기 2번", "나: 미투표".
+  static String rowMine(AttendanceState? s, int? waitPosition) => '나: ${state(s, waitPosition)}';
   static const addMatch = '일정 추가';
   static const matchDetail = '일정';
   static const matchUnavailable = '볼 수 없는 일정이에요';

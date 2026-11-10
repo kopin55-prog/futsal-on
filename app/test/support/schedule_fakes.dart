@@ -125,6 +125,11 @@ class FakeAttendanceRepository implements AttendanceRepository {
   Future<List<AttendanceResponse>> listResponses(String matchId) async => List.of(byMatch[matchId] ?? const []);
 
   @override
+  Future<Map<String, List<AttendanceResponse>>> listResponsesFor(List<String> matchIds) async {
+    return {for (final id in matchIds) id: List.of(byMatch[id] ?? const [])};
+  }
+
+  @override
   Future<AttendanceState> respond(String matchId, {required bool attending, ReturnConfirmation? returnConfirmed}) async {
     calls.add('respond:$matchId:$attending${returnConfirmed == null ? '' : ':${returnConfirmed.name}'}');
     final f = nextFailure;

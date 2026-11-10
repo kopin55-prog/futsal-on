@@ -49,5 +49,4 @@ abstract final class AuthTempTexts {
       '앱 설정값이 없어요 (개발용 안내). config/dev.json 으로 실행해 주세요.';
   static const loadFailed = '정보를 불러오지 못했어요.';
   static const retry = '다시 시도';
-  static const homePlaceholder = '가입이 완료됐어요. (다음 화면 준비 중)';
 }

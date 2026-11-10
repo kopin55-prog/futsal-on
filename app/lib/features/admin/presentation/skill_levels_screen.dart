@@ -104,7 +104,7 @@ class _SkillLevelsScreenState extends State<SkillLevelsScreen> {
             const SizedBox(height: AppSpacing.sm),
             if (members == null && _error == null)
               const Padding(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (members != null)

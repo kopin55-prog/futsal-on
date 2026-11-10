@@ -18,7 +18,6 @@ import '../../schedule/presentation/match_create_screen.dart';
 import '../../schedule/presentation/match_detail_screen.dart';
 import '../../schedule/presentation/schedule_texts.dart';
 import '../../team/domain/team_models.dart';
-import '../../team/presentation/team_logo.dart';
 import '../data/dashboard_loader.dart';
 import '../domain/dashboard_models.dart';
 import 'dashboard_texts.dart';
@@ -26,7 +25,7 @@ import 'dashboard_texts.dart';
 /// 홈 = 팀 대시보드 (스프린트 04 4단계, 기획서 11장, kopn 2026-11-10).
 ///
 /// 정보는 카드·상자로 보여주고 **카드를 누르면 바로 해당 화면으로** 간다.
-/// - 헤더: 팀 로고·이름·팀원 수 (4-2)
+/// - 헤더: 팀원 수 (4-2). 팀 로고·이름은 위쪽 바에만 (중복 정리, 6-3). 누르면 팀원 탭
 /// - 처리할 일 (팀장·운영진만, S4-05): 가입 신청 대기 → 관리 탭, 팀 나누기 대기 → 그 경기 배치 화면
 /// - 다음 경기 (S4-02): 누르면 일정 상세. 카드에서 바로 참석·불참 (부상 중이면 복귀 확인 창, 2-5).
 ///   배치가 확정되면 내 팀 블록(조끼 색 + 이름 가나다순, 게스트 상자)을 크게. 실력·포지션 없음.
@@ -167,7 +166,7 @@ class _DashboardTabState extends State<DashboardTab> {
         key: const Key('dashboard'),
         padding: AppSpacing.page,
         children: [
-          _Header(team: widget.team, memberCount: data.memberCount),
+          _Header(memberCount: data.memberCount, onTap: widget.onOpenMembers),
           const SizedBox(height: AppSpacing.md),
           if (todos != null && !todos.isEmpty) ...[
             _TodoCard(todos: todos, onOpenJoin: widget.onOpenAdmin, onOpenLineup: _openLineup),
@@ -251,35 +250,36 @@ class _CardTitle extends StatelessWidget {
   }
 }
 
+/// 홈 머리: 팀원 수 (누르면 팀원 탭). 팀 로고·이름은 위쪽 바(팀 전환 버튼)에 이미 있어 여기서는 다시 보이지 않는다 (6-3).
 class _Header extends StatelessWidget {
-  const _Header({required this.team, required this.memberCount});
+  const _Header({required this.memberCount, required this.onTap});
 
-  final TeamSummary team;
   final int memberCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
+    final muted = theme.colorScheme.onSurfaceVariant;
+    return InkWell(
       key: const Key('dash-header'),
-      children: [
-        TeamLogo(text: team.logoText, imagePath: team.logoImagePath, size: 56),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(team.name, style: theme.textTheme.titleLarge, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 2),
-              Text(
-                DashboardTexts.memberCount(memberCount),
-                key: const Key('dash-member-count'),
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSpacing.radius),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(Icons.groups_outlined, size: 20, color: muted),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              DashboardTexts.memberCount(memberCount),
+              key: const Key('dash-member-count'),
+              style: theme.textTheme.titleSmall?.copyWith(color: muted),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: muted),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

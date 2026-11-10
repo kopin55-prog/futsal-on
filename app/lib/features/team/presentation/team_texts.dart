@@ -56,6 +56,10 @@ abstract final class TeamTexts {
   static const findTeam = '팀 찾기';
   static const switchTeam = '팀 전환';
   static const tabMembers = '팀원';
+
+  // 팀원 탭 (스프린트 04 6-1, S4-14)
+  static String memberCount(int n) => '팀원 $n명';
+  static String injuryMark(int weeks) => '부상 ${weeks}W';
   static const tabAdmin = '관리';
   static const tabMy = '내 기록';
   static const loadFailed = '정보를 불러오지 못했어요.';

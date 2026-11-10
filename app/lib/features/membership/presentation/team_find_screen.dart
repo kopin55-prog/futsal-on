@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/region.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../../shared/presentation/region_picker.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_logo.dart';
 import '../../team/presentation/team_texts.dart';
@@ -12,7 +14,8 @@ import '../data/membership_repository.dart';
 /// 팀 찾기·가입 신청 (data-model.md 3-1, 3-5, 3-6, Q-067 10·11·14번).
 ///
 /// - 팀 식별코드: 소문자도 인식, 정확히 일치. 모집 중일 때만 신청 (Q-029, Q-051).
-/// - 팀 이름 일부 검색: 2자 이상 (Q-067 11번).
+/// - 팀 이름 일부 검색: 2자 이상 (Q-067 11번). 위쪽 지역 선택(시·도 → 시·군·구, "전체" 가능)으로 좁힌다 (Q-079 4번).
+///   결과 카드에는 "서울 성동구"까지만 (상세 주소는 서버가 주지 않는다).
 /// - 초대 코드 붙여넣기 칸도 이 화면에 둔다 (Q-067 14번). 모집 여부와 무관.
 /// - 보낸 대기 신청 목록과 신청 취소 (Q-067 10번).
 class TeamFindScreen extends StatefulWidget {
@@ -34,6 +37,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
   List<TeamSearchResult>? _results;
   InviteTeam? _inviteTeam;
   List<MyJoinRequest> _myRequests = const [];
+  Region? _regionFilter;
 
   MembershipRepository get _m => widget.membership;
 
@@ -99,7 +103,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
           return;
         }
         await _run(() async {
-          final list = await _m.searchTeams(text);
+          final list = await _m.searchTeams(text, region: _regionFilter);
           setState(() {
             _results = list;
             if (list.isEmpty) _message = TeamTexts.noSearchResult;
@@ -176,6 +180,18 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
               onSelectionChanged: (s) => _setMode(s.first),
             ),
             const SizedBox(height: AppSpacing.md),
+            // 지역 필터: 팀 이름 검색에만 쓴다 (식별코드·초대 코드는 정확히 한 팀)
+            if (_mode == _Mode.name) ...[
+              RegionPicker(
+                keyPrefix: 'find-region',
+                value: _regionFilter,
+                onChanged: (v) => setState(() => _regionFilter = v),
+                emptyLabel: TeamTexts.regionAll,
+                sidoLabel: TeamTexts.regionSido,
+                sigunguLabel: TeamTexts.regionSigungu,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             TextField(
               key: const Key('find-input'),
               controller: _input,
@@ -253,6 +269,7 @@ class _ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final details = [
+      ?team.region?.label,
       team.teamCode,
       ?TeamTexts.schedule(team.schedule),
       ?team.venueName,

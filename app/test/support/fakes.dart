@@ -23,6 +23,7 @@ import 'package:futsal_on/features/notifications/data/push_controller.dart';
 import 'package:futsal_on/features/venue/data/place_search_repository.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 import 'package:futsal_on/shared/domain/position.dart';
+import 'package:futsal_on/shared/domain/region.dart';
 import 'package:futsal_on/shared/domain/venue.dart';
 
 import 'award_fakes.dart';
@@ -49,6 +50,7 @@ class FakeTeamRepository implements TeamRepository {
   final List<String> calls = [];
   ServerFailure? nextFailure;
   Venue? lastCreatedVenue;
+  Region? lastCreatedRegion;
   int _seq = 0;
 
   void _maybeFail() {
@@ -68,9 +70,11 @@ class FakeTeamRepository implements TeamRepository {
     RegularSchedule schedule = const RegularSchedule(),
     String? logoText,
     Venue? venue,
+    Region? region,
   }) async {
     _maybeFail();
     final id = 'new-${++_seq}';
+    lastCreatedRegion = region;
     calls.add('create:$name');
     lastCreatedVenue = venue;
     teams.add(
@@ -83,6 +87,7 @@ class FakeTeamRepository implements TeamRepository {
         isRecruiting: true,
         schedule: schedule,
         venue: venue,
+        region: region,
       ),
     );
     return id;
@@ -147,7 +152,13 @@ class FakeMembershipRepository implements MembershipRepository {
   }
 
   @override
-  Future<List<TeamSearchResult>> searchTeams(String query) async => searchResults;
+  Future<List<TeamSearchResult>> searchTeams(String query, {Region? region}) async {
+    lastSearchRegion = region;
+    return searchResults;
+  }
+
+  /// 마지막 이름 검색의 지역 필터
+  Region? lastSearchRegion;
 
   @override
   Future<void> requestJoin(String teamCode, {required bool viaSearch}) async {

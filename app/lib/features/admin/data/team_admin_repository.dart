@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/region.dart';
 import '../../../shared/domain/venue.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
@@ -17,6 +18,7 @@ class TeamInfoInput {
     required this.isRecruiting,
     this.venue,
     this.logoText,
+    this.region,
   });
 
   final String name;
@@ -26,6 +28,9 @@ class TeamInfoInput {
   /// 지정 풋살장. 항상 화면의 현재 값을 보낸다 (null = 없음, 지움).
   final Venue? venue;
   final String? logoText;
+
+  /// 활동 지역. 항상 화면의 현재 값을 보낸다 (null = 없음, 지움).
+  final Region? region;
 }
 
 /// 관리 탭의 팀 설정 (팀 정보·경기 설정·실력 등급·그룹·라이벌). 모두 서버 함수로 쓰고,
@@ -70,6 +75,8 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
         'p_is_recruiting': input.isRecruiting,
         'p_venue': input.venue?.toServerJson(),
         'p_logo_text': input.logoText,
+        'p_region_sido': input.region?.sido,
+        'p_region_sigungu': input.region?.sigungu,
       },
     ),
   );

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/region.dart';
 import '../../team/data/team_repository.dart' show scheduleFromRow;
 import '../../team/domain/team_models.dart';
 
@@ -11,8 +12,8 @@ abstract interface class MembershipRepository {
   /// 팀 식별코드로 찾기. 없으면 null. 해체된 팀이면 [ServerErrorCode.teamDissolved].
   Future<TeamSearchResult?> findTeamByCode(String code);
 
-  /// 팀 이름 일부로 찾기 (2자 이상, Q-067 11번).
-  Future<List<TeamSearchResult>> searchTeams(String query);
+  /// 팀 이름 일부로 찾기 (2자 이상, Q-067 11번). [region] 이 있으면 그 지역 팀만 (시·군·구가 없으면 시·도 전체, Q-079 4번).
+  Future<List<TeamSearchResult>> searchTeams(String query, {Region? region});
 
   /// 검색·식별코드 경로 신청 (모집 중일 때만).
   Future<void> requestJoin(String teamCode, {required bool viaSearch});
@@ -50,6 +51,7 @@ TeamSearchResult _searchResult(Map<String, dynamic> row) => TeamSearchResult(
   logoImagePath: row['logo_image_path'] as String?,
   schedule: scheduleFromRow(row),
   venueName: row['venue_name'] as String?,
+  region: Region.fromRow(row),
   memberCount: row['member_count'] as int,
   isRecruiting: row['is_recruiting'] as bool,
 );
@@ -71,8 +73,12 @@ class SupabaseMembershipRepository implements MembershipRepository {
   });
 
   @override
-  Future<List<TeamSearchResult>> searchTeams(String query) => guardServer(() async {
-    final rows = await _rows('search_teams', {'p_query': query});
+  Future<List<TeamSearchResult>> searchTeams(String query, {Region? region}) => guardServer(() async {
+    final rows = await _rows('search_teams', {
+      'p_query': query,
+      'p_region_sido': region?.sido,
+      'p_region_sigungu': region?.sigungu,
+    });
     return rows.map(_searchResult).toList();
   });
 

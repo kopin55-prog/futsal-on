@@ -109,6 +109,16 @@ abstract final class TeamTexts {
   static const venueNameTooLong = '200자까지 입력할 수 있어요';
   static const venueAddressTooLong = '300자까지 입력할 수 있어요';
   static const venueManualBadge = '직접 입력';
+
+  // 활동 지역 (Q-079 4번, data-model v4.7)
+  static const region = '활동 지역 (선택)';
+  static const regionSido = '시·도';
+  static const regionSigungu = '시·군·구';
+  static const regionNone = '선택 안 함';
+  static const regionAll = '전체';
+  static const regionAutoNote = '지정 풋살장을 검색해 고르면 주소로 채워져요. 바꾸거나 비워도 돼요.';
+  static const regionFilter = '지역';
+  static const regionInvalid = '활동 지역을 확인해 주세요';
   static const create = '만들기';
   static const nameTooLong = '팀 이름은 10자까지 쓸 수 있어요';
   static const nameHasLineBreak = '팀 이름은 한 줄로 써주세요';
@@ -201,6 +211,7 @@ abstract final class TeamTexts {
     ServerErrorCode.invalidLogoText => logoEmpty,
     ServerErrorCode.invalidRegularSchedule => '정기 운동 시간을 확인해 주세요',
     ServerErrorCode.invalidVenue => '지정 풋살장 정보를 확인해 주세요',
+    ServerErrorCode.invalidRegion => regionInvalid,
     ServerErrorCode.invalidLogoImage => photoFailed,
     ServerErrorCode.invalidSearchQuery => searchTooShort,
     ServerErrorCode.requestNotPending => '이미 처리된 신청이에요',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/region.dart';
 import '../../../shared/domain/venue.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../venue/data/place_search_repository.dart';
@@ -12,11 +13,13 @@ import '../data/team_repository.dart';
 import '../domain/team_models.dart';
 import '../domain/team_validation.dart';
 import 'logo_photo_field.dart';
+import 'region_field.dart';
 import 'regular_schedule_fields.dart';
 import 'team_logo.dart';
 import 'team_texts.dart';
 
-/// 팀 만들기 (data-model.md 3-1): 팀 이름(필수), 로고 글자·로고 사진, 정기 운동일, 지정 풋살장.
+/// 팀 만들기 (data-model.md 3-1): 팀 이름(필수), 로고 글자·로고 사진, 정기 운동일, 지정 풋살장, 활동 지역.
+/// 활동 지역은 카카오 검색으로 구장을 고르면 주소로 채우고, 바꾸거나 비울 수 있다 (Q-079 4번).
 /// 만든 사람이 팀장이므로 로고 글자도 정할 수 있다 (Q-014). 만들면 팀 ID 를 돌려주며 닫힌다.
 ///
 /// 로고 사진은 팀이 생긴 뒤에 올린다 (저장 경로에 팀 ID 가 필요). 사진만 실패하면 팀은 만들어진 채로
@@ -45,6 +48,7 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
   RegularSchedule _schedule = const RegularSchedule();
   LogoPhotoDraft _photo = const LogoPhotoDraft();
   Venue? _venue;
+  Region? _region;
   bool _submitted = false;
   bool _saving = false;
   String? _serverError;
@@ -104,6 +108,7 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
         schedule: _schedule,
         logoText: logo.isEmpty ? null : logo,
         venue: _venue,
+        region: _region,
       );
       final png = _photo.newPng;
       if (png != null) {
@@ -186,7 +191,16 @@ class _TeamCreateScreenState extends State<TeamCreateScreen> {
               value: _venue,
               places: widget.places,
               enabled: !_saving,
-              onChanged: (v) => setState(() => _venue = v),
+              onChanged: (v) => setState(() {
+                _venue = v;
+                _region = regionAfterVenueChange(v, _region);
+              }),
+            ),
+            AppSpacing.sectionGap,
+            TeamRegionField(
+              value: _region,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _region = v),
             ),
             AppSpacing.sectionGap,
             if (_serverError != null) ErrorText(_serverError!),

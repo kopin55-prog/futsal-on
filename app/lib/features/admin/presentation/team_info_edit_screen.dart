@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/region.dart';
 import '../../../shared/domain/venue.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../team/data/logo_picker.dart';
@@ -10,6 +11,7 @@ import '../../team/data/team_logo_repository.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/logo_photo_field.dart';
+import '../../team/presentation/region_field.dart';
 import '../../team/presentation/regular_schedule_fields.dart';
 import '../../team/presentation/team_logo.dart';
 import '../../team/presentation/team_texts.dart';
@@ -25,6 +27,7 @@ import 'admin_texts.dart';
 ///   화면에는 같은 규칙의 미리보기를 보여준다.
 /// - 팀장이 로고 글자 칸을 비우면 새 이름의 기본값(앞 두 글자)으로 저장 (팀 만들기와 같은 동작).
 /// - 지정 풋살장: 카카오맵 검색 또는 직접 입력 (Q-032, Q-068 2번). 팀 정보와 한 번에 저장.
+/// - 활동 지역: 카카오 검색 구장을 고르면 주소로 채움, 바꾸거나 비울 수 있음 (Q-079 4번). 항상 현재 값을 보낸다.
 /// - 로고 사진: 팀 정보 저장 뒤 바꾸거나 지운다 (Q-068 1번). 사진만 실패하면 안내하고 닫는다.
 class TeamInfoEditScreen extends StatefulWidget {
   const TeamInfoEditScreen({
@@ -56,6 +59,7 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
   late RegularSchedule _schedule = widget.team.schedule;
   late bool _recruiting = widget.team.isRecruiting;
   late Venue? _venue = widget.team.venue;
+  late Region? _region = widget.team.region;
   late LogoPhotoDraft _photo = LogoPhotoDraft(currentPath: widget.team.logoImagePath);
   bool _submitted = false;
   bool _saving = false;
@@ -134,6 +138,7 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
           schedule: _schedule,
           isRecruiting: _recruiting,
           venue: _venue,
+          region: _region,
           logoText: _logoTouched ? _logoPreview : null,
         ),
       );
@@ -234,7 +239,16 @@ class _TeamInfoEditScreenState extends State<TeamInfoEditScreen> {
               value: _venue,
               places: widget.places,
               enabled: !_saving,
-              onChanged: (v) => setState(() => _venue = v),
+              onChanged: (v) => setState(() {
+                _venue = v;
+                _region = regionAfterVenueChange(v, _region);
+              }),
+            ),
+            AppSpacing.sectionGap,
+            TeamRegionField(
+              value: _region,
+              enabled: !_saving,
+              onChanged: (v) => setState(() => _region = v),
             ),
             AppSpacing.fieldGap,
             SwitchListTile(

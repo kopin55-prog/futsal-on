@@ -1,5 +1,6 @@
 import '../../../core/entitlements/entitlements.dart';
 import '../../../shared/domain/position.dart';
+import '../../../shared/domain/region.dart';
 import '../../../shared/domain/venue.dart';
 import 'team_validation.dart';
 
@@ -26,6 +27,7 @@ class TeamSummary {
     this.logoImagePath,
     this.schedule = const RegularSchedule(),
     this.venue,
+    this.region,
   });
 
   final String id;
@@ -39,6 +41,9 @@ class TeamSummary {
 
   /// 지정 풋살장. 없으면 null.
   final Venue? venue;
+
+  /// 활동 지역 (Q-079 4번). 없으면 null.
+  final Region? region;
 }
 
 /// 팀원 명단의 한 사람 (이름·역할·자기소개). 선호 포지션은 따로 읽는다 (Q-017).
@@ -75,6 +80,7 @@ class TeamSearchResult {
     this.logoImagePath,
     this.schedule = const RegularSchedule(),
     this.venueName,
+    this.region,
   });
 
   final String teamCode;
@@ -83,6 +89,9 @@ class TeamSearchResult {
   final String? logoImagePath;
   final RegularSchedule schedule;
   final String? venueName;
+
+  /// 활동 지역 (시·도·시·군·구까지만, 상세 주소는 서버가 주지 않는다)
+  final Region? region;
   final int memberCount;
   final bool isRecruiting;
 }

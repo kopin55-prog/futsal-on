@@ -43,6 +43,8 @@ enum ServerErrorCode {
   teamDissolved('team_dissolved'),
   dissolveConfirmationMismatch('dissolve_confirmation_mismatch'),
   invalidVenue('invalid_venue'),
+  // 팀 활동 지역 (create_team·update_team_info·search_teams, 202611050067)
+  invalidRegion('invalid_region'),
   invalidLogoImage('invalid_logo_image'),
   invalidMatchTime('invalid_match_time'),
   matchInPast('match_in_past'),

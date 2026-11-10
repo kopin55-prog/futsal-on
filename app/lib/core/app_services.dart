@@ -1,5 +1,6 @@
 import '../features/admin/data/team_admin_repository.dart';
 import '../features/auth/data/account_repository.dart';
+import '../features/injury/data/injury_repository.dart';
 import '../features/lineup/data/lineup_repository.dart';
 import '../features/membership/data/membership_repository.dart';
 import '../features/notifications/data/notification_repository.dart';
@@ -35,6 +36,7 @@ class AppServices {
     required this.guests,
     required this.lineups,
     required this.awards,
+    required this.injuries,
     this.push,
     this.shareImages = const SharePlusShareImageService(),
     this.entitlements = const Entitlements(),
@@ -75,6 +77,9 @@ class AppServices {
 
   /// POM·오늘의 골 투표와 투표 설정 (읽기: 팀원, 투표: 대상자, 설정 바꾸기: 관리자)
   final AwardRepository awards;
+
+  /// 부상 동의·부상 기록 (모두 본인만, 스프린트 04 2단계)
+  final InjuryRepository injuries;
 
   /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
   final PushController? push;

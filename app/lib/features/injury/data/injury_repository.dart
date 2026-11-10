@@ -6,7 +6,7 @@ import '../domain/injury_models.dart';
 /// 부상 동의·부상 기록 (data-model.md v4.6 8-1·8-2, 스프린트 04 1-2·1-3). 모두 본인만, 서버 함수로.
 ///
 /// 참석 투표로 복귀하는 경로는 AttendanceRepository.respond(returnConfirmed: ...) (1-5).
-/// 실패는 모두 [ServerFailure]. 화면(2단계)에서 AppServices 에 연결한다.
+/// 실패는 모두 [ServerFailure]. 화면은 AppServices.injuries 로 쓴다 (스프린트 04 2단계).
 abstract interface class InjuryRepository {
   /// 나중에 부상 동의 (유효한 동의가 있으면 [ServerErrorCode.injuryConsentExists]).
   Future<void> agreeConsent();
@@ -28,6 +28,9 @@ abstract interface class InjuryRepository {
 
   /// 내 진행 중 부상 (없으면 null).
   Future<Injury?> myActiveInjury(String userId);
+
+  /// 유효한(철회 안 한) 부상 동의가 있는지 (user_consents, 본인 줄만 읽힘).
+  Future<bool> hasActiveConsent(String userId);
 }
 
 class SupabaseInjuryRepository implements InjuryRepository {
@@ -72,5 +75,17 @@ class SupabaseInjuryRepository implements InjuryRepository {
         .eq('status', 'active')
         .maybeSingle();
     return row == null ? null : Injury.fromRow(row);
+  });
+
+  @override
+  Future<bool> hasActiveConsent(String userId) => guardServer(() async {
+    final row = await _client
+        .from('user_consents')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('consent_type', 'injury_info')
+        .isFilter('withdrawn_at', null)
+        .maybeSingle();
+    return row != null;
   });
 }

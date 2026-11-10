@@ -50,11 +50,15 @@ final class InjuryInfo extends Info {
   const InjuryInfo({
     required this.subjectUserId,
     required this.subjectConsented,
+    required this.isActive,
   });
   final String subjectUserId;
 
-  /// 본인이 건강 정보 처리·팀원 공개에 동의했는지 (가입 시 최초 1회 체크박스, Q-028. 문구는 승인 대기).
+  /// 주인의 부상 정보 동의가 유효한지 (가입 때 또는 나중에 동의, 철회하면 아님. Q-028·Q-052).
   final bool subjectConsented;
+
+  /// 진행 중 부상인지 (회복한 지난 기록이면 false).
+  final bool isActive;
 }
 
 /// 특정 사람의 내 기록 (수상·출석 횟수).

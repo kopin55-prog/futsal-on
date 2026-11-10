@@ -23,6 +23,7 @@ class NotificationTeamTarget {
 /// 배치(lineup_confirmed·lineup_changed·lineup_unconfirmed)·POM(award_poll_opened·award_results_announced) 알림도
 /// ref_type = match 라 같은 일정 상세로 간다 (투표·결과는 상세 안, 스프린트 03 5단계).
 /// 가입 신청 → 그 팀 관리 탭, 그 밖의 팀 알림 → 그 팀: [NotificationTeamTarget] 을 돌려준다(부른 쪽이 팀 전환).
+/// 복귀 확인(injury_return_check)도 그 일정 상세로 가고, 상세 위에 복귀 확인 창을 띄운다 (스프린트 04 2-6, S4-11).
 /// 지금 소속이 아닌 팀(떠난 팀·해체된 팀)이나 사라진 대상은 이동하지 않는다 (Q-041, Entitlements.canOpenNotificationTarget).
 Future<NotificationTeamTarget?> openNotification(
   BuildContext context, {
@@ -55,6 +56,7 @@ Future<NotificationTeamTarget?> openNotification(
               team: team,
               viewer: viewer,
               matchId: matchId,
+              openReturnCheck: n.kind == NotificationKind.injuryReturnCheck,
             ),
           ),
         );

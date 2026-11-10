@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
 import '../domain/attendance_models.dart';
+import '../domain/match_models.dart';
 
 /// 참석 투표 (data-model.md 4-2). 읽기는 표(그 팀 팀원 전체), 응답은 서버 함수(본인만).
 ///
@@ -17,6 +18,18 @@ abstract interface class AttendanceRepository {
   /// "부상에서 복귀하셨나요?" 확인을 받은 뒤 [returnConfirmed] 를 주고 다시 부르면 한 처리 안에서
   /// 참석(또는 대기) + 부상 회복. 불참에는 확인이 필요 없다 (스프린트 04 1-5).
   Future<AttendanceState> respond(String matchId, {required bool attending, ReturnConfirmation? returnConfirmed});
+
+  /// 내가 참석·대기로 응답해 둔 다가오는(시작 전, 취소 안 된) 일정, 시작 순. 지금 소속 팀 것만 읽힌다.
+  /// 부상 등록 직후 "참석으로 되어 있는 경기" 안내에 쓴다 (S4-08).
+  Future<List<MyUpcomingResponse>> listMyUpcomingAttending(String userId, {required DateTime now});
+}
+
+/// 내 응답 한 줄 + 그 일정.
+class MyUpcomingResponse {
+  const MyUpcomingResponse({required this.match, required this.state});
+
+  final TeamMatch match;
+  final AttendanceState state;
 }
 
 /// 부상 복귀 확인을 받은 곳 (서버 injury_event_via).
@@ -59,4 +72,24 @@ class SupabaseAttendanceRepository implements AttendanceRepository {
     );
     return AttendanceState.fromServer(state);
   });
+
+  @override
+  Future<List<MyUpcomingResponse>> listMyUpcomingAttending(String userId, {required DateTime now}) =>
+      guardServer(() async {
+        final rows = await _client
+            .from('attendance_responses')
+            .select('state, matches!inner(${TeamMatch.columns})')
+            .eq('user_id', userId)
+            .inFilter('state', ['attending', 'waitlisted'])
+            .eq('matches.status', 'scheduled')
+            .gt('matches.starts_at', now.toUtc().toIso8601String());
+        final list = [
+          for (final r in rows)
+            MyUpcomingResponse(
+              match: TeamMatch.fromRow(r['matches'] as Map<String, dynamic>),
+              state: AttendanceState.fromServer(r['state'] as String),
+            ),
+        ]..sort((a, b) => a.match.startsAt.compareTo(b.match.startsAt));
+        return list;
+      });
 }

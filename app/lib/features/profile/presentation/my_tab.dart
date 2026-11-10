@@ -7,13 +7,17 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../auth/presentation/account_delete_screen.dart';
+import '../../injury/presentation/injury_flows.dart';
+import '../../injury/presentation/injury_texts.dart';
+import '../../injury/presentation/my_injury_card.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_texts.dart';
 import '../data/profile_repository.dart';
 import 'profile_edit_screen.dart';
 import 'profile_texts.dart';
 
-/// 내 정보 탭: 내 프로필 보기·수정, 팀 식별코드, 팀 탈퇴, 로그아웃, 회원 탈퇴.
+/// 내 정보 탭: 내 프로필 보기·수정, 내 부상 카드(스프린트 04 2-3), 팀 식별코드, 부상 정보 동의 철회(2-4),
+/// 팀 탈퇴, 로그아웃, 회원 탈퇴. 3-3 에서 "내 기록·프로필" 탭으로 바뀐다(탭 이름만).
 class MyTab extends StatefulWidget {
   const MyTab({
     required this.services,
@@ -21,6 +25,7 @@ class MyTab extends StatefulWidget {
     required this.viewer,
     required this.onLeftTeam,
     required this.onSignOut,
+    this.now = DateTime.now,
     super.key,
   });
 
@@ -29,6 +34,7 @@ class MyTab extends StatefulWidget {
   final Viewer viewer;
   final Future<void> Function() onLeftTeam;
   final Future<void> Function() onSignOut;
+  final DateTime Function() now;
 
   @override
   State<MyTab> createState() => _MyTabState();
@@ -38,6 +44,7 @@ class _MyTabState extends State<MyTab> {
   OwnProfile? _profile;
   String? _error;
   bool _busy = false;
+  late final _injury = MyInjuryController(services: widget.services, userId: widget.viewer.userId);
 
   AppServices get _s => widget.services;
 
@@ -45,6 +52,25 @@ class _MyTabState extends State<MyTab> {
   void initState() {
     super.initState();
     _load();
+    _injury.addListener(_onInjuryChanged);
+    _injury.load();
+  }
+
+  @override
+  void dispose() {
+    _injury.removeListener(_onInjuryChanged);
+    _injury.dispose();
+    super.dispose();
+  }
+
+  /// 동의 철회 메뉴가 동의 상태를 따라가게
+  void _onInjuryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _withdrawInjuryConsent() async {
+    final done = await confirmWithdrawInjuryConsent(context, services: _s);
+    if (done) await _injury.load();
   }
 
   Future<void> _load() async {
@@ -155,6 +181,8 @@ class _MyTabState extends State<MyTab> {
             ),
         ],
         AppSpacing.sectionGap,
+        MyInjuryCard(controller: _injury, viewer: widget.viewer, now: widget.now),
+        AppSpacing.sectionGap,
         SectionCard(
           children: [
             if (e.canViewTeamCode(widget.viewer))
@@ -173,6 +201,18 @@ class _MyTabState extends State<MyTab> {
                     }
                   },
                 ),
+              ),
+            // 동의한 사람에게만 (Entitlements.canWithdrawInjuryConsent, 2-4)
+            if (e.canWithdrawInjuryConsent(
+              widget.viewer,
+              subjectUserId: widget.viewer.userId,
+              hasConsent: _injury.loaded && _injury.hasConsent,
+            ))
+              ListTile(
+                key: const Key('injury-withdraw'),
+                enabled: !_injury.busy,
+                title: const Text(InjuryTexts.withdrawMenu),
+                onTap: _withdrawInjuryConsent,
               ),
             if (e.canPerform(widget.viewer, TeamAction.leaveTeam))
               ListTile(

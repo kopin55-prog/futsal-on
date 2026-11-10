@@ -112,6 +112,14 @@ class Entitlements {
   /// 팀 식별코드를 볼 수 있는지: 팀원 전체 (Q-051).
   bool canViewTeamCode(Viewer viewer) => viewer.isTeamMember;
 
+  /// 부상 등록·연장·회복·메모 수정, 부상 동의·철회 버튼: 본인만 (서버 함수도 본인 것만 다룬다, 스프린트 04 1-3).
+  bool canManageInjury(Viewer viewer, {required String subjectUserId}) =>
+      viewer.userId == subjectUserId;
+
+  /// "부상 정보 동의 철회" 메뉴: 본인이고 유효한 부상 동의가 있을 때만 (2-4).
+  bool canWithdrawInjuryConsent(Viewer viewer, {required String subjectUserId, required bool hasConsent}) =>
+      canManageInjury(viewer, subjectUserId: subjectUserId) && hasConsent;
+
   /// 프로필 항목(선호 포지션·전문 골키퍼 포함)을 수정할 수 있는지: 본인만.
   bool canEditProfile(Viewer viewer, {required String subjectUserId}) =>
       viewer.userId == subjectUserId;
@@ -135,6 +143,9 @@ class Entitlements {
 
     // 내 기록은 팀 소속과 무관하게 본인만.
     if (info is PersonalRecordInfo) return isSelf;
+
+    // 내 부상은 팀 소속과 무관하게 본인이 본다. 1차 화면에는 진행 중인 것만 (S4-06 (4): 지난 기록은 저장만).
+    if (info is InjuryInfo && isSelf) return info.isActive;
 
     final role = viewer.role;
     if (role == null) return false;
@@ -175,9 +186,10 @@ class Entitlements {
         // 익명 투표: 누구도 조회 불가 (2차에서도 열지 않음).
         return false;
 
-      case InjuryInfo(:final subjectConsented):
-        // 본인 동의 후 팀원 전체. 본인은 동의 여부와 무관하게 자기 기록을 본다.
-        return isSelf || subjectConsented;
+      case InjuryInfo(:final subjectConsented, :final isActive):
+        // 다른 사람: 같은 팀 팀원 전체, 주인의 동의가 유효하고 진행 중인 부상만 (서버 권한 규칙과 같음, S-07).
+        // 본인은 위에서 처리. TODO(2차): 팀 구독 리포트의 지난 부상 기록은 TeamReportInfo 로 따로 판단.
+        return subjectConsented && isActive;
 
       case TeamReportInfo():
         // 1차: 리포트 메뉴 숨김.

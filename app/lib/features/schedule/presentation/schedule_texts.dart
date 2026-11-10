@@ -152,7 +152,7 @@ abstract final class ScheduleTexts {
     ServerErrorCode.invalidCancelReason => '사유는 20자까지 쓸 수 있어요',
     ServerErrorCode.invalidGuestName => guestError(GuestInputError.nameTooLong),
     ServerErrorCode.invalidPositions => ProfileTexts.serverError(code),
-    // TODO(문구 미정): 임시. 2-5 복귀 확인 창이 생기면 이 오류 대신 확인 창을 띄운다.
+    // TODO(문구 미정): 임시. 보통은 복귀 확인 창(2-5)이 먼저 떠서 이 문구는 거의 안 보인다.
     ServerErrorCode.returnConfirmationRequired => '부상 중이에요. 복귀 확인 후 참석할 수 있어요',
     ServerErrorCode.guestLimitReached => guestError(GuestInputError.tooManyGuests),
     ServerErrorCode.duplicateGuestName => guestError(GuestInputError.duplicateName),

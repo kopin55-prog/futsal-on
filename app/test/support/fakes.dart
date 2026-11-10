@@ -26,10 +26,12 @@ import 'package:futsal_on/shared/domain/position.dart';
 import 'package:futsal_on/shared/domain/venue.dart';
 
 import 'award_fakes.dart';
+import 'injury_fakes.dart';
 import 'lineup_fakes.dart';
 import 'share_fakes.dart';
 import 'schedule_fakes.dart';
 
+export 'injury_fakes.dart';
 export 'lineup_fakes.dart';
 export 'schedule_fakes.dart';
 export 'share_fakes.dart';
@@ -466,7 +468,8 @@ class TestServices {
   final places = FakePlaceSearchRepository();
   final notifications = FakeNotificationRepository();
   final matches = FakeMatchRepository();
-  late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId);
+  late final injuries = FakeInjuryRepository(userId: () => currentUserId);
+  late final attendance = FakeAttendanceRepository(matches: matches, userId: () => currentUserId, injuries: injuries);
   final guests = FakeGuestRepository();
   final lineups = FakeLineupRepository();
   final awards = FakeAwardRepository();
@@ -494,6 +497,7 @@ class TestServices {
     guests: guests,
     lineups: lineups,
     awards: awards,
+    injuries: injuries,
     push: push,
     shareImages: shareImages,
   );

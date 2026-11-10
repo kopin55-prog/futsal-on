@@ -7,6 +7,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_texts.dart';
+import '../../injury/presentation/injury_flows.dart';
+import '../../injury/presentation/return_check_dialog.dart';
 import '../../lineup/domain/lineup_models.dart';
 import '../../lineup/presentation/lineup_editor_screen.dart';
 import '../../lineup/presentation/lineup_section.dart';
@@ -35,6 +37,8 @@ import 'schedule_texts.dart';
 /// - 취소된 일정은 "취소됨 + 사유" (Q-073 4번).
 /// - 팀 배치 (스프린트 03 3-1·3-4): [LineupSection]. 운영진은 [LineupEditorScreen] 으로 팀 나누기.
 /// - POM·오늘의 골 (스프린트 03 5-2·5-3): 투표가 열린 경기(경기 종료 뒤)만 [AwardSection].
+/// - 부상 중 [참석] → "부상에서 복귀하셨나요?" 확인 창 (스프린트 04 2-5, [respondWithReturnConfirm]).
+/// - 복귀 확인 알림으로 열면([openReturnCheck]) 처음 읽은 뒤 복귀 확인 창 (2-6, [showReturnCheckDialog]).
 class MatchDetailScreen extends StatefulWidget {
   const MatchDetailScreen({
     required this.services,
@@ -42,6 +46,7 @@ class MatchDetailScreen extends StatefulWidget {
     required this.viewer,
     required this.matchId,
     this.initial,
+    this.openReturnCheck = false,
     this.now = DateTime.now,
     super.key,
   });
@@ -53,6 +58,9 @@ class MatchDetailScreen extends StatefulWidget {
 
   /// 목록에서 이미 읽은 일정 (먼저 보여주고 다시 읽는다)
   final TeamMatch? initial;
+
+  /// 복귀 확인 알림(injury_return_check)을 눌러 열었는지 (2-6)
+  final bool openReturnCheck;
 
   final DateTime Function() now;
 
@@ -82,7 +90,30 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   void initState() {
     super.initState();
     _match = widget.initial;
-    _load();
+    _load().then((_) => _maybeReturnCheck());
+  }
+
+  /// 복귀 확인 알림으로 열었을 때 한 번만: 지금도 부상 중이고 그 일정에 응답 전이면 확인 창 (2-6)
+  Future<void> _maybeReturnCheck() async {
+    final m = _match;
+    final roster = _roster;
+    if (!widget.openReturnCheck || !mounted || m == null || roster == null || _missing) return;
+    try {
+      final injury = await _s.injuries.myActiveInjury(widget.viewer.userId);
+      if (!mounted) return;
+      final show = shouldShowReturnCheck(
+        entitlements: _e,
+        viewer: widget.viewer,
+        match: m,
+        myInjury: injury,
+        hasResponse: roster.responseOf(widget.viewer.userId) != null,
+      );
+      if (!show) return;
+    } on ServerFailure {
+      return; // 창 없이 상세만
+    }
+    final outcome = await showReturnCheckDialog(context, services: _s, match: m, now: widget.now());
+    if (outcome != ReturnCheckOutcome.closed && mounted) await _load();
   }
 
   Future<void> _load() async {
@@ -131,7 +162,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     if (m == null || _busy) return;
     setState(() => _busy = true);
     try {
-      await _s.attendance.respond(m.id, attending: attending);
+      // 부상 중 참석이면 복귀 확인 창 (취소하면 응답 그대로)
+      await respondWithReturnConfirm(context, _s.attendance, m.id, attending: attending);
       await _load();
     } on ServerFailure catch (e) {
       if (mounted) _toast(ScheduleTexts.serverError(e.code));

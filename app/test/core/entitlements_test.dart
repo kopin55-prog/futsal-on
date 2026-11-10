@@ -225,15 +225,36 @@ void main() {
     });
 
     test('부상: 동의하면 팀원 전체, 동의 전에는 본인만', () {
-      const consented = InjuryInfo(subjectUserId: 'a', subjectConsented: true);
+      const consented = InjuryInfo(subjectUserId: 'a', subjectConsented: true, isActive: true);
       const notConsented = InjuryInfo(
         subjectUserId: 'u',
         subjectConsented: false,
+        isActive: true,
       );
       expect(e.canView(member, consented), isTrue);
       expect(e.canView(outsider, consented), isFalse);
       expect(e.canView(member, notConsented), isTrue); // 본인
       expect(e.canView(owner, notConsented), isFalse);
+    });
+
+    test('부상: 다른 사람은 진행 중인 것만, 본인 지난 기록도 1차 화면에는 안 보임 (2-7, S4-06 (4))', () {
+      const othersPast = InjuryInfo(subjectUserId: 'a', subjectConsented: true, isActive: false);
+      const myPast = InjuryInfo(subjectUserId: 'u', subjectConsented: true, isActive: false);
+      for (final v in [owner, manager]) {
+        expect(e.canView(v, othersPast), isFalse);
+      }
+      expect(e.canView(member, myPast), isFalse);
+      // 내 진행 중 부상은 팀 소속과 무관하게 본인이 본다
+      const myActive = InjuryInfo(subjectUserId: 'u', subjectConsented: true, isActive: true);
+      expect(e.canView(const Viewer(userId: 'u', role: null), myActive), isTrue);
+    });
+
+    test('부상 등록·연장·회복·동의 철회 버튼: 본인만, 철회는 동의가 있을 때만', () {
+      expect(e.canManageInjury(member, subjectUserId: 'u'), isTrue);
+      expect(e.canManageInjury(owner, subjectUserId: 'u'), isFalse);
+      expect(e.canWithdrawInjuryConsent(member, subjectUserId: 'u', hasConsent: true), isTrue);
+      expect(e.canWithdrawInjuryConsent(member, subjectUserId: 'u', hasConsent: false), isFalse);
+      expect(e.canWithdrawInjuryConsent(owner, subjectUserId: 'u', hasConsent: true), isFalse);
     });
 
     test('내 기록: 본인만 (팀장도 불가)', () {

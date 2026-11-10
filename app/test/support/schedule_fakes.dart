@@ -7,6 +7,8 @@ import 'package:futsal_on/features/schedule/domain/guest_models.dart';
 import 'package:futsal_on/features/schedule/domain/match_models.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 
+import 'injury_fakes.dart';
+
 /// 일정 흉내. 취소는 예정 상태만 (서버와 같게).
 class FakeMatchRepository implements MatchRepository {
   final List<TeamMatch> items = [];
@@ -87,10 +89,13 @@ class FakeMatchRepository implements MatchRepository {
 
 /// 참석 투표 흉내: 정원이 차면 대기 (서버와 같게). 자동 참석은 seed 로 준비한다.
 class FakeAttendanceRepository implements AttendanceRepository {
-  FakeAttendanceRepository({required this.matches, required this.userId});
+  FakeAttendanceRepository({required this.matches, required this.userId, this.injuries});
 
   final FakeMatchRepository matches;
   final String Function() userId;
+
+  /// 있으면 부상 중 참석은 복귀 확인 필요(서버 1-5와 같게), 확인하면 부상 회복
+  final FakeInjuryRepository? injuries;
   final Map<String, List<AttendanceResponse>> byMatch = {};
   final List<String> calls = [];
   ServerFailure? nextFailure;
@@ -130,6 +135,11 @@ class FakeAttendanceRepository implements AttendanceRepository {
     final match = (await matches.getMatch(matchId))!;
     final list = byMatch[matchId] ??= [];
     final me = userId();
+    final injured = injuries?.active.containsKey(me) ?? false;
+    if (attending && injured) {
+      if (returnConfirmed == null) throw const ServerFailure(ServerErrorCode.returnConfirmationRequired);
+      injuries!.recoverByReturn(me);
+    }
     final current = list.where((r) => r.userId == me).firstOrNull;
     AttendanceState next;
     if (attending) {
@@ -157,6 +167,22 @@ class FakeAttendanceRepository implements AttendanceRepository {
       ),
     );
     return next;
+  }
+
+  @override
+  Future<List<MyUpcomingResponse>> listMyUpcomingAttending(String userId, {required DateTime now}) async {
+    final out = <MyUpcomingResponse>[];
+    for (final entry in byMatch.entries) {
+      final m = await matches.getMatch(entry.key);
+      if (m == null || m.isCancelled || !m.startsAt.isAfter(now)) continue;
+      for (final r in entry.value) {
+        if (r.userId == userId && r.state != AttendanceState.declined) {
+          out.add(MyUpcomingResponse(match: m, state: r.state));
+        }
+      }
+    }
+    out.sort((a, b) => a.match.startsAt.compareTo(b.match.startsAt));
+    return out;
   }
 }
 

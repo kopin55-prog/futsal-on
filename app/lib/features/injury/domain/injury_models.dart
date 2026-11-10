@@ -1,4 +1,6 @@
-/// 부상 기록 (data-model.md v4.6 8-2). 화면(2단계)은 아직 없다.
+import '../../../shared/domain/text_length.dart';
+
+/// 부상 기록 (data-model.md v4.6 8-2). 화면은 presentation/ (스프린트 04 2단계).
 ///
 /// 읽기 범위는 서버 권한 규칙이 정한다: 본인은 전부, 지금 같은 팀 팀원은 진행 중인 것만(주인의 부상 동의가
 /// 유효할 때만). 앱에서 "이 사람이 볼 수 있나" 판단은 entitlements(`InjuryInfo`) 한 곳에서 한다.
@@ -61,4 +63,26 @@ abstract final class InjuryRules {
 
   /// 메모 최대 글자 수 (보이는 글자, Flutter characters 로 셈)
   static const int maxMemoLength = 20;
+
+  /// 등록 화면의 기본 선택 (임시, 화면 편의)
+  static const int defaultWeeks = 2;
+
+  /// 저장 직전 메모 정리 (11장 14번): 보이지 않는 문자를 이름과 같은 규칙으로 지우고(Q-048) 앞뒤 공백 제거.
+  /// 비면 null (메모 없음).
+  static String? normalizeMemo(String? text) {
+    if (text == null) return null;
+    final v = normalizeInput(removeInvisibleChars(text));
+    return v.isEmpty ? null : v;
+  }
+
+  /// 메모 검사 (정리 뒤 기준). 문제가 없으면 null.
+  static InjuryMemoError? validateMemo(String? text) {
+    final v = normalizeMemo(text);
+    if (v == null) return null;
+    if (containsLineBreak(v)) return InjuryMemoError.lineBreak;
+    if (countChars(v) > maxMemoLength) return InjuryMemoError.tooLong;
+    return null;
+  }
 }
+
+enum InjuryMemoError { tooLong, lineBreak }

@@ -34,4 +34,19 @@ void main() {
       expect(i.remainingWeeks(today), 2);
     });
   });
+
+  group('메모 정리·검사 (11장 14번, 2-2)', () {
+    test('보이지 않는 문자·앞뒤 공백 정리, 비면 없음', () {
+      expect(InjuryRules.normalizeMemo('  발목​ '), '발목');
+      expect(InjuryRules.normalizeMemo('​ ㅤ'), isNull);
+      expect(InjuryRules.normalizeMemo(null), isNull);
+      expect(InjuryRules.validateMemo('   '), isNull);
+    });
+    test('20자까지, 이모지 1개 = 1자, 줄바꿈 불가', () {
+      expect(InjuryRules.validateMemo('가' * 20), isNull);
+      expect(InjuryRules.validateMemo('가' * 21), InjuryMemoError.tooLong);
+      expect(InjuryRules.validateMemo('${'가' * 19}👨‍👩‍👧'), isNull);
+      expect(InjuryRules.validateMemo('발목\n인대'), InjuryMemoError.lineBreak);
+    });
+  });
 }

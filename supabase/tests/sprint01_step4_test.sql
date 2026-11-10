@@ -267,9 +267,9 @@ select pg_temp.check(pg_temp.delete_logo(pg_temp.v('p3')) = 1, 'ex-owner deletes
 
 -- ================================================================ 실행 권한
 reset role;
-select pg_temp.check(not has_function_privilege('anon', 'public.create_team(text, smallint, time, time, text, jsonb)', 'execute'), 'anon cannot create team');
-select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text)', 'execute'), 'anon cannot update team');
-select pg_temp.check(has_function_privilege('authenticated', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text)', 'execute'), 'authenticated can update team');
+select pg_temp.check(not has_function_privilege('anon', 'public.create_team(text, smallint, time, time, text, jsonb, text, text)', 'execute'), 'anon cannot create team');
+select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text, text, text)', 'execute'), 'anon cannot update team');
+select pg_temp.check(has_function_privilege('authenticated', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text, text, text)', 'execute'), 'authenticated can update team');
 select pg_temp.check(not has_function_privilege('authenticated', 'private.apply_team_venue(uuid, jsonb)', 'execute'), 'venue helper not callable');
 
 select 'ALL PASSED' as result;

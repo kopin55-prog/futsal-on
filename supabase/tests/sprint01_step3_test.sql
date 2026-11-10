@@ -158,7 +158,7 @@ select pg_temp.expect_error($$select public.update_own_profile('사번', null, a
 
 -- ================================================================ 실행 권한
 reset role;
-select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text)', 'execute'), 'anon cannot update team');
+select pg_temp.check(not has_function_privilege('anon', 'public.update_team_info(uuid, text, smallint, time, time, boolean, jsonb, text, text, text)', 'execute'), 'anon cannot update team');
 select pg_temp.check(not has_function_privilege('anon', 'public.update_own_profile(text, text, public.play_position[], boolean)', 'execute'), 'anon cannot update profile');
 select pg_temp.check(has_function_privilege('authenticated', 'public.update_own_profile(text, text, public.play_position[], boolean)', 'execute'), 'authenticated can update profile');
 

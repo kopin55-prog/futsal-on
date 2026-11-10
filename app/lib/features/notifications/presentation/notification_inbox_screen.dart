@@ -112,10 +112,11 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         onRefresh: _load,
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          padding: AppSpacing.page,
           itemCount: items.length,
-          separatorBuilder: (_, _) => const Divider(indent: AppSpacing.gutter, endIndent: AppSpacing.gutter),
-          itemBuilder: (context, i) => _NotificationTile(item: items[i], onTap: () => _open(items[i])),
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          // 카드형 목록 (Q-079 1·2번)
+          itemBuilder: (context, i) => Card(child: _NotificationTile(item: items[i], onTap: () => _open(items[i]))),
         ),
       );
     }
@@ -148,7 +149,7 @@ class _NotificationTile extends StatelessWidget {
     return ListTile(
       key: Key('notification-${item.id}'),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
       leading: Icon(
         unread ? Icons.circle : Icons.circle_outlined,
         size: 10,

@@ -11,16 +11,16 @@ import 'lineup_texts.dart';
 /// 노조끼는 색이 없으므로 테마 바탕색 + 테두리.
 ({Color background, Color foreground, Color? border}) bibColorStyle(BibColor c, ColorScheme scheme) {
   final Color? fixed = switch (c) {
-    BibColor.red => const Color(0xFFD93A3A),
-    BibColor.blue => const Color(0xFF2F6FDB),
-    BibColor.yellow => const Color(0xFFF2C94C),
-    BibColor.green => const Color(0xFF3E9B5B),
-    BibColor.orange => const Color(0xFFF08A2C),
-    BibColor.navy => const Color(0xFF233A6B),
-    BibColor.purple => const Color(0xFF7D4CC2),
-    BibColor.pink => const Color(0xFFF08DB5),
-    BibColor.black => const Color(0xFF222222),
-    BibColor.white => const Color(0xFFFAFAFA),
+    BibColor.red => BibPalette.red,
+    BibColor.blue => BibPalette.blue,
+    BibColor.yellow => BibPalette.yellow,
+    BibColor.green => BibPalette.green,
+    BibColor.orange => BibPalette.orange,
+    BibColor.navy => BibPalette.navy,
+    BibColor.purple => BibPalette.purple,
+    BibColor.pink => BibPalette.pink,
+    BibColor.black => BibPalette.black,
+    BibColor.white => BibPalette.white,
     BibColor.noBib => null,
   };
   if (fixed == null) {
@@ -29,7 +29,7 @@ import 'lineup_texts.dart';
   final dark = ThemeData.estimateBrightnessForColor(fixed) == Brightness.dark;
   return (
     background: fixed,
-    foreground: dark ? Colors.white : const Color(0xFF1B1B1B),
+    foreground: dark ? BibPalette.onDark : BibPalette.onLight,
     border: c == BibColor.white ? scheme.outlineVariant : null,
   );
 }

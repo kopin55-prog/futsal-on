@@ -571,10 +571,22 @@ class _LastAwardCard extends StatelessWidget {
                     child: Builder(
                       builder: (context) {
                         final names = _winnerNames(c);
-                        return Text(
+                        final text = Text(
                           names.isEmpty ? DashboardTexts.noResult : names.join(', '),
                           key: Key('dash-award-${c.code}'),
-                          style: names.isEmpty ? muted : theme.textTheme.bodyLarge,
+                          style: names.isEmpty ? muted : theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                        );
+                        if (names.isEmpty) return text;
+                        // 1위 표시는 금색 (Q-079 1번)
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2, right: AppSpacing.xs),
+                              child: Icon(Icons.emoji_events_outlined, size: 18, color: AppColors.of(context).accent),
+                            ),
+                            Expanded(child: text),
+                          ],
                         );
                       },
                     ),

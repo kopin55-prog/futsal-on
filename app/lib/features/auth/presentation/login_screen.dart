@@ -68,9 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 AuthTempTexts.appTitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: AppSpacing.xxl + AppSpacing.lg),
               FilledButton(
                 key: const Key('login-kakao'),
                 onPressed: _busy ? null : () => _signIn(SignInMethod.kakao),

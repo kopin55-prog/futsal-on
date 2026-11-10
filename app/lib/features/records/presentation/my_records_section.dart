@@ -170,7 +170,7 @@ class _TotalsCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                _Stat(label: RecordsTexts.pom, value: RecordsTexts.times(totals.pom)),
+                _Stat(label: RecordsTexts.pom, value: RecordsTexts.times(totals.pom), award: totals.pom > 0),
                 _Stat(label: RecordsTexts.goalOfTheDay, value: RecordsTexts.times(totals.goalOfTheDay)),
                 _Stat(label: RecordsTexts.attendance, value: RecordsTexts.times(totals.attendance)),
               ],
@@ -193,10 +193,13 @@ class _TotalsCard extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
+  const _Stat({required this.label, required this.value, this.award = false});
 
   final String label;
   final String value;
+
+  /// POM 수상이 있으면 금색 강조 (Q-079 1번: 금색은 POM·1위만)
+  final bool award;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +207,7 @@ class _Stat extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(value, style: theme.textTheme.titleLarge),
+          Text(value, style: theme.textTheme.titleLarge?.copyWith(color: award ? AppColors.of(context).accent : null)),
           const SizedBox(height: 2),
           Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],

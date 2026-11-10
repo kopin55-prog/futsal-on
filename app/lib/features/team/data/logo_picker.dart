@@ -56,7 +56,8 @@ class DeviceLogoPicker implements LogoPicker {
 
   @override
   Future<LogoPickResult> pick(BuildContext context) async {
-    final primary = Theme.of(context).colorScheme.primary;
+    final scheme = Theme.of(context).colorScheme;
+    final primary = scheme.primary;
     try {
       // 원본 크기를 재야 하므로 고를 때는 줄이지 않는다.
       final file = await _picker.pickImage(source: ImageSource.gallery, requestFullMetadata: false);
@@ -76,7 +77,7 @@ class DeviceLogoPicker implements LogoPicker {
         uiSettings: [
           AndroidUiSettings(
             toolbarColor: primary,
-            toolbarWidgetColor: Colors.white,
+            toolbarWidgetColor: scheme.onPrimary,
             activeControlsWidgetColor: primary,
             lockAspectRatio: true,
             hideBottomControls: true,

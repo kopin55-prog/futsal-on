@@ -230,7 +230,15 @@ class _AwardSectionState extends State<AwardSection> {
                 runSpacing: AppSpacing.sm,
                 children: [
                   for (final id in winners)
-                    Chip(avatar: const Icon(Icons.emoji_events_outlined, size: 18), label: Text(widget.memberNames[id] ?? AwardTexts.leftMember)),
+                    Chip(
+                      avatar: Icon(Icons.emoji_events_outlined, size: 18, color: AppColors.of(context).accent),
+                      backgroundColor: AppColors.of(context).accentContainer,
+                      side: BorderSide.none,
+                      label: Text(
+                        widget.memberNames[id] ?? AwardTexts.leftMember,
+                        style: theme.textTheme.labelLarge?.copyWith(color: AppColors.of(context).onAccentContainer),
+                      ),
+                    ),
                 ],
               ),
             // 득표수 보기 버튼 자리 (1차 숨김, 2차 보상형 광고·개인 구독)

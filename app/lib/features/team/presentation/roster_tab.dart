@@ -107,42 +107,45 @@ class _RosterTabState extends State<RosterTab> {
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.lg, AppSpacing.sm, AppSpacing.xxl),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.lg, AppSpacing.gutter, AppSpacing.xxl),
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: members.length + 1,
             itemBuilder: (context, i) {
               if (i == 0) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  child: SectionHeader(
-                    TeamTexts.memberCount(members.length),
-                    key: const Key('roster-count'),
-                  ),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: SectionHeader(TeamTexts.memberCount(members.length), key: const Key('roster-count')),
                 );
               }
               final m = members[i - 1];
               final injury = data.injuries[m.userId];
               final weeks = injury?.remainingWeeks(data.today);
-              return ListTile(
-                key: Key('member-${m.userId}'),
-                leading: _Initial(name: m.displayName),
-                title: Row(
-                  children: [
-                    Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
-                    if (m.role != TeamRole.member) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      RoleBadge(role: m.role),
-                    ],
-                    if (weeks != null) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      InjuryMark(weeks: weeks, key: Key('member-injury-${m.userId}')),
-                    ],
-                  ],
+              // 카드형 목록 (Q-079 1·2번): 한 사람 = 카드 한 장
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Card(
+                  child: ListTile(
+                    key: Key('member-${m.userId}'),
+                    leading: _Initial(name: m.displayName),
+                    title: Row(
+                      children: [
+                        Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
+                        if (m.role != TeamRole.member) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          RoleBadge(role: m.role),
+                        ],
+                        if (weeks != null) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          InjuryMark(weeks: weeks, key: Key('member-injury-${m.userId}')),
+                        ],
+                      ],
+                    ),
+                    subtitle: (m.bio == null || m.bio!.isEmpty)
+                        ? null
+                        : Text(m.bio!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onTap: () => _openMember(m, injury, data.today),
+                  ),
                 ),
-                subtitle: (m.bio == null || m.bio!.isEmpty)
-                    ? null
-                    : Text(m.bio!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                onTap: () => _openMember(m, injury, data.today),
               );
             },
           ),
@@ -165,7 +168,7 @@ class InjuryMark extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       decoration: BoxDecoration(
         border: Border.all(color: scheme.error),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppSpacing.badgeRadius),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -174,7 +177,7 @@ class InjuryMark extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             TeamTexts.injuryMark(weeks),
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.error),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.error),
           ),
         ],
       ),
@@ -195,15 +198,13 @@ class RoleBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       decoration: BoxDecoration(
         color: owner ? scheme.primary : scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppSpacing.badgeRadius),
       ),
       child: Text(
         TeamTexts.role(role),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: owner ? scheme.onPrimary : scheme.onSecondaryContainer,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: owner ? scheme.onPrimary : scheme.onSecondaryContainer),
       ),
     );
   }
@@ -222,7 +223,10 @@ class _Initial extends StatelessWidget {
     return CircleAvatar(
       radius: 20,
       backgroundColor: scheme.surfaceContainerHighest,
-      child: Text(first, style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+      child: Text(
+        first,
+        style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -249,10 +253,7 @@ class MemberProfileSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canSeePrefs = services.entitlements.canView(
-      viewer,
-      PreferredPositionsInfo(subjectUserId: member.userId),
-    );
+    final canSeePrefs = services.entitlements.canView(viewer, PreferredPositionsInfo(subjectUserId: member.userId));
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.gutter),
@@ -262,12 +263,7 @@ class MemberProfileSheet extends StatelessWidget {
           children: [
             Row(
               children: [
-                Flexible(
-                  child: Text(
-                    member.displayName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
+                Flexible(child: Text(member.displayName, style: Theme.of(context).textTheme.titleLarge)),
                 const SizedBox(width: 8),
                 if (member.role != TeamRole.member) RoleBadge(role: member.role),
               ],
@@ -289,10 +285,7 @@ class MemberProfileSheet extends StatelessWidget {
                 ],
               ),
             ],
-            if (canSeePrefs) ...[
-              AppSpacing.fieldGap,
-              _PrefsView(services: services, userId: member.userId),
-            ],
+            if (canSeePrefs) ...[AppSpacing.fieldGap, _PrefsView(services: services, userId: member.userId)],
             const SizedBox(height: AppSpacing.sm),
           ],
         ),
@@ -310,10 +303,7 @@ class _PrefsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<PlayPrefs?>(
-      future: services.teams.getPlayPrefs(userId).catchError(
-        (Object _) => null,
-        test: (e) => e is ServerFailure,
-      ),
+      future: services.teams.getPlayPrefs(userId).catchError((Object _) => null, test: (e) => e is ServerFailure),
       builder: (context, snap) {
         final prefs = snap.data;
         if (prefs == null) return const SizedBox.shrink();

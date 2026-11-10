@@ -134,9 +134,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
 
   void _onRequested() {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text(TeamTexts.requestSent)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(TeamTexts.requestSent)));
     setState(() {
       _results = null;
       _inviteTeam = null;
@@ -148,9 +146,7 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
   Future<void> _cancel(MyJoinRequest r) => _run(() async {
     await _m.cancelJoinRequest(r.requestId);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(TeamTexts.requestCancelled)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(TeamTexts.requestCancelled)));
     }
     await _loadMyRequests();
   });
@@ -196,17 +192,11 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
               key: const Key('find-input'),
               controller: _input,
               maxLines: 1,
-              textCapitalization: _mode == _Mode.code
-                  ? TextCapitalization.characters
-                  : TextCapitalization.none,
+              textCapitalization: _mode == _Mode.code ? TextCapitalization.characters : TextCapitalization.none,
               decoration: InputDecoration(
                 labelText: _label,
                 suffixIcon: _mode == _Mode.invite
-                    ? IconButton(
-                        tooltip: TeamTexts.paste,
-                        icon: const Icon(Icons.content_paste),
-                        onPressed: _paste,
-                      )
+                    ? IconButton(tooltip: TeamTexts.paste, icon: const Icon(Icons.content_paste), onPressed: _paste)
                     : null,
               ),
               onSubmitted: (_) => _search(),
@@ -219,11 +209,17 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
             ),
             if (_message != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Text(_message!, key: const Key('find-message'), style: TextStyle(color: errorColor)),
+              Text(
+                _message!,
+                key: const Key('find-message'),
+                style: TextStyle(color: errorColor),
+              ),
             ],
             const SizedBox(height: AppSpacing.md),
-            for (final t in _results ?? const <TeamSearchResult>[])
+            for (final t in _results ?? const <TeamSearchResult>[]) ...[
               _ResultCard(team: t, busy: _busy, onRequest: () => _requestJoin(t)),
+              AppSpacing.cardGap,
+            ],
             if (_inviteTeam != null)
               Card(
                 child: ListTile(
@@ -240,17 +236,21 @@ class _TeamFindScreenState extends State<TeamFindScreen> {
             if (_myRequests.isNotEmpty) ...[
               AppSpacing.sectionGap,
               const SectionHeader(TeamTexts.myRequests),
-              for (final r in _myRequests)
-                ListTile(
-                  key: Key('my-request-${r.requestId}'),
-                  leading: TeamLogo(text: r.logoText, imagePath: r.logoImagePath, size: 36),
-                  title: Text(r.teamName),
-                  subtitle: Text(r.teamCode),
-                  trailing: TextButton(
-                    onPressed: _busy ? null : () => _cancel(r),
-                    child: const Text(TeamTexts.cancelRequest),
-                  ),
-                ),
+              SectionCard(
+                children: [
+                  for (final r in _myRequests)
+                    ListTile(
+                      key: Key('my-request-${r.requestId}'),
+                      leading: TeamLogo(text: r.logoText, imagePath: r.logoImagePath, size: 36),
+                      title: Text(r.teamName),
+                      subtitle: Text(r.teamCode),
+                      trailing: TextButton(
+                        onPressed: _busy ? null : () => _cancel(r),
+                        child: const Text(TeamTexts.cancelRequest),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ],
         ),
@@ -283,10 +283,7 @@ class _ResultCard extends StatelessWidget {
         subtitle: Text(details.join(' · ')),
         isThreeLine: true,
         trailing: team.isRecruiting
-            ? FilledButton(
-                onPressed: busy ? null : onRequest,
-                child: const Text(TeamTexts.requestJoin),
-              )
+            ? FilledButton(onPressed: busy ? null : onRequest, child: const Text(TeamTexts.requestJoin))
             // 모집 꺼진 팀도 보이되 신청 불가 (Q-021)
             : const Text(TeamTexts.recruitingClosed),
       ),

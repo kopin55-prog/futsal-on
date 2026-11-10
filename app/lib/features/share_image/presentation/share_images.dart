@@ -179,20 +179,20 @@ class AwardResultShareImage extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: AppSpacing.md),
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
+                      color: scheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(AppSpacing.radius),
-                      border: Border.all(color: scheme.outlineVariant),
+                      border: Border.all(color: AppColors.of(context).cardBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.emoji_events_outlined, size: 20, color: scheme.primary),
+                            Icon(Icons.emoji_events_outlined, size: 20, color: AppColors.of(context).accent),
                             const SizedBox(width: AppSpacing.xs),
                             Text(
                               AwardTexts.category(c),
-                              style: theme.textTheme.titleSmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w700),
+                              style: theme.textTheme.titleSmall?.copyWith(color: AppColors.of(context).accent, fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),

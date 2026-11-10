@@ -39,6 +39,8 @@ const row = (over: Partial<ClaimedRow> = {}): ClaimedRow => ({
   award_poll_status: null,
   award_poll_closes_at: null,
   lineup_status: null,
+  recipient_injury_active: null,
+  recipient_rsvp_state: null,
   recipient_active: true,
   recipient_left_at: null,
   tokens: ['tok-a'],
@@ -126,6 +128,49 @@ Deno.test('skipReason: 배치 확정 상태는 배치 미확정 알림에만 쓴
   const future = { match_starts_at: '2026-11-12T01:00:00Z', match_ends_at: '2026-11-12T03:00:00Z', lineup_status: 'confirmed' };
   assertEquals(skipReason(row({ kind: 'lineup_confirmed', ...future }), NOW), null);
   assertEquals(skipReason(row({ kind: 'lineup_changed', ...future }), NOW), null);
+});
+
+// ---------------------------------------------------------------- 복귀 확인 알림 (스프린트 04 2단계, 202611050065)
+const returnCheck = {
+  kind: 'injury_return_check',
+  body: '부상은 회복되셨나요? 경기가 열렸습니다. 참석하시겠습니까?',
+  recipient_injury_active: true,
+  recipient_rsvp_state: null,
+};
+
+Deno.test('skipReason: 복귀 확인 알림은 아직 부상 중이고 응답 전이면 보낸다', () => {
+  assertEquals(skipReason(row(returnCheck), NOW), null);
+});
+
+Deno.test('skipReason: 복귀 확인 알림은 푸시 전에 회복했으면(진행 중 부상 없음) 건너뜀', () => {
+  assertEquals(skipReason(row({ ...returnCheck, recipient_injury_active: false }), NOW), 'recovered');
+});
+
+Deno.test('skipReason: 복귀 확인 알림은 그 일정에 이미 참석 투표 응답을 했으면 건너뜀 (참석·대기·불참 모두)', () => {
+  for (const state of ['attending', 'waitlisted', 'declined']) {
+    assertEquals(skipReason(row({ ...returnCheck, recipient_rsvp_state: state }), NOW), 'responded');
+  }
+  // 참석으로 복귀하면 부상도 끝나 있으므로 회복이 먼저
+  assertEquals(
+    skipReason(row({ ...returnCheck, recipient_injury_active: false, recipient_rsvp_state: 'attending' }), NOW),
+    'recovered',
+  );
+});
+
+Deno.test('skipReason: 복귀 확인 알림도 읽음·취소·시작 규칙이 먼저, 재료가 null 이면 건너뛰지 않음', () => {
+  const recovered = { ...returnCheck, recipient_injury_active: false };
+  assertEquals(skipReason(row({ ...recovered, read_at: '2026-11-11T03:00:00Z' }), NOW), 'read');
+  assertEquals(skipReason(row({ ...recovered, match_status: 'cancelled' }), NOW), 'match_cancelled');
+  assertEquals(skipReason(row({ ...recovered, ...ended }), NOW), 'match_started');
+  assertEquals(skipReason(row({ ...returnCheck, recipient_injury_active: null }), NOW), null);
+  assertEquals(skipReason(row({ ...returnCheck, tokens: [] }), NOW), 'no_device');
+});
+
+Deno.test('skipReason: 부상·응답 상태는 복귀 확인 알림에만 쓴다', () => {
+  assertEquals(
+    skipReason(row({ kind: 'match_created', recipient_injury_active: false, recipient_rsvp_state: 'attending' }), NOW),
+    null,
+  );
 });
 
 Deno.test('skipReason: 그 밖의 종류는 경기 시작 규칙 그대로 (배치 확정 알림 등)', () => {

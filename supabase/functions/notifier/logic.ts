@@ -8,6 +8,9 @@
 //       · award_results_announced                  → 시작·마감을 이유로 건너뛰지 않음
 //       · lineup_unconfirmed                       → match_ended: 경기가 이미 끝남 (시작 시각에 생기는 알림)
 //                                                    lineup_confirmed: 푸시 전에 배치가 이미 확정됨 (스프린트 03 5단계)
+//       · injury_return_check                      → match_started 그대로 + (조용한 시간으로 늦게 나갈 때, 스프린트 04 2단계)
+//                                                    recovered: 받는 사람에게 진행 중 부상이 없음 (그 사이 회복)
+//                                                    responded: 받는 사람이 그 일정에 이미 참석 투표 응답을 함
 //   - left_team     받는 사람이 알림이 생긴 뒤 그 팀을 떠남 (지금 소속이 아니고, 마지막으로 떠난 시각이 알림보다 뒤)
 //                   → 내보내진 본인 알림·해체 알림(떠난 순간 = 알림 시각)·가입 거절 알림(소속 이력 없음)은 건너뛰지 않는다
 //   - no_device     기기 주소가 하나도 없음 (보낼 곳이 없음)
@@ -38,6 +41,10 @@ export type ClaimedRow = {
   award_poll_closes_at: string | null;
   /** 대상 일정의 팀 배치 상태 draft/confirmed (배치가 없으면 null, 202611050052) */
   lineup_status: string | null;
+  /** injury_return_check 만: 받는 사람의 진행 중 부상 여부 (다른 종류는 null, 202611050065) */
+  recipient_injury_active: boolean | null;
+  /** injury_return_check 만: 받는 사람의 그 일정 참석 응답 attending/waitlisted/declined (없으면 null, 202611050065) */
+  recipient_rsvp_state: string | null;
   recipient_active: boolean;
   recipient_left_at: string | null;
   tokens: string[] | null;
@@ -50,6 +57,8 @@ export type SkipReason =
   | 'match_ended'
   | 'lineup_confirmed'
   | 'poll_closed'
+  | 'recovered'
+  | 'responded'
   | 'left_team'
   | 'no_device';
 
@@ -80,6 +89,11 @@ export function skipReason(row: ClaimedRow, now: number): SkipReason | null {
     } else {
       const starts = time(row.match_starts_at);
       if (starts !== null && starts <= now) return 'match_started';
+      if (row.kind === 'injury_return_check') {
+        // 값이 null 이면(판단 재료 없음) 건너뛰지 않는다
+        if (row.recipient_injury_active === false) return 'recovered';
+        if (row.recipient_rsvp_state) return 'responded';
+      }
     }
   }
 

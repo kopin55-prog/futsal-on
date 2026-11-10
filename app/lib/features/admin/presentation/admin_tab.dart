@@ -259,6 +259,10 @@ class _AdminTabState extends State<AdminTab> {
     ),
   );
 
+  /// 2차 팀 구독 리포트 화면 자리 (1차에는 메뉴가 숨겨져 불리지 않는다).
+  // TODO(2차): 팀 구독 리포트 화면 연결 (TeamReportInfo).
+  Future<void> _openTeamReport() async {}
+
   /// 팀 설정 메뉴. 메뉴마다 Entitlements 로만 보일지 정한다.
   List<Widget> _settingsSection(ThemeData theme) {
     final v = widget.viewer;
@@ -274,6 +278,9 @@ class _AdminTabState extends State<AdminTab> {
       if (_e.canPerform(v, TeamAction.editGroupRivalRules) &&
           _e.canView(v, const GroupRivalSettingsInfo()))
         (const Key('open-pairing-rules'), Icons.compare_arrows, AdminTexts.groupRival, _openPairingRules),
+      // 2차 "출석·참여 리포트" 메뉴 자리 (팀 구독). 1차에는 Entitlements.showTeamReportMenu 가 거절해 보이지 않는다.
+      if (_e.showTeamReportMenu(v))
+        (const Key('open-team-report'), Icons.insights_outlined, AdminTexts.teamReport, _openTeamReport),
     ];
     if (items.isEmpty) return const [];
     return [

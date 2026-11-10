@@ -31,6 +31,10 @@ abstract interface class InjuryRepository {
 
   /// 유효한(철회 안 한) 부상 동의가 있는지 (user_consents, 본인 줄만 읽힘).
   Future<bool> hasActiveConsent(String userId);
+
+  /// [userIds] 중 진행 중 부상 (홈 부상자 라인업, 스프린트 04 4-5). 서버 권한 규칙이 "지금 같은 팀 팀원 +
+  /// 주인의 부상 동의가 유효한 진행 중 부상"만 돌려준다 (S-07). 본인 것도 포함될 수 있다.
+  Future<List<Injury>> listActiveInjuries(List<String> userIds);
 }
 
 class SupabaseInjuryRepository implements InjuryRepository {
@@ -75,6 +79,17 @@ class SupabaseInjuryRepository implements InjuryRepository {
         .eq('status', 'active')
         .maybeSingle();
     return row == null ? null : Injury.fromRow(row);
+  });
+
+  @override
+  Future<List<Injury>> listActiveInjuries(List<String> userIds) => guardServer(() async {
+    if (userIds.isEmpty) return const <Injury>[];
+    final rows = await _client
+        .from('injuries')
+        .select(Injury.columns)
+        .inFilter('user_id', userIds)
+        .eq('status', 'active');
+    return [for (final r in rows) Injury.fromRow(r)];
   });
 
   @override

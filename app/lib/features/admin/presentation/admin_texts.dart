@@ -34,6 +34,9 @@ abstract final class AdminTexts {
   static const teamInfo = '팀 정보 수정';
   static const matchSettings = '경기 설정';
   static const groupRival = '그룹·라이벌';
+
+  /// 2차 팀 구독 메뉴 자리 (1차 숨김, 기획서 11장 관리 탭)
+  static const teamReport = '출석·참여 리포트';
   static const save = '저장';
   static const saved = '저장했어요';
   static const delete = '삭제';

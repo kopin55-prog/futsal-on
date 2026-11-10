@@ -9,6 +9,7 @@ import 'package:futsal_on/features/team/presentation/team_texts.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 
 import '../../support/fakes.dart';
+import '../../support/tabs.dart';
 
 void _tall(WidgetTester tester) {
   tester.view.physicalSize = const Size(1080, 2400);
@@ -51,7 +52,7 @@ void main() {
     await tester.tap(find.byKey(const Key('team-create-submit')));
     await tester.pumpAndSettle();
     expect(t.teams.calls, ['create:코코 FC']);
-    expect(find.text('코코 FC'), findsOneWidget);
+    expect(teamTitle('코코 FC'), findsOneWidget);
     // 만든 사람은 팀장 → 관리 탭이 보인다
     expect(find.text(TeamTexts.tabAdmin), findsOneWidget);
   });
@@ -80,13 +81,13 @@ void main() {
     await t.recent.save('me', ['b']);
     await tester.pumpWidget(_home(t));
     await tester.pumpAndSettle();
-    expect(find.text('비팀'), findsOneWidget);
+    expect(teamTitle('비팀'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('team-title')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('switch-team-a')));
     await tester.pumpAndSettle();
-    expect(find.text('에이팀'), findsOneWidget);
+    expect(teamTitle('에이팀'), findsOneWidget);
     expect(await t.recent.load('me'), ['a', 'b']);
   });
 
@@ -147,7 +148,7 @@ void main() {
     await t.recent.save('me', ['b', 'c', 'a']);
     await tester.pumpWidget(_home(t));
     await tester.pumpAndSettle();
-    expect(find.text('비팀'), findsOneWidget);
+    expect(teamTitle('비팀'), findsOneWidget);
 
     await tester.tap(find.text(TeamTexts.tabMy));
     await tester.pumpAndSettle();
@@ -156,7 +157,7 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-ok')));
     await tester.pumpAndSettle();
     expect(t.teams.calls, ['leave:b']);
-    expect(find.text('씨팀'), findsOneWidget);
+    expect(teamTitle('씨팀'), findsOneWidget);
   });
 
   testWidgets('마지막 팀을 떠나면 만들기·찾기 홈', (tester) async {
@@ -284,7 +285,7 @@ void main() {
       await tester.tap(find.byKey(const Key('dissolve-confirm')));
       await tester.pumpAndSettle();
       expect(t.teams.calls, ['dissolve:a:  코코 fc ']);
-      expect(find.text('비팀'), findsOneWidget);
+      expect(teamTitle('비팀'), findsOneWidget);
     });
   });
 

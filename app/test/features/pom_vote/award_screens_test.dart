@@ -12,6 +12,7 @@ import 'package:futsal_on/features/team/presentation/team_home_screen.dart';
 import 'package:futsal_on/shared/data/server_error.dart';
 
 import '../../support/fakes.dart';
+import '../../support/tabs.dart';
 
 void _tall(WidgetTester tester) {
   tester.view.physicalSize = const Size(1080, 4000);
@@ -89,6 +90,8 @@ Future<TestServices> _open(
     MaterialApp(home: TeamHomeScreen(services: t.services, userId: userId, onSignOut: () async {})),
   );
   await tester.pumpAndSettle();
+  // 홈이 첫 탭 (S4-01) → 일정 탭으로
+  await openTab(tester, ScheduleTexts.tabSchedule);
   return t;
 }
 

@@ -8,6 +8,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../admin/presentation/admin_tab.dart';
+import '../../dashboard/presentation/dashboard_tab.dart';
+import '../../dashboard/presentation/dashboard_texts.dart';
 import '../../membership/presentation/team_find_screen.dart';
 import '../../notifications/domain/notification_models.dart';
 import '../../notifications/domain/push_message.dart';
@@ -382,6 +384,7 @@ class _TeamShell extends StatefulWidget {
   });
 
   /// 탭 이름 ([initialTab] 에 쓴다)
+  static const homeTab = 'home';
   static const scheduleTab = 'schedule';
   static const membersTab = 'members';
   static const adminTab = 'admin';
@@ -395,7 +398,7 @@ class _TeamShell extends StatefulWidget {
   /// 위쪽 종 모양 (안 읽은 알림 수)
   final Widget bell;
 
-  /// 처음 열 탭 이름. 없으면 첫 탭(일정).
+  /// 처음 열 탭 이름. 없으면 첫 탭(홈, S4-01).
   final String? initialTab;
 
   /// 팀 탈퇴·해체 후
@@ -412,11 +415,63 @@ class _TeamShell extends StatefulWidget {
 class _TeamShellState extends State<_TeamShell> {
   int? _tab;
 
+  /// 지금 보이는 탭 이름 순서 (build 때 정함)
+  List<String> _names = const [];
+
+  /// 관리 탭 아이콘의 가입 신청 숫자 (팀장·운영진만, S4-05). 팀원은 읽지 않는다.
+  int _pendingJoin = 0;
+
+  Viewer get _viewer => Viewer(userId: widget.userId, role: widget.team.myRole);
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshPendingJoin();
+  }
+
+  Future<void> _refreshPendingJoin() async {
+    if (!widget.services.entitlements.showJoinRequestTodo(_viewer)) return;
+    try {
+      final n = (await widget.services.membership.listPendingRequests(widget.team.id)).length;
+      if (mounted && n != _pendingJoin) setState(() => _pendingJoin = n);
+    } on ServerFailure {
+      // 다음에 다시 읽는다
+    }
+  }
+
+  /// 대시보드 카드에서 다른 탭으로
+  void _goTo(String name) {
+    final i = _names.indexOf(name);
+    if (i >= 0) setState(() => _tab = i);
+  }
+
+  void _select(int i) {
+    setState(() => _tab = i);
+    _refreshPendingJoin();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final viewer = Viewer(userId: widget.userId, role: widget.team.myRole);
-    final showAdmin = widget.services.entitlements.showAdminTab(viewer);
+    final viewer = _viewer;
+    final e = widget.services.entitlements;
+    final showAdmin = e.showAdminTab(viewer);
     final tabs = <(String, IconData, Widget, String)>[
+      (
+        DashboardTexts.tabHome,
+        Icons.home_outlined,
+        DashboardTab(
+          services: widget.services,
+          team: widget.team,
+          viewer: viewer,
+          onOpenMembers: () => _goTo(_TeamShell.membersTab),
+          onOpenAdmin: () => _goTo(_TeamShell.adminTab),
+          onLoaded: (data) {
+            final n = data.todos?.pendingJoinRequests ?? 0;
+            if (e.showJoinRequestTodo(viewer) && n != _pendingJoin) setState(() => _pendingJoin = n);
+          },
+        ),
+        _TeamShell.homeTab,
+      ),
       (
         ScheduleTexts.tabSchedule,
         Icons.event,
@@ -455,8 +510,10 @@ class _TeamShellState extends State<_TeamShell> {
         _TeamShell.myTab,
       ),
     ];
+    _names = [for (final t in tabs) t.$4];
     final initial = tabs.indexWhere((t) => t.$4 == widget.initialTab);
     final index = (_tab ??= initial < 0 ? 0 : initial).clamp(0, tabs.length - 1);
+    final joinBadge = showAdmin && e.showJoinRequestTodo(viewer) ? _pendingJoin : 0;
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
@@ -477,10 +534,20 @@ class _TeamShellState extends State<_TeamShell> {
       body: tabs[index].$3,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: _select,
         destinations: [
           for (final t in tabs)
-            NavigationDestination(icon: Icon(t.$2), label: t.$1),
+            NavigationDestination(
+              icon: t.$4 == _TeamShell.adminTab
+                  ? Badge(
+                      key: const Key('admin-tab-badge'),
+                      isLabelVisible: joinBadge > 0,
+                      label: Text('$joinBadge'),
+                      child: Icon(t.$2),
+                    )
+                  : Icon(t.$2),
+              label: t.$1,
+            ),
         ],
       ),
     );

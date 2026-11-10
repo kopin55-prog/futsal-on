@@ -28,11 +28,13 @@ import 'package:futsal_on/shared/domain/venue.dart';
 import 'award_fakes.dart';
 import 'injury_fakes.dart';
 import 'lineup_fakes.dart';
+import 'record_fakes.dart';
 import 'share_fakes.dart';
 import 'schedule_fakes.dart';
 
 export 'injury_fakes.dart';
 export 'lineup_fakes.dart';
+export 'record_fakes.dart';
 export 'schedule_fakes.dart';
 export 'share_fakes.dart';
 
@@ -473,6 +475,7 @@ class TestServices {
   final guests = FakeGuestRepository();
   final lineups = FakeLineupRepository();
   final awards = FakeAwardRepository();
+  final records = FakeRecordRepository();
   final shareImages = FakeShareImageService();
 
   /// 휴대폰 푸시 (없으면 푸시 없음)
@@ -498,6 +501,7 @@ class TestServices {
     lineups: lineups,
     awards: awards,
     injuries: injuries,
+    records: records,
     push: push,
     shareImages: shareImages,
   );

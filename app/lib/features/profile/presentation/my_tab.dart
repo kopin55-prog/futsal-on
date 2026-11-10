@@ -10,14 +10,15 @@ import '../../auth/presentation/account_delete_screen.dart';
 import '../../injury/presentation/injury_flows.dart';
 import '../../injury/presentation/injury_texts.dart';
 import '../../injury/presentation/my_injury_card.dart';
+import '../../records/presentation/my_records_section.dart';
 import '../../team/domain/team_models.dart';
 import '../../team/presentation/team_texts.dart';
 import '../data/profile_repository.dart';
 import 'profile_edit_screen.dart';
 import 'profile_texts.dart';
 
-/// 내 정보 탭: 내 프로필 보기·수정, 내 부상 카드(스프린트 04 2-3), 팀 식별코드, 부상 정보 동의 철회(2-4),
-/// 팀 탈퇴, 로그아웃, 회원 탈퇴. 3-3 에서 "내 기록·프로필" 탭으로 바뀐다(탭 이름만).
+/// "내 기록" 탭 (스프린트 04 3-3, S4-01): 내 기록(3-2, 모든 팀), 내 프로필 보기·수정, 내 부상 카드(2-3),
+/// 팀 식별코드, 부상 정보 동의 철회(2-4), 팀 탈퇴, 로그아웃, 회원 탈퇴. 계정 연결 메뉴는 없음(Q-063).
 class MyTab extends StatefulWidget {
   const MyTab({
     required this.services,
@@ -152,6 +153,8 @@ class _MyTabState extends State<MyTab> {
     return ListView(
       padding: AppSpacing.page,
       children: [
+        MyRecordsSection(records: _s.records, entitlements: e, viewer: widget.viewer),
+        AppSpacing.sectionGap,
         if (_error != null) ...[
           Text(_error!, key: const Key('my-error'), style: TextStyle(color: theme.colorScheme.error)),
           const SizedBox(height: AppSpacing.sm),

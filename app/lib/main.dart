@@ -19,6 +19,7 @@ import 'features/notifications/data/notification_repository.dart';
 import 'features/notifications/data/push_controller.dart';
 import 'features/notifications/data/push_messaging.dart';
 import 'features/profile/data/profile_repository.dart';
+import 'features/records/data/record_repository.dart';
 import 'features/schedule/data/attendance_repository.dart';
 import 'features/schedule/data/guest_repository.dart';
 import 'features/schedule/data/match_repository.dart';
@@ -78,6 +79,7 @@ Future<void> main() async {
         lineups: SupabaseLineupRepository(client),
         awards: SupabaseAwardRepository(client),
         injuries: SupabaseInjuryRepository(client),
+        records: SupabaseRecordRepository(client),
         push: push,
       ),
       logoImages: (path) => _logoImage(client, config, path),

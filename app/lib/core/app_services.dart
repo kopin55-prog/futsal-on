@@ -7,6 +7,7 @@ import '../features/notifications/data/notification_repository.dart';
 import '../features/notifications/data/push_controller.dart';
 import '../features/pom_vote/data/award_repository.dart';
 import '../features/profile/data/profile_repository.dart';
+import '../features/records/data/record_repository.dart';
 import '../features/schedule/data/attendance_repository.dart';
 import '../features/schedule/data/guest_repository.dart';
 import '../features/schedule/data/match_repository.dart';
@@ -37,6 +38,7 @@ class AppServices {
     required this.lineups,
     required this.awards,
     required this.injuries,
+    required this.records,
     this.push,
     this.shareImages = const SharePlusShareImageService(),
     this.entitlements = const Entitlements(),
@@ -80,6 +82,9 @@ class AppServices {
 
   /// 부상 동의·부상 기록 (모두 본인만, 스프린트 04 2단계)
   final InjuryRepository injuries;
+
+  /// 내 기록 (본인 것만, 서버 함수 get_my_records, 스프린트 04 3-1)
+  final RecordRepository records;
 
   /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
   final PushController? push;

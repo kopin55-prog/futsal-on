@@ -15,6 +15,7 @@ import 'package:futsal_on/features/team/presentation/team_texts.dart';
 import 'package:futsal_on/shared/presentation/common_widgets.dart';
 
 import '../../support/fakes.dart';
+import '../../support/tabs.dart';
 
 void _tall(WidgetTester tester) {
   tester.view.physicalSize = const Size(1080, 3200);
@@ -66,8 +67,10 @@ Future<TestServices> _open(WidgetTester tester, {void Function(TestServices t)? 
   );
   await tester.pumpAndSettle();
   if (myTab) {
-    await tester.tap(find.text(TeamTexts.tabMy));
-    await tester.pumpAndSettle();
+    await openTab(tester, TeamTexts.tabMy);
+  } else {
+    // 홈이 첫 탭 (S4-01) → 일정 탭으로
+    await openTab(tester, ScheduleTexts.tabSchedule);
   }
   return t;
 }

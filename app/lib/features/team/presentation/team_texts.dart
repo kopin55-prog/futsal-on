@@ -57,7 +57,7 @@ abstract final class TeamTexts {
   static const switchTeam = '팀 전환';
   static const tabMembers = '팀원';
   static const tabAdmin = '관리';
-  static const tabMy = '내 정보';
+  static const tabMy = '내 기록';
   static const loadFailed = '정보를 불러오지 못했어요.';
   static const retry = '다시 시도';
   static const cancel = '취소';

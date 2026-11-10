@@ -62,6 +62,17 @@ class Entitlements {
   bool showAdminTab(Viewer viewer) =>
       canPerform(viewer, TeamAction.reviewJoinRequests);
 
+  /// 홈 "처리할 일"의 가입 신청 대기, 관리 탭 아이콘의 숫자 배지 (스프린트 04 4-6, S4-05): 팀장·운영진만.
+  /// 팀원 화면에는 가입 신청 수가 나오지 않는다 (서버도 팀원에게 다른 사람의 가입 신청을 주지 않는다).
+  bool showJoinRequestTodo(Viewer viewer) =>
+      canPerform(viewer, TeamAction.reviewJoinRequests);
+
+  /// 홈 "처리할 일"의 팀 나누기 대기 (참석 마감 뒤·경기 종료 전·배치 미확정 일정, S4-05): 팀장·운영진만.
+  /// 미확정(초안) 배치를 볼 수 있는 사람만 "미확정"을 알 수 있다.
+  bool showLineupTodo(Viewer viewer) =>
+      canPerform(viewer, TeamAction.manageLineup) &&
+      canView(viewer, const LineupInfo(confirmed: false));
+
   /// [viewer]가 팀원 [target]에게 할 수 있는 관리 행동 (관리 탭의 팀원 메뉴).
   /// 서버도 같은 규칙으로 다시 거절한다 (3-3, Q-018).
   Set<TeamAction> memberActions(

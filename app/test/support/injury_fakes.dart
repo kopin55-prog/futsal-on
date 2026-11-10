@@ -131,4 +131,11 @@ class FakeInjuryRepository implements InjuryRepository {
 
   @override
   Future<bool> hasActiveConsent(String userId) async => consented.contains(userId);
+
+  /// 팀원이 읽는 진행 중 부상: 동의가 유효한 사람만 (서버 권한 규칙과 같게)
+  @override
+  Future<List<Injury>> listActiveInjuries(List<String> userIds) async => [
+    for (final id in userIds)
+      if (active[id] case final i? when consented.contains(id)) i,
+  ];
 }

@@ -13,6 +13,7 @@ import 'package:futsal_on/features/team/presentation/team_home_screen.dart';
 import 'package:futsal_on/features/team/presentation/team_texts.dart';
 
 import '../../support/fakes.dart';
+import '../../support/tabs.dart';
 import '../../support/push_fakes.dart';
 
 TeamSummary _team(String id, String name, TeamRole role) => TeamSummary(
@@ -238,10 +239,10 @@ void main() {
       expect(find.byKey(const Key('match-time')), findsNothing);
       fcm.opened.add(const PushMessage(notificationId: 'nope'));
       await tester.pumpAndSettle();
-      expect(find.text('코코FC'), findsOneWidget);
+      expect(teamTitle('코코FC'), findsOneWidget);
       fcm.opened.add(const PushMessage(notificationId: 'j1'));
       await tester.pumpAndSettle();
-      expect(find.text('비FC'), findsOneWidget);
+      expect(teamTitle('비FC'), findsOneWidget);
       expect(find.text(TeamTexts.tabAdmin), findsOneWidget);
     });
 

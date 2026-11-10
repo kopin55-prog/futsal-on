@@ -30,6 +30,8 @@ dependencies:
   # 설정 파일이 없으면(테스트·CI) 푸시만 꺼지고 앱은 그대로 동작한다 (FirebasePushMessaging.tryCreate).
   firebase_core: ^5.1.0
   firebase_messaging: ^17.0.1
+  # 공유 이미지를 휴대폰 공유 창으로 (Q-075 11번 승인, S3-11 A). path_provider 등은 share_plus 가 쓰는 패키지.
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:

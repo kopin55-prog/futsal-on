@@ -27,10 +27,12 @@ import 'package:futsal_on/shared/domain/venue.dart';
 
 import 'award_fakes.dart';
 import 'lineup_fakes.dart';
+import 'share_fakes.dart';
 import 'schedule_fakes.dart';
 
 export 'lineup_fakes.dart';
 export 'schedule_fakes.dart';
+export 'share_fakes.dart';
 
 /// 화면 테스트용 메모리 저장소. 서버 규칙은 필요한 만큼만 흉내 낸다.
 class FakeTeamRepository implements TeamRepository {
@@ -468,6 +470,7 @@ class TestServices {
   final guests = FakeGuestRepository();
   final lineups = FakeLineupRepository();
   final awards = FakeAwardRepository();
+  final shareImages = FakeShareImageService();
 
   /// 휴대폰 푸시 (없으면 푸시 없음)
   PushController? push;
@@ -492,5 +495,6 @@ class TestServices {
     lineups: lineups,
     awards: awards,
     push: push,
+    shareImages: shareImages,
   );
 }

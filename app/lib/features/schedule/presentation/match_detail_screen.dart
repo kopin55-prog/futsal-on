@@ -14,6 +14,9 @@ import '../../pom_vote/domain/award_models.dart';
 import '../../pom_vote/presentation/award_section.dart';
 import '../../pom_vote/presentation/award_texts.dart';
 import '../../profile/presentation/profile_texts.dart';
+import '../../share_image/domain/share_image_content.dart';
+import '../../share_image/presentation/share_image_texts.dart';
+import '../../share_image/presentation/share_images.dart';
 import '../../team/domain/team_models.dart';
 import '../domain/attendance_models.dart';
 import '../domain/guest_models.dart';
@@ -194,6 +197,52 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       if (mounted) _toast(AwardTexts.serverError(e.code));
     }
     await _load();
+  }
+
+  /// 공유 이미지를 만들어 휴대폰 공유 창으로 (6-1·6-2). 실패하면 안내만.
+  Future<void> _shareImage(Widget image, String fileName, Rect? origin) async {
+    try {
+      await _s.shareImages.share(
+        context,
+        image,
+        fileName: fileName,
+        logoImagePath: widget.team.logoImagePath,
+        origin: origin,
+      );
+    } catch (_) {
+      if (mounted) _toast(ShareImageTexts.failed);
+    }
+  }
+
+  /// 확정된 배치 이미지 (6-1). 버튼은 확정 배치에서만 보인다 (Entitlements.canShareLineupImage).
+  Future<void> _shareLineup(Rect? origin) async {
+    final m = _match;
+    final l = _lineup;
+    if (m == null || l == null || !l.isConfirmed) return;
+    await _shareImage(
+      LineupShareImage(team: widget.team, match: m, lineup: l, nameOf: _lineupName),
+      ShareImageTexts.lineupFileName,
+      origin,
+    );
+  }
+
+  /// POM·오늘의 골 결과 이미지 (6-2). 마감 뒤만. 팀을 떠난 1위는 뺀다 (S3-12).
+  Future<void> _shareResult(Rect? origin) async {
+    final m = _match;
+    final poll = _poll;
+    if (m == null || poll == null || poll.status != AwardPollStatus.closed) return;
+    await _shareImage(
+      AwardResultShareImage(
+        team: widget.team,
+        match: m,
+        winners: {
+          for (final c in AwardCategory.values)
+            if (_e.voteResultMaxRank(widget.viewer, c.voteCategory) >= 1) c: shareableWinnerNames(poll, c, _members),
+        },
+      ),
+      ShareImageTexts.resultFileName,
+      origin,
+    );
   }
 
   String _lineupName(LineupPerson p) {
@@ -427,6 +476,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           nameOf: _lineupName,
           now: now,
           onOpenEditor: _openLineupEditor,
+          onShareImage: _shareLineup,
         ),
         // ---- POM·오늘의 골 투표·결과
         if (_poll case final poll?) ...[
@@ -438,6 +488,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             memberNames: _members,
             now: now,
             onVote: _castVote,
+            onShareImage: _shareResult,
           ),
         ],
         // ---- 운영진: 일정 취소

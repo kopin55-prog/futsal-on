@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../share_image/presentation/share_image_button.dart';
+import '../../share_image/presentation/share_image_texts.dart';
 import '../domain/award_models.dart';
 import 'award_texts.dart';
 
@@ -25,6 +27,7 @@ class AwardSection extends StatefulWidget {
     required this.memberNames,
     required this.now,
     required this.onVote,
+    this.onShareImage,
     super.key,
   });
 
@@ -38,6 +41,9 @@ class AwardSection extends StatefulWidget {
 
   /// 투표를 서버에 보낸다 (부른 쪽이 안내·다시 읽기).
   final Future<void> Function(AwardCategory category, String candidateId) onVote;
+
+  /// 결과 공유 이미지 (6-2). 버튼은 Entitlements.canShareAwardResultImage 일 때만(마감 뒤) 보인다.
+  final Future<void> Function(Rect? origin)? onShareImage;
 
   @override
   State<AwardSection> createState() => _AwardSectionState();
@@ -98,6 +104,15 @@ class _AwardSectionState extends State<AwardSection> {
       for (final c in AwardCategory.values) {
         if (widget.entitlements.voteResultMaxRank(widget.viewer, c.voteCategory) < 1) continue;
         children.add(_resultCard(context, c));
+      }
+      if (widget.onShareImage case final share?
+          when widget.entitlements.canShareAwardResultImage(widget.viewer, pollClosed: true)) {
+        children.add(
+          Align(
+            alignment: Alignment.centerRight,
+            child: ShareImageButton(key: const Key('award-share'), label: ShareImageTexts.shareResult, onShare: share),
+          ),
+        );
       }
     } else if (!poll.isOpenAt(widget.now)) {
       children.add(Text(AwardTexts.closedPending, key: const Key('award-closed-pending'), style: muted));

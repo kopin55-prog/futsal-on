@@ -4,6 +4,8 @@ import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/presentation/common_widgets.dart';
 import '../../schedule/domain/match_models.dart';
+import '../../share_image/presentation/share_image_button.dart';
+import '../../share_image/presentation/share_image_texts.dart';
 import '../domain/lineup_board.dart';
 import '../domain/lineup_models.dart';
 import 'lineup_blocks.dart';
@@ -25,6 +27,7 @@ class LineupSection extends StatelessWidget {
     required this.nameOf,
     required this.now,
     required this.onOpenEditor,
+    this.onShareImage,
     super.key,
   });
 
@@ -35,6 +38,9 @@ class LineupSection extends StatelessWidget {
   final String Function(LineupPerson) nameOf;
   final DateTime now;
   final VoidCallback onOpenEditor;
+
+  /// 배치 공유 이미지 (6-1). 버튼은 Entitlements.canShareLineupImage 일 때만 보인다.
+  final Future<void> Function(Rect? origin)? onShareImage;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +93,20 @@ class LineupSection extends StatelessWidget {
               ),
             ),
           LineupBlocksView(lineup: visible, nameOf: nameOf, highlightUserId: viewer.userId),
+          if (onShareImage case final share?
+              when entitlements.canShareLineupImage(
+                viewer,
+                lineupConfirmed: visible.isConfirmed,
+                matchCancelled: match.isCancelled,
+              ))
+            Align(
+              alignment: Alignment.centerRight,
+              child: ShareImageButton(
+                key: const Key('lineup-share'),
+                label: ShareImageTexts.shareLineup,
+                onShare: share,
+              ),
+            ),
         ],
       ],
     );

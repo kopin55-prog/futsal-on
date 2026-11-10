@@ -9,6 +9,7 @@ import '../features/profile/data/profile_repository.dart';
 import '../features/schedule/data/attendance_repository.dart';
 import '../features/schedule/data/guest_repository.dart';
 import '../features/schedule/data/match_repository.dart';
+import '../features/share_image/data/share_image_service.dart';
 import '../features/team/data/logo_picker.dart';
 import '../features/team/data/recent_team_store.dart';
 import '../features/team/data/team_logo_repository.dart';
@@ -35,6 +36,7 @@ class AppServices {
     required this.lineups,
     required this.awards,
     this.push,
+    this.shareImages = const SharePlusShareImageService(),
     this.entitlements = const Entitlements(),
   });
 
@@ -76,6 +78,9 @@ class AppServices {
 
   /// 휴대폰 푸시 (기기 등록·해제, 받은 푸시). 없으면 푸시 없음(테스트 등).
   final PushController? push;
+
+  /// 공유 이미지 만들기·휴대폰 공유 창 (스프린트 03 6단계)
+  final ShareImageService shareImages;
 
   /// 권한 판단은 여기 하나로만 (app/lib/core/entitlements).
   final Entitlements entitlements;

@@ -86,6 +86,25 @@ class Entitlements {
     };
   }
 
+  /// 팀 배치 공유 이미지 버튼 (스프린트 03 6-1): "공유 이미지 복사" 권한(팀장·운영진)이고
+  /// 확정된 배치일 때만. 취소된 일정은 공유하지 않는다.
+  bool canShareLineupImage(
+    Viewer viewer, {
+    required bool lineupConfirmed,
+    required bool matchCancelled,
+  }) =>
+      canPerform(viewer, TeamAction.copyShareImage) &&
+      lineupConfirmed &&
+      !matchCancelled &&
+      canView(viewer, const LineupInfo(confirmed: true));
+
+  /// POM·오늘의 골 결과 공유 이미지 버튼 (스프린트 03 6-2): "공유 이미지 복사" 권한(팀장·운영진)이고
+  /// 투표가 마감(결과 확정)된 뒤에만. 이미지에 들어가는 것도 1위 이름뿐이다 (득표수 없음).
+  bool canShareAwardResultImage(Viewer viewer, {required bool pollClosed}) =>
+      canPerform(viewer, TeamAction.copyShareImage) &&
+      pollClosed &&
+      VoteCategory.values.any((c) => voteResultMaxRank(viewer, c) >= 1);
+
   /// 알림을 눌렀을 때 그 팀의 화면(일정 상세 등)으로 이동할 수 있는지: 지금 그 팀 팀원일 때만.
   /// 떠난 팀·해체된 팀의 알림은 남지만 이동하지 않는다 (Q-041). [viewer] 는 알림의 팀 기준.
   bool canOpenNotificationTarget(Viewer viewer) => viewer.isTeamMember;

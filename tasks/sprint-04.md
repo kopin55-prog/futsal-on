@@ -282,3 +282,4 @@ qa는 아래 문장을 시나리오로 만든다. 시각은 모두 한국 시간
 - 2026-11-10: 7단계 코드 준비 완료(315de74). iOS 번들 ID만 kr.futsalon.app(안드로이드는 묶음 테스트 뒤 변경). lead 확인: flutter analyze 문제 없음·test 575개, 비밀 파일(DevConfig.xcconfig·GoogleService-Info.plist·dev.json) 무시 목록 확인·추적 0, 비밀값 노출 0. iOS 빌드는 맥이 없어 미확인 → Codemagic 첫 빌드(O-01)에서 확인
 - (lead 정리) iOS 최소 버전 15.0(firebase_messaging 요구, 아이폰 6s 이후). 남은 것: kopn docs/ios-setup.md 1~5 + git push, 안드로이드 패키지 이름 변경(묶음 테스트 뒤), 7-6 유료 계정 후, 출시 전 보안 점검(kopn 요청 시), kopn 팀 테스트
 - 2026-11-10: Q-079 디자인 개편·활동 지역 완료(cc6c860·03ee7a1·82774c3). lead 확인: DB 테스트 19개 ALL PASSED, flutter analyze 문제 없음·test 597개, 개발 DB 0067 적용, 비밀값 노출 0. 팀 이름 검색 호출 제한은 원래 없음 → 출시 전 보안 점검 항목. 지역 세부는 Q-080
+- 2026-11-10: 큰 팀 관리 기능(Q-079 3번 a~f) builder 작업 중 kopn 요청으로 일시 정지. 미완성·미커밋 파일: supabase/migrations/202611050068_bulk_member_actions.sql, supabase/tests/sprint05_bulk_test.sql (검증 안 됨, 개발 DB 미적용). 다시 시작할 때 이 두 파일을 검토해 이어서 하거나 새로 작성. 남은 질문 Q-080

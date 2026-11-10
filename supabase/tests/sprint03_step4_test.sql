@@ -519,8 +519,9 @@ select pg_temp.check((select count(*) = 0 from public.award_tallies where match_
                      and (select count(*) = 0 from public.award_participants where match_id = pg_temp.vid('qB')), 'poll rows voided');
 select pg_temp.check((select count(*) = 0 from public.award_winners where team_id = pg_temp.vid('Q')), 'no award on dissolve');
 select pg_temp.check((select coalesce(sum(pom_count), 0) = 0 from public.member_season_stats where team_id = pg_temp.vid('Q')), 'no award count on dissolve');
-select pg_temp.check((select closed_out_at is not null from public.matches where id = pg_temp.vid('qA')), 'unprocessed match closed out on dissolve');
-select pg_temp.check((select count(*) = 2 from public.attendance_records where match_id = pg_temp.vid('qA')), 'attendance kept on dissolve');
+-- 7단계(202611050054)부터 해체 때 지난 경기는 출석 처리 뒤 삭제된다 (Q-061 4번). 카운트는 아래에서 확인
+select pg_temp.check((select count(*) = 0 from public.matches where id = pg_temp.vid('qA')), 'unprocessed match closed out then deleted on dissolve');
+select pg_temp.check((select count(*) = 0 from public.attendance_records where match_id = pg_temp.vid('qA')), 'attendance details deleted on dissolve');
 select pg_temp.check((select count(*) = 0 from public.award_polls where match_id = pg_temp.vid('qA')), 'no poll opened on dissolve');
 select pg_temp.check((select attendance_count = 2 from public.member_season_stats
                        where user_id = pg_temp.u(9) and team_id = pg_temp.vid('Q') and season = private.match_season(now())), 'season count kept');

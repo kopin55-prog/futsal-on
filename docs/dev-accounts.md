@@ -22,12 +22,16 @@ SUPABASE_DEV_ANON_KEY=
 SUPABASE_DEV_DB_PASSWORD=
 KAKAO_NATIVE_APP_KEY=
 GOOGLE_WEB_CLIENT_ID=
+# 아이폰 준비 (docs/ios-setup.md 2번). 비어 있어도 안드로이드는 그대로 동작
+GOOGLE_IOS_CLIENT_ID=
 ```
+- `APPLE_SIGN_IN_ENABLED`는 적지 않는다 (없으면 꺼짐). 유료 애플 계정 후(7-6) `true`로 켠다.
 
 ## 앱 정보 (등록할 때 입력할 값, 비밀 아님)
 | 항목 | 값 |
 | --- | --- |
 | 안드로이드 패키지 이름 (임시, Q-025) | `com.example.futsal_on` |
+| iOS 번들 ID (S4-15) | `kr.futsalon.app` (안드로이드는 묶음 테스트 뒤 같은 값으로 변경 예정) |
 | 개발용 SHA-1 | `25:99:C8:C1:69:85:E8:5C:7F:CC:8E:AA:C5:23:20:84:54:69:95:79` |
 | 카카오 키 해시 | `JZnIwWmF6Fx/zI6qxSMghFRplXk=` |
 | Supabase 콜백 주소 | `https://<프로젝트ID>.supabase.co/auth/v1/callback` (1번을 마치면 확정) |
@@ -78,11 +82,12 @@ GOOGLE_WEB_CLIENT_ID=
    - 내려받은 **`google-services.json`**을 `C:\Users\sdt\SDT_project\futsal-app\app\android\app\google-services.json`에 저장 (Git에 안 올라가게 설정됨)
 3. 프로젝트 설정 → **서비스 계정** → "새 비공개 키 생성" → 내려받은 JSON 파일을 `C:\Users\sdt\SDT_project\futsal-app\.secrets\firebase-service-account.json`에 저장 (Git에 안 올라가게 설정됨, 서버가 푸시를 보낼 때만 사용)
 4. Cloud Messaging API(V1)가 켜져 있는지 확인 (프로젝트 설정 → 클라우드 메시징). 예전 방식(서버 키)은 쓰지 않음
-- iOS 앱 추가와 APNs 키는 애플 유료 계정이 생긴 뒤에 한다
+- iOS 앱 추가는 docs/ios-setup.md 3번(무료). APNs 키는 애플 유료 계정이 생긴 뒤에 한다
 ## 나중에 (지금 안 해도 됨)
 | 항목 | 시점 |
 | --- | --- |
-| Firebase iOS 설정·APNs 키 | 애플 유료 계정 후 |
+| Firebase iOS 앱 추가 | 지금 가능(무료). docs/ios-setup.md 3번 |
+| APNs 키 | 애플 유료 계정 후 |
 | Supabase 운영용 프로젝트 | 출시 준비 때 |
 | 애플 개발자 계정 (연 99달러) | 테스트 배포 직전 |
 | 구글 플레이 개발자 (25달러) | 테스트 배포 직전 |

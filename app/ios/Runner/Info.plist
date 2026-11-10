@@ -24,6 +24,40 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- 로그인 후 앱으로 돌아오는 주소 (7-2). 값은 빌드 설정(ios/Flutter/*.xcconfig)에서 오고,
+	     실제 키는 make_dev_config.dart 가 만드는 DevConfig.xcconfig(git 제외)에 있다. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<!-- 카카오 로그인: kakao{네이티브 앱 키} (안드로이드 AndroidManifest 와 같은 값) -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
+			</array>
+		</dict>
+		<!-- 구글 로그인: iOS OAuth 클라이언트 ID 를 뒤집은 값 (com.googleusercontent.apps.…) -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_IOS_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
+	</array>
+	<!-- 카카오톡 설치 여부 확인·카카오톡으로 로그인 (안드로이드 queries 의 com.kakao.talk 와 같은 역할) -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+	</array>
+	<!-- 백그라운드 푸시 받기 (Background Modes: Remote notifications, 7-4) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -30,7 +30,7 @@ abstract interface class PushMessaging {
   Future<PushMessage?> takeInitialMessage();
 }
 
-/// 푸시 없음 (설정 파일이 없는 환경·iOS(04 전)·테스트).
+/// 푸시 없음 (설정 파일이 없는 환경·안드로이드/iOS 가 아닌 기기·테스트).
 class NoPushMessaging implements PushMessaging {
   const NoPushMessaging();
 
@@ -56,7 +56,8 @@ class NoPushMessaging implements PushMessaging {
   Future<PushMessage?> takeInitialMessage() async => null;
 }
 
-/// firebase_messaging 연결 (안드로이드만, 5-4 iOS 는 04).
+/// firebase_messaging 연결 (안드로이드·iOS, 7-4). iOS 실제 푸시 수신은 APNs 키 등록 후 (7-6).
+/// 그 전에는 iOS getToken 이 실패해 null 이 되고, 기기 주소 등록만 건너뛴다.
 ///
 /// 토큰은 FCM 등록 토큰(getToken·onTokenRefresh·deleteToken)을 쓴다. firebase_messaging 17 은 이 함수들을
 /// 새 방식(register·onRegistered: Firebase 설치 ID 로 직접 보내기)으로 바꾸라고 표시하지만, 서버 notifier 는
@@ -66,9 +67,11 @@ class FirebasePushMessaging implements PushMessaging {
 
   final FirebaseMessaging _messaging;
 
-  /// Firebase 를 켜 본다. google-services.json 이 없어(테스트·CI) 실패하거나 안드로이드가 아니면 [NoPushMessaging].
-  static Future<PushMessaging> tryCreate() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+  /// Firebase 를 켜 본다. 설정 파일(안드로이드 google-services.json, iOS GoogleService-Info.plist)이
+  /// 없어 실패하거나(테스트·CI·클라우드 빌드) 안드로이드·iOS 가 아니면 [NoPushMessaging].
+  /// iOS 설정 파일은 있을 때만 빌드가 앱에 넣는다 (Xcode "Copy GoogleService-Info.plist" 단계).
+  static Future<PushMessaging> tryCreate({TargetPlatform? platform}) async {
+    if (!supportsPush(kIsWeb, platform ?? defaultTargetPlatform)) {
       return const NoPushMessaging();
     }
     try {
@@ -78,6 +81,11 @@ class FirebasePushMessaging implements PushMessaging {
       return const NoPushMessaging();
     }
   }
+
+  /// 푸시를 켜 보는 기기 (안드로이드·iOS).
+  static bool supportsPush(bool isWeb, TargetPlatform platform) =>
+      !isWeb &&
+      (platform == TargetPlatform.android || platform == TargetPlatform.iOS);
 
   static PushMessage? _convert(RemoteMessage m) => PushMessage.fromData(
     m.data,

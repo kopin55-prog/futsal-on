@@ -22,6 +22,7 @@ class AuthGate extends StatefulWidget {
     required this.profileRepository,
     required this.homeBuilder,
     this.onProfileCreated,
+    this.appleSignInEnabled = false,
     super.key,
   });
 
@@ -34,6 +35,9 @@ class AuthGate extends StatefulWidget {
   /// 프로필을 만든 직후 한 번 (홈으로 가기 전). 알림 권한 요청에 쓴다 (Q-071 13번).
   /// 실패해도 홈으로 간다.
   final Future<void> Function()? onProfileCreated;
+
+  /// 로그인 화면의 애플 버튼 켜기 (iOS 전용, 기본 꺼짐, 7-3).
+  final bool appleSignInEnabled;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -104,7 +108,10 @@ class _AuthGateState extends State<AuthGate> {
       _Stage.loading => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
-      _Stage.signedOut => LoginScreen(authRepository: widget.authRepository),
+      _Stage.signedOut => LoginScreen(
+        authRepository: widget.authRepository,
+        appleSignInEnabled: widget.appleSignInEnabled,
+      ),
       _Stage.consent => ConsentScreen(
         initial: _consent,
         onSignOut: _signOut,

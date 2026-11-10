@@ -113,11 +113,11 @@
 ### 7단계 — iOS 준비 (유료 애플 계정 전)
 | 작업 | 담당 | 완료 기준 | 상태 |
 | --- | --- | --- | --- |
-| 7-1 번들 ID | lead → kopn → builder | S4-15 답대로 iOS 번들 ID(와 안드로이드 패키지 이름)를 정해 앱 설정에 반영, dev-accounts.md 표 갱신 | 대기 |
-| 7-2 카카오·구글 iOS 설정 | kopn·builder | kopn이 카카오(iOS 플랫폼 등록)·구글(iOS OAuth 클라이언트) 콘솔에 번들 ID 등록(무료). builder가 Info.plist URL 스킴 등 앱 설정. 비밀 값은 저장소에 없음 | 대기 |
-| 7-3 애플 로그인 코드 준비 | builder | `sign_in_with_apple`(Q-004 로그인 라이브러리 범위) 추가, 버튼은 **iOS에만**(Q-030), 설정 값으로 꺼 둠(유료 계정 전에는 화면에 안 보임). 안드로이드 화면·동작 변화 없음 | 대기 (7-1 후) |
-| 7-4 iOS 푸시 준비 | kopn·builder | kopn이 Firebase에 iOS 앱 추가(번들 ID, 무료) → `GoogleService-Info.plist`는 저장소 밖. builder가 iOS 알림 권한 요청(프로필 직후, Q-071)·기기 주소 등록(platform=ios) 코드. APNs 키 등록은 유료 계정 후 | 대기 |
-| 7-5 클라우드 빌드 | kopn·builder | S4-16 답대로 서비스 연결, GitHub 저장소에서 **서명 없는 iOS 빌드가 성공**. 비밀 값은 서비스의 비밀 값 저장소에만 | 대기 |
+| 7-1 번들 ID | lead → kopn → builder | S4-15 답대로 iOS 번들 ID(와 안드로이드 패키지 이름)를 정해 앱 설정에 반영, dev-accounts.md 표 갱신 | 완료 (iOS만 `kr.futsalon.app`, 테스트 타깃 `kr.futsalon.app.RunnerTests`. 안드로이드 `com.example.futsal_on`은 lead 결정대로 묶음 테스트 뒤 카카오·구글·Firebase 재등록과 함께 변경) |
+| 7-2 카카오·구글 iOS 설정 | kopn·builder | kopn이 카카오(iOS 플랫폼 등록)·구글(iOS OAuth 클라이언트) 콘솔에 번들 ID 등록(무료). builder가 Info.plist URL 스킴 등 앱 설정. 비밀 값은 저장소에 없음 | builder 완료 (카카오·구글 URL 스킴, LSApplicationQueriesSchemes. 값은 make_dev_config.dart 가 만드는 ios/Flutter/DevConfig.xcconfig(git 제외)에서. .env.local 새 키 `GOOGLE_IOS_CLIENT_ID`, 비면 iOS 구글 버튼은 준비 중 안내) / **kopn 작업 대기** (docs/ios-setup.md 1·2번) |
+| 7-3 애플 로그인 코드 준비 | builder | `sign_in_with_apple`(Q-004 로그인 라이브러리 범위) 추가, 버튼은 **iOS에만**(Q-030), 설정 값으로 꺼 둠(유료 계정 전에는 화면에 안 보임). 안드로이드 화면·동작 변화 없음 | 완료 (sign_in_with_apple 8.2.0, 설정 값 `APPLE_SIGN_IN_ENABLED` 기본 꺼짐, nonce 는 카카오·구글과 같은 방식. 실제 로그인 확인은 7-6) |
+| 7-4 iOS 푸시 준비 | kopn·builder | kopn이 Firebase에 iOS 앱 추가(번들 ID, 무료) → `GoogleService-Info.plist`는 저장소 밖. builder가 iOS 알림 권한 요청(프로필 직후, Q-071)·기기 주소 등록(platform=ios) 코드. APNs 키 등록은 유료 계정 후 | builder 완료 (iOS 푸시 켜기·platform=ios, plist 없으면 푸시만 꺼짐, Runner.entitlements·Background Modes, 최소 iOS 15) / **kopn 작업 대기** (docs/ios-setup.md 3번) |
+| 7-5 클라우드 빌드 | kopn·builder | S4-16 답대로 서비스 연결, GitHub 저장소에서 **서명 없는 iOS 빌드가 성공**. 비밀 값은 서비스의 비밀 값 저장소에만 | builder 완료 (저장소 루트 codemagic.yaml, 환경 변수 그룹 `futsalon_dev`) / **kopn 작업 대기** (docs/ios-setup.md 4·5번, 빌드 성공 확인 O-01) |
 | 7-6 유료 계정 후 작업 | kopn·builder | APNs 키 등록 → 아이폰 푸시(sprint-02 5-4 이월), Supabase 애플 로그인 켜기·실제 로그인, 애플 탈퇴 철회(Q-065 → M-44), 서명·TestFlight 업로드 | BLOCKED (유료 애플 계정, Q-005-2) |
 
 ### 점검·테스트

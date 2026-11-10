@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/login_nonce.dart';
@@ -21,7 +23,7 @@ enum SignInFailureReason {
   /// 구글이 ID 토큰을 주지 않음.
   googleIdTokenMissing,
 
-  /// 아직 지원하지 않는 방법 (애플: 유료 개발자 계정 이후, Q-005-2).
+  /// 아직 지원하지 않는 방법 (iOS 구글 클라이언트 ID 가 아직 없을 때 등).
   notSupported,
 
   /// 그 밖의 실패 (네트워크, Supabase 거절 등).
@@ -63,11 +65,27 @@ class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository({
     required SupabaseClient client,
     required String googleServerClientId,
+    String googleIosClientId = '',
+    TargetPlatform? platform,
   }) : _client = client,
-       _googleServerClientId = googleServerClientId;
+       _googleServerClientId = googleServerClientId,
+       _googleIosClientId = googleIosClientId,
+       _platform = platform;
 
   final SupabaseClient _client;
   final String _googleServerClientId;
+
+  /// iOS 구글 로그인용 클라이언트 ID (안드로이드는 쓰지 않는다). 비면 iOS 구글 로그인은 [SignInFailureReason.notSupported].
+  final String _googleIosClientId;
+
+  /// 테스트용. 없으면 지금 기기.
+  final TargetPlatform? _platform;
+
+  bool get _isIOS => (_platform ?? defaultTargetPlatform) == TargetPlatform.iOS;
+
+  /// iOS 에서만 클라이언트 ID 를 넘긴다 (안드로이드는 지금처럼 null).
+  String? get _googleClientId => _isIOS ? _googleIosClientId : null;
+
   bool _googleInitialized = false;
 
   @override
@@ -132,6 +150,7 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> _prepareGoogle(String hashedNonce) async {
     if (!_googleInitialized) {
       await GoogleSignIn.instance.initialize(
+        clientId: _googleClientId,
         serverClientId: _googleServerClientId,
         nonce: hashedNonce,
       );
@@ -139,6 +158,7 @@ class SupabaseAuthRepository implements AuthRepository {
     } else {
       await GoogleSignInPlatform.instance.init(
         InitParameters(
+          clientId: _googleClientId,
           serverClientId: _googleServerClientId,
           nonce: hashedNonce,
         ),
@@ -147,6 +167,10 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   Future<void> _signInWithGoogle() async {
+    // iOS 구글 클라이언트 ID 가 아직 없으면 네이티브 SDK 를 부르지 않고 안내만 (docs/ios-setup.md 2번).
+    if (_isIOS && _googleIosClientId.isEmpty) {
+      throw const SignInFailure(SignInFailureReason.notSupported);
+    }
     final google = GoogleSignIn.instance;
     final nonce = LoginNonce.generate();
     final GoogleSignInAccount account;
@@ -173,10 +197,36 @@ class SupabaseAuthRepository implements AuthRepository {
     );
   }
 
-  /// TODO(Q-005-2): 애플 로그인은 유료 애플 개발자 계정 준비 후 구현·테스트한다 (iOS 전용, Q-050).
-  /// 구현 방향: sign_in_with_apple 로 ID 토큰(원본 nonce 의 SHA-256 전달) → signInWithIdToken(apple, nonce: 원본).
+  /// 애플 로그인 (iOS 전용, Q-030·Q-050). 카카오·구글과 같은 방식: 애플에는 nonce 의 SHA-256 을,
+  /// Supabase 에는 원본을 넘긴다. 이메일만 요청하고 이름은 받지 않는다 (11장 10번).
+  /// 버튼은 APPLE_SIGN_IN_ENABLED 로 꺼 둔다. 실제 동작 확인은 유료 애플 계정·Supabase 애플 설정 후 (7-6).
   Future<void> _signInWithApple() async {
-    throw const SignInFailure(SignInFailureReason.notSupported);
+    if (!_isIOS) throw const SignInFailure(SignInFailureReason.notSupported);
+    final nonce = LoginNonce.generate();
+    final AuthorizationCredentialAppleID credential;
+    try {
+      credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [AppleIDAuthorizationScopes.email],
+        nonce: nonce.hashed,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw SignInFailure(SignInFailureReason.cancelled, e);
+      }
+      throw SignInFailure(SignInFailureReason.failed, e);
+    } catch (e) {
+      throw SignInFailure(SignInFailureReason.failed, e);
+    }
+
+    final idToken = credential.identityToken;
+    if (idToken == null) {
+      throw const SignInFailure(SignInFailureReason.failed);
+    }
+    await _signInSupabase(
+      OAuthProvider.apple,
+      idToken: idToken,
+      nonce: nonce.raw,
+    );
   }
 
   Future<void> _signInSupabase(

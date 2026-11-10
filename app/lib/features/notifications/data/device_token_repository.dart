@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/data/server_error.dart';
@@ -13,12 +14,17 @@ abstract interface class DeviceTokenRepository {
 }
 
 class SupabaseDeviceTokenRepository implements DeviceTokenRepository {
-  SupabaseDeviceTokenRepository(this._client);
+  SupabaseDeviceTokenRepository(this._client, {TargetPlatform? platform})
+    : platform = platformName(platform ?? defaultTargetPlatform);
 
   final SupabaseClient _client;
 
-  /// 1차는 안드로이드만 (5-4 iOS 는 04).
-  static const platform = 'android';
+  /// 서버 device_platform 값 ('android' / 'ios', 7-4).
+  final String platform;
+
+  /// 기기 종류 → 서버 값. 푸시는 안드로이드·iOS 에서만 켜지므로 그 밖은 안드로이드로 둔다.
+  static String platformName(TargetPlatform p) =>
+      p == TargetPlatform.iOS ? 'ios' : 'android';
 
   @override
   Future<void> register(String token) => guardServer(() async {

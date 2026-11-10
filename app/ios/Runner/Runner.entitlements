@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 푸시 알림 (Push Notifications capability). 서명 없는 빌드에서는 쓰이지 않는다.
+	     유료 애플 계정 후(7-6) App ID 에 Push Notifications 를 켜고, 스토어용 서명 때는 production 으로 바뀐다. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- 애플 로그인 (Sign in with Apple capability, 7-3). 앱 화면에서는 APPLE_SIGN_IN_ENABLED 로 꺼 둔다. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

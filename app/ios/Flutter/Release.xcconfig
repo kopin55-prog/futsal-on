@@ -1,1 +1,7 @@
 #include "Generated.xcconfig"
+
+// 로그인용 URL 스킴 값 (Info.plist 에서 씀). 기본값은 자리표시이고, 실제 값은
+// app/tool/make_dev_config.dart 가 만드는 DevConfig.xcconfig(git 제외)가 덮어쓴다.
+KAKAO_NATIVE_APP_KEY = missing
+GOOGLE_IOS_REVERSED_CLIENT_ID = com.googleusercontent.apps.missing
+#include? "DevConfig.xcconfig"

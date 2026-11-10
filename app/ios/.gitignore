@@ -32,3 +32,8 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# 로그인 키로 만든 설정 (app/tool/make_dev_config.dart 가 생성, 저장소에 넣지 않음)
+Flutter/DevConfig.xcconfig
+# Firebase iOS 설정 파일 (저장소 루트 .gitignore 에도 있음)
+Runner/GoogleService-Info.plist

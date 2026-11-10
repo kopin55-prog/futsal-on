@@ -50,7 +50,7 @@ Future<void> main() async {
     publishableKey: config.supabaseAnonKey,
   );
   final client = Supabase.instance.client;
-  // 푸시: google-services.json 이 없는 환경이면 푸시만 꺼진다 (5-1)
+  // 푸시: 설정 파일(안드로이드 google-services.json, iOS GoogleService-Info.plist)이 없으면 푸시만 꺼진다 (5-1, 7-4)
   final push = PushController(
     messaging: await FirebasePushMessaging.tryCreate(),
     tokens: SupabaseDeviceTokenRepository(client),
@@ -61,6 +61,7 @@ Future<void> main() async {
       authRepository: SupabaseAuthRepository(
         client: client,
         googleServerClientId: config.googleWebClientId,
+        googleIosClientId: config.googleIosClientId,
       ),
       services: AppServices(
         profiles: SupabaseProfileRepository(client),
@@ -83,6 +84,7 @@ Future<void> main() async {
         push: push,
       ),
       logoImages: (path) => _logoImage(client, config, path),
+      appleSignInEnabled: config.appleSignInEnabled,
     ),
   );
 }
@@ -102,6 +104,7 @@ class FutsalOnApp extends StatelessWidget {
     required this.authRepository,
     required this.services,
     this.logoImages,
+    this.appleSignInEnabled = false,
     super.key,
   });
 
@@ -110,6 +113,9 @@ class FutsalOnApp extends StatelessWidget {
 
   /// 로고 사진 경로 → 이미지 (없으면 글자 로고만)
   final ImageProvider? Function(String path)? logoImages;
+
+  /// 애플 로그인 버튼 (iOS 전용, 설정 값 APPLE_SIGN_IN_ENABLED, 기본 꺼짐).
+  final bool appleSignInEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +131,7 @@ class FutsalOnApp extends StatelessWidget {
         authRepository: authRepository,
         profileRepository: services.profiles,
         onProfileCreated: services.push?.requestPermission,
+        appleSignInEnabled: appleSignInEnabled,
         homeBuilder: (userId, signOut) => TeamHomeScreen(
           key: ValueKey(userId),
           services: services,

@@ -6,11 +6,19 @@ import '../data/auth_repository.dart';
 import 'auth_texts.dart';
 
 /// 로그인 화면. 안드로이드는 카카오·구글, iOS 는 애플까지 (Q-030, Q-050).
+/// 애플 버튼은 iOS 이고 [appleSignInEnabled] 일 때만 보인다 (유료 애플 계정 전에는 꺼 둠, 7-3).
 /// 디자인은 기본 위젯만 쓴 임시 화면이다.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({required this.authRepository, super.key});
+  const LoginScreen({
+    required this.authRepository,
+    this.appleSignInEnabled = false,
+    super.key,
+  });
 
   final AuthRepository authRepository;
+
+  /// 설정 값 APPLE_SIGN_IN_ENABLED (기본 꺼짐).
+  final bool appleSignInEnabled;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,7 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _busy = false;
   String? _error;
 
-  bool get _showApple => defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _showApple =>
+      widget.appleSignInEnabled && defaultTargetPlatform == TargetPlatform.iOS;
 
   Future<void> _signIn(SignInMethod method) async {
     setState(() {

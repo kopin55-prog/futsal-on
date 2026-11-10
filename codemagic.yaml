@@ -1,0 +1,45 @@
+# 풋살ON 아이폰 클라우드 빌드 (Codemagic 무료, S4-16). 맥이 없어 iOS 빌드는 여기서만 한다.
+#
+# 지금은 서명 없는 빌드(설치 파일 없음)로 "아이폰용으로 빌드가 되는지"만 확인한다 (스프린트 04 7-5).
+# 서명·TestFlight 업로드는 유료 애플 계정 후 (7-6) 이 파일에 워크플로를 더한다.
+#
+# 비밀 값은 저장소에 없다. Codemagic 의 환경 변수 그룹 "futsalon_dev" 에서 받는다 (docs/ios-setup.md 4번).
+#   SUPABASE_DEV_URL, SUPABASE_DEV_ANON_KEY, KAKAO_NATIVE_APP_KEY, GOOGLE_WEB_CLIENT_ID  (필수, .env.local 과 같은 이름)
+#   GOOGLE_IOS_CLIENT_ID                (비어도 됨: iOS 구글 로그인만 "준비 중" 안내)
+#   GOOGLE_SERVICE_INFO_PLIST_BASE64    (비어도 됨: 푸시 없이 빌드)
+#
+# 무료 범위: 맥 빌드 월 500분. 자동 실행 없이 Codemagic 화면에서 "Start new build" 를 누를 때만 돈다.
+workflows:
+  ios-unsigned:
+    name: iOS 서명 없는 빌드
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      groups:
+        - futsalon_dev
+      flutter: 3.44.1
+      xcode: latest
+      cocoapods: default
+    # triggering 을 두지 않는다 = push 마다 자동으로 돌지 않음 (무료 시간 아끼기)
+    scripts:
+      - name: 앱 설정 파일 만들기 (값은 출력하지 않음)
+        script: |
+          set -e
+          cd app
+          flutter pub get
+          # 환경 변수 → config/dev.json, ios/Flutter/DevConfig.xcconfig (둘 다 git 제외 파일)
+          dart run tool/make_dev_config.dart --from-env
+      - name: Firebase iOS 설정 파일 (있을 때만)
+        script: |
+          set -e
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > app/ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist 를 만들었습니다."
+          else
+            echo "GOOGLE_SERVICE_INFO_PLIST_BASE64 가 없어 푸시 없이 빌드합니다."
+          fi
+      - name: iOS 빌드 (서명 없음)
+        script: |
+          set -e
+          cd app
+          flutter build ios --release --no-codesign --dart-define-from-file=config/dev.json

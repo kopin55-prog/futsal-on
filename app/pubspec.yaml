@@ -34,6 +34,7 @@ dependencies:
   share_plus: ^13.3.1
   # 일정 탭 달력 보기 (S4-13, 0-3 승인). 날짜 글자는 앱 코드로 한국어 표시(intl 직접 의존 없음).
   table_calendar: ^3.3.0
+  sign_in_with_apple: ^8.2.0
 
 dev_dependencies:
   flutter_test:

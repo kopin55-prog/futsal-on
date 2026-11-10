@@ -1,5 +1,5 @@
--- 스프린트 03 7단계 마이그레이션(202611050053~202611050055: 최근 10경기 정리, 해체 시 지난 경기 상세 삭제,
--- 회원 탈퇴 시 배치 변경 이력 정리) 동작 확인 스크립트.
+-- 스프린트 03 7단계 마이그레이션(202611050053~202611050056: 최근 10경기 정리, 해체 시 지난 경기 상세 삭제,
+-- 회원 탈퇴 시 배치 변경 이력 정리, 해체 팀 남은 일정 정리) 동작 확인 스크립트.
 -- 반드시 트랜잭션 안에서 실행하고 끝에 롤백한다 (가짜 auth.users 를 만든다).
 -- 실패하면 예외로 멈춘다. 모두 통과하면 마지막에 'ALL PASSED' 를 돌려준다.
 --
@@ -411,12 +411,30 @@ select pg_temp.check((select count(*) = 0 from public.attendance_records where t
 -- 다른 팀은 그대로
 select pg_temp.check((select count(*) = 10 from public.matches where team_id = pg_temp.vid('P') and status = 'scheduled' and ends_at <= now()), 'P untouched by Q dissolve');
 
+-- 해체 팀의 남은 일정 (202611050056): 취소된 일정은 매일 정리에서 바로, 진행 중이던 경기는 종료 처리 뒤에
+select pg_temp.check(private.prune_dissolved_team_matches(pg_temp.vid('P')) = 0, 'not dissolved: untouched');
+select pg_temp.check(private.prune_dissolved_team_matches(pg_temp.vid('Q')) = 1, 'dissolved: cancelled upcoming deleted');
+select pg_temp.check(not pg_temp.exists_match('qF') and pg_temp.exists_match('qL'), 'in-progress kept until close-out');
+insert into t_vars select 'tmmQ2', coalesce(sum(match_count), 0)::text from public.team_monthly_matches where team_id = pg_temp.vid('Q');
+select private.close_out_matches(now() + interval '2 hours');
+select pg_temp.check((select closed_out_at is not null from public.matches where id = pg_temp.vid('qL')), 'qL closed out');
+select pg_temp.check((select count(*) = 0 from public.award_polls where match_id = pg_temp.vid('qL')), 'no poll for dissolved team');
+select pg_temp.check(private.prune_old_matches(now() + interval '2 hours') >= 1 and not pg_temp.exists_match('qL'), 'daily prune deletes closed-out qL');
+select pg_temp.check((select count(*) = 0 from public.matches where team_id = pg_temp.vid('Q')), 'dissolved team has no matches');
+select pg_temp.check((select coalesce(sum(match_count), 0) from public.team_monthly_matches where team_id = pg_temp.vid('Q'))
+                     = pg_temp.v('tmmQ2')::int + 1, 'team monthly matches kept (+1 for qL)');
+select pg_temp.check(pg_temp.stat(8, 'Q', 'attendance_count') = 2 and pg_temp.stat(8, 'Q', 'pom_count') = 1, 'dissolved team counts kept');
+-- 2시간 뒤 기준으로는 pL 도 끝나 처리됐으므로 P 는 pL~p4 10경기를 남기고 p3 를 지운다
+select pg_temp.check((select count(*) = 10 from public.matches where team_id = pg_temp.vid('P') and status = 'scheduled' and ends_at <= now() + interval '2 hours')
+                     and pg_temp.exists_match('pL') and pg_temp.exists_match('p4') and not pg_temp.exists_match('p3'), 'P keeps recent 10');
+
 -- ---------------------------------------------------------------------------
 -- 7. 실행 권한·예약 작업·보안 설정
 -- ---------------------------------------------------------------------------
 set local role authenticated;
 select pg_temp.login(pg_temp.u(1));
 select pg_temp.expect_error('select private.prune_old_matches()', 'permission denied%');
+select pg_temp.expect_error(format('select private.prune_dissolved_team_matches(%L)', pg_temp.vid('Q')), 'permission denied%');
 select pg_temp.expect_error(format('select private.prune_team_matches(%L)', pg_temp.vid('P')), 'permission denied%');
 select pg_temp.expect_error(format('select private.remove_user_from_lineup_logs(%L)', pg_temp.u(3)), 'permission denied%');
 reset role;
@@ -425,13 +443,14 @@ select pg_temp.expect_error('select private.prune_old_matches()', 'permission de
 reset role;
 select pg_temp.check(not has_function_privilege('service_role', 'private.prune_old_matches(timestamptz)', 'execute')
                      and not has_function_privilege('service_role', 'private.prune_team_matches(uuid, timestamptz)', 'execute')
+                     and not has_function_privilege('service_role', 'private.prune_dissolved_team_matches(uuid)', 'execute')
                      and not has_function_privilege('service_role', 'private.close_award_polls(timestamptz)', 'execute')
                      and not has_function_privilege('service_role', 'private.remove_user_from_lineup_logs(uuid)', 'execute')
                      and has_function_privilege('service_role', 'public.delete_account(uuid)', 'execute')
                      and not has_function_privilege('authenticated', 'public.delete_account(uuid)', 'execute'), 'execute grants');
 select pg_temp.check((select command from cron.job where jobname = 'prune-old-matches') = 'select private.prune_old_matches()', 'prune cron');
 select pg_temp.check((select count(*) = 0 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                       where ((n.nspname = 'private' and p.proname in ('prune_team_matches', 'prune_old_matches', 'close_award_polls',
+                       where ((n.nspname = 'private' and p.proname in ('prune_team_matches', 'prune_old_matches', 'prune_dissolved_team_matches', 'close_award_polls',
                                                                        'remove_user_from_lineup_logs', 'strip_user_from_lineup_snapshot'))
                            or (n.nspname = 'public' and p.proname in ('dissolve_team', 'delete_account')))
                          and not coalesce(p.proconfig @> array['search_path=""'], false)), 'search_path empty');

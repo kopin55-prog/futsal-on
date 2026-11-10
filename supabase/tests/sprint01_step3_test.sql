@@ -139,7 +139,7 @@ select pg_temp.check((select positions = array['goalkeeper', 'forward']::public.
 select public.update_own_profile('새 이름', '   ', array['goalkeeper']::public.play_position[], false);
 select pg_temp.check((select bio is null from public.profiles where user_id = auth.uid()), 'blank bio -> null');
 -- 포지션이 잘못되면 이름도 저장되지 않는다 (원자적)
-select pg_temp.expect_error($$select public.update_own_profile('다른이름', '소개', array['forward', 'midfielder', 'winger', 'defender']::public.play_position[], false)$$, 'invalid_positions');
+select pg_temp.expect_error($$select public.update_own_profile('다른이름', '소개', array['forward', 'goalkeeper', 'winger', 'defender']::public.play_position[], false)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.update_own_profile('다른이름', '소개', array['forward']::public.play_position[], true)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.update_own_profile('다른이름', '소개', array[]::public.play_position[], false)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.update_own_profile('다른이름', '소개', null, false)$$, 'invalid_positions');

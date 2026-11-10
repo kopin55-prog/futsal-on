@@ -58,7 +58,7 @@ select public.create_profile('이번', null, array['defender']::public.play_posi
 select pg_temp.login('00000000-0000-4000-8000-0000000000b3');
 select public.create_profile('삼번', null, array['winger']::public.play_position[], false, true, true, true, false);
 select pg_temp.login('00000000-0000-4000-8000-0000000000b4');
-select public.create_profile('사번', null, array['midfielder']::public.play_position[], false, true, true, true, false);
+select public.create_profile('사번', null, array['allrounder']::public.play_position[], false, true, true, true, false);
 select pg_temp.login('00000000-0000-4000-8000-0000000000b5');
 select public.create_profile('오번', null, array['goalkeeper']::public.play_position[], false, true, true, true, false);
 

@@ -246,7 +246,7 @@ void main() {
 
     for (final p in [
       Position.defender,
-      Position.midfielder,
+      Position.winger,
       Position.forward,
     ]) {
       await _tapVisible(tester, find.byKey(Key('profile-position-${p.name}')));
@@ -260,9 +260,28 @@ void main() {
     );
 
     // 4번째 포지션은 선택되지 않고 안내 (Q-067 1번)
-    await _tapVisible(tester, find.byKey(const Key('profile-position-winger')));
-    expect(selected(Position.winger), isFalse);
+    await _tapVisible(tester, find.byKey(const Key('profile-position-goalkeeper')));
+    expect(selected(Position.goalkeeper), isFalse);
     expect(find.text(ProfileTexts.maxPositionsReached), findsOneWidget);
+
+    // 다른 포지션을 고른 상태에서 올라운더는 막고 안내 (v4.6 올라운더 단독)
+    await _tapVisible(tester, find.byKey(const Key('profile-position-allrounder')));
+    expect(selected(Position.allrounder), isFalse);
+    expect(find.text(ProfileTexts.allrounderNeedsEmpty), findsOneWidget);
+
+    // 모두 빼고 올라운더만 고르면 됨. 그 상태에서 다른 포지션·전문 골키퍼는 막고 안내
+    for (final p in [Position.defender, Position.winger, Position.forward]) {
+      await _tapVisible(tester, find.byKey(Key('profile-position-${p.name}')));
+    }
+    await _tapVisible(tester, find.byKey(const Key('profile-position-allrounder')));
+    expect(selected(Position.allrounder), isTrue);
+    await _tapVisible(tester, find.byKey(const Key('profile-position-forward')));
+    expect(selected(Position.forward), isFalse);
+    expect(find.text(ProfileTexts.allrounderSelected), findsOneWidget);
+    await _tapVisible(tester, find.byKey(const Key('profile-dedicated-gk')));
+    expect(dedicated(), isFalse);
+    expect(selected(Position.goalkeeper), isFalse);
+    expect(find.text(ProfileTexts.allrounderNoGk), findsOneWidget);
   });
 
   testWidgets('서버가 이미 프로필이 있다고 하면 가입 완료로 본다', (tester) async {

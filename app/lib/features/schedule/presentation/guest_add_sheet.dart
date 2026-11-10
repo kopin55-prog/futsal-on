@@ -49,10 +49,14 @@ class _GuestAddSheetState extends State<GuestAddSheet> {
       _hint = null;
       if (_positions.contains(p)) {
         _positions.remove(p);
-      } else if (_positions.length >= GuestInput.maxPositions) {
-        _hint = ScheduleTexts.guestMaxPositions;
-      } else {
+        return;
+      }
+      // 최대 3개, 올라운더 단독 (프로필과 같은 규칙, v4.6)
+      final block = PositionRules.addBlock(_positions, p);
+      if (block == null) {
         _positions.add(p);
+      } else {
+        _hint = ProfileTexts.addBlock(block);
       }
     });
   }

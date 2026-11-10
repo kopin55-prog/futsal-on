@@ -14,7 +14,7 @@ import 'package:futsal_on/shared/domain/position.dart';
 SplitCandidate m(
   String id, {
   SkillLevel skill = SkillLevel.amateur,
-  Set<Position> pos = const {Position.midfielder},
+  Set<Position> pos = const {Position.winger},
   bool gk = false,
 }) => SplitCandidate(
   person: LineupPerson.member(id),
@@ -44,8 +44,11 @@ PairingRule rival(List<String> ids, {bool enabled = true}) =>
 /// 여러 포지션이 섞인 팀원 n명 (p1..pn)
 List<SplitCandidate> people(int n, {int from = 1}) => [
   for (var i = from; i < from + n; i++)
-    m('p$i', pos: {Position.values[i % 4 + 1]}),
+    m('p$i', pos: {const [Position.defender, Position.winger, Position.forward][i % 3]}),
 ];
+
+/// 올라운더가 아닌 포지션 (골키퍼·수비·측면·공격)
+const _specific = [Position.goalkeeper, Position.defender, Position.winger, Position.forward];
 
 int teamOf(TeamSplitPlan plan, String key) =>
     plan.squads.indexWhere((s) => s.any((p) => p.key == key));
@@ -492,6 +495,81 @@ void main() {
     });
   });
 
+  group('K-15 올라운더 (v4.6: 모든 포지션 가능, 부족한 쪽을 채움)', () {
+    // 공격 4명 + 수비 1명 + 6번째 사람, 2팀 × 3명. 실력은 공격 3명(세미프로) | 공격 1·수비 1(프로) + 6번째(비기너)
+    // 로 나눌 때만 합계가 같다(90:90). 이 배치는 공격이 3:1 이라, 6번째가 공격을 채우지 못하면 포지션(4번)에서 진다.
+    List<SplitCandidate> scenario(SplitCandidate sixth) => [
+      for (var i = 0; i < 3; i++) m('fw$i', skill: SkillLevel.semipro, pos: {Position.forward}),
+      m('fw3', skill: SkillLevel.pro, pos: {Position.forward}),
+      m('df0', skill: SkillLevel.pro, pos: {Position.defender}),
+      sixth,
+    ];
+
+    test('올라운더는 공격이 부족한 팀의 공격을 채운다 → 실력 합계가 같은 3:1 배치', () {
+      final plan = TeamSplitter.split(TeamSplitInput(
+        candidates: scenario(m('ar0', skill: SkillLevel.beginner, pos: {Position.allrounder})),
+        teamCount: 2,
+        playersPerTeam: 3,
+      ));
+      expect(plan.signature, 'u:ar0,u:df0,u:fw3|u:fw0,u:fw1,u:fw2#');
+    });
+
+    test('같은 자리에 측면 전용 선수면 공격을 못 채워 공격 2:2 배치가 이긴다', () {
+      final plan = TeamSplitter.split(TeamSplitInput(
+        candidates: scenario(m('wg0', skill: SkillLevel.beginner, pos: {Position.winger})),
+        teamCount: 2,
+        playersPerTeam: 3,
+      ));
+      for (final squad in plan.squads) {
+        expect(squad.where((p) => p.key.startsWith('u:fw')).length, 2);
+      }
+    });
+
+    test('게스트 올라운더도 같게 계산', () {
+      final plan = TeamSplitter.split(TeamSplitInput(
+        candidates: scenario(g('1', skill: SkillLevel.beginner, pos: {Position.allrounder})),
+        teamCount: 2,
+        playersPerTeam: 3,
+      ));
+      expect(plan.signature, 'g:1,u:df0,u:fw3|u:fw0,u:fw1,u:fw2#');
+    });
+
+    test('올라운더는 전문 GK 가 아니다: 전문 GK 2명은 팀마다 1명, 올라운더는 GK 분산과 무관', () {
+      final input = TeamSplitInput(
+        candidates: [
+          m('gk1', gk: true),
+          m('gk2', gk: true),
+          for (var i = 0; i < 4; i++) m('ar$i', pos: {Position.allrounder}),
+        ],
+        teamCount: 2,
+        playersPerTeam: 3,
+      );
+      final plan = TeamSplitter.split(input);
+      expect(teamOf(plan, 'u:gk1'), isNot(teamOf(plan, 'u:gk2')));
+      expect(kinds(plan), isEmpty);
+      // 올라운더 3명 + 전문 GK 0명인 팀은 GK 없는 팀 → 1번에서 진다
+      expect(
+        TeamSplitter.evaluateWarnings(input, [
+          [const LineupPerson.member('gk1'), const LineupPerson.member('gk2'), const LineupPerson.member('ar0')],
+          [const LineupPerson.member('ar1'), const LineupPerson.member('ar2'), const LineupPerson.member('ar3')],
+        ], const []).map((w) => w.kind),
+        contains(SplitWarningKind.dedicatedGkOverTeams),
+      );
+    });
+
+    test('같은 입력이면 같은 결과 (입력 순서와 무관), 재조합 후보도 같음', () {
+      final base = [
+        ...scenario(m('ar0', skill: SkillLevel.beginner, pos: {Position.allrounder})),
+        m('ar1', pos: {Position.allrounder}),
+        m('gk1', gk: true),
+      ];
+      TeamSplitInput input(List<SplitCandidate> c) => TeamSplitInput(candidates: c, teamCount: 2, playersPerTeam: 4);
+      final a = TeamSplitter.plans(input(base));
+      final b = TeamSplitter.plans(input(base.reversed.toList()));
+      expect([for (final p in a) p.signature], [for (final p in b) p.signature]);
+    });
+  });
+
   group('성능', () {
     test('30명·6팀 (그룹·라이벌·GK 포함) 계산이 1초 안', () {
       final input = TeamSplitInput(
@@ -499,7 +577,7 @@ void main() {
           for (var i = 1; i <= 26; i++)
             m('p$i',
                 skill: SkillLevel.values[i % 5],
-                pos: {Position.values[i % 4 + 1], Position.values[(i * 3) % 5]}),
+                pos: {_specific[i % 3 + 1], _specific[(i * 3) % 4]}),
           for (var i = 1; i <= 4; i++) m('gk$i', gk: true),
         ],
         rules: [grp(['p1', 'p2', 'p3']), grp(['p7', 'p8']), rival(['p4', 'p5', 'p6']), rival(['p9', 'p10'])],

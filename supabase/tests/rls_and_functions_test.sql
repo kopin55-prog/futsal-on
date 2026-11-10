@@ -67,7 +67,7 @@ select pg_temp.expect_error($$select public.create_profile('x', null, array['for
 select pg_temp.login('00000000-0000-4000-8000-0000000000a2');
 select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward']::public.play_position[], false, false, true, true, false)$$, 'age_14_required');
 select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward']::public.play_position[], false, true, false, true, false)$$, 'required_consents_missing');
-select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward','winger','defender','midfielder']::public.play_position[], false, true, true, true, false)$$, 'invalid_positions');
+select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward','winger','defender','goalkeeper']::public.play_position[], false, true, true, true, false)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward','forward']::public.play_position[], false, true, true, true, false)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.create_profile('영희', null, array['forward']::public.play_position[], true, true, true, true, false)$$, 'invalid_positions');
 select pg_temp.expect_error($$select public.create_profile('영희', null, array[]::public.play_position[], false, true, true, true, false)$$, 'invalid_positions');
@@ -83,7 +83,7 @@ select pg_temp.check((select count(*) = 1 from public.profiles), 'a2 sees only o
 select pg_temp.login('00000000-0000-4000-8000-0000000000a3');
 select public.create_profile('민수', null, array['defender']::public.play_position[], false, true, true, true, false);
 select pg_temp.login('00000000-0000-4000-8000-0000000000a4');
-select public.create_profile('지훈', null, array['midfielder']::public.play_position[], false, true, true, true, false);
+select public.create_profile('지훈', null, array['allrounder']::public.play_position[], false, true, true, true, false);
 
 -- ---------------------------------------------------------------- a1: 팀 만들기
 select pg_temp.login('00000000-0000-4000-8000-0000000000a1');

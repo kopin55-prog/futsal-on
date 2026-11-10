@@ -53,6 +53,8 @@ enum ServerErrorCode {
   invalidAttendance('invalid_attendance'),
   matchCancelled('match_cancelled'),
   rsvpClosed('rsvp_closed'),
+  // 부상 중 참석 → 복귀 확인 필요 (respond_attendance, 스프린트 04 1-5)
+  returnConfirmationRequired('return_confirmation_required'),
   invalidGuestName('invalid_guest_name'),
   guestLimitReached('guest_limit_reached'),
   duplicateGuestName('duplicate_guest_name'),
@@ -72,6 +74,17 @@ enum ServerErrorCode {
   awardSelfVote('award_self_vote'),
   awardInvalidCandidate('award_invalid_candidate'),
   awardAlreadyVoted('award_already_voted'),
+  // 부상 동의·부상 기록 (agree_injury_consent, withdraw_consent, report_injury, extend_injury, recover_injury,
+  // update_injury_memo — 스프린트 04 1-2·1-3)
+  injuryConsentExists('injury_consent_exists'),
+  injuryConsentNotFound('injury_consent_not_found'),
+  consentNotWithdrawable('consent_not_withdrawable'),
+  injuryConsentRequired('injury_consent_required'),
+  injuryAlreadyActive('injury_already_active'),
+  injuryNotActive('injury_not_active'),
+  injuryInvalidWeeks('injury_invalid_weeks'),
+  injuryInvalidVia('injury_invalid_via'),
+  invalidInjuryMemo('invalid_injury_memo'),
 
   /// 목록에 없는 오류 (네트워크·알 수 없는 서버 오류 포함).
   unknown('unknown');

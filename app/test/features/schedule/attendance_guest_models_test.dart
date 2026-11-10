@@ -179,13 +179,25 @@ void main() {
 
     test('포지션 최대 3개, 중복 불가', () {
       expect(
-        const GuestInput(name: '넷', positions: Position.values).validate(),
+        const GuestInput(
+          name: '넷',
+          positions: [Position.goalkeeper, Position.defender, Position.winger, Position.forward],
+        ).validate(),
         {GuestInputError.tooManyPositions},
       );
       expect(
         const GuestInput(name: '중복', positions: [Position.winger, Position.winger]).validate(),
         {GuestInputError.duplicatePositions},
       );
+    });
+
+    test('게스트도 올라운더 단독 (v4.6)', () {
+      expect(const GuestInput(positions: [Position.allrounder]).validate(), isEmpty);
+      expect(
+        const GuestInput(positions: [Position.allrounder, Position.forward]).validate(),
+        {GuestInputError.allrounderNotAlone},
+      );
+      expect(const GuestInput(positions: [Position.allrounder]).toServerParams('m1')['p_positions'], ['allrounder']);
     });
 
     test('서버 인자: 이름 정리(비우면 null), 빈 포지션·미정 실력은 null', () {

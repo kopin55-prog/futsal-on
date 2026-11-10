@@ -63,6 +63,13 @@ enum ProfileError {
   dedicatedGkNeedsFreeSlot,
 
   duplicatePositions,
+
+  /// 올라운더를 다른 포지션과 함께 고름 (v4.6 올라운더 단독).
+  allrounderNotAlone,
+
+  /// 올라운더 상태에서 전문 골키퍼 (전문 GK 는 골키퍼 필요, decisions 2026-11-10 lead 정리).
+  allrounderWithDedicatedGk,
+
   bioTooLong,
   bioHasLineBreak,
 }
@@ -74,15 +81,17 @@ class ProfileValidator {
   static const int minPositions = 1;
 
   /// 골키퍼(자동 포함 포함) 합계 기준 최대 개수 (Q-035).
-  static const int maxPositions = 3;
+  static const int maxPositions = PositionRules.maxPositions;
   static const int maxBioLength = 20;
 
   /// [positions]를 고른 상태에서 전문 골키퍼를 체크해도 3개를 넘지 않는지 (Q-035).
   ///
   /// 골키퍼가 이미 포함돼 있거나, 고른 포지션이 3개 미만이면 true.
+  /// 올라운더를 고른 상태면 false (올라운더는 단독이라 골키퍼를 더할 수 없음).
   static bool canCheckDedicatedGk(List<Position> positions) =>
-      positions.contains(Position.goalkeeper) ||
-      positions.toSet().length < maxPositions;
+      !positions.contains(Position.allrounder) &&
+      (positions.contains(Position.goalkeeper) ||
+          positions.toSet().length < maxPositions);
 
   /// 오류가 없으면 빈 집합.
   ///
@@ -116,6 +125,11 @@ class ProfileValidator {
     }
     if (selected.toSet().length != selected.length) {
       errors.add(ProfileError.duplicatePositions);
+    }
+    if (input.isDedicatedGk && selected.contains(Position.allrounder)) {
+      errors.add(ProfileError.allrounderWithDedicatedGk);
+    } else if (!PositionRules.allrounderAlone(selected)) {
+      errors.add(ProfileError.allrounderNotAlone);
     }
 
     final bio = input.bio;

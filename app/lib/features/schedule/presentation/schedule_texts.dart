@@ -1,5 +1,6 @@
 import '../../../shared/data/server_error.dart';
 import '../../admin/presentation/admin_texts.dart';
+import '../../profile/presentation/profile_texts.dart';
 import '../../team/domain/team_validation.dart';
 import '../../team/presentation/team_texts.dart';
 import '../domain/attendance_models.dart';
@@ -103,6 +104,7 @@ abstract final class ScheduleTexts {
     GuestInputError.reservedName => '"게스트+숫자" 이름은 쓸 수 없어요. 비우면 자동으로 붙어요',
     GuestInputError.tooManyPositions => guestMaxPositions,
     GuestInputError.duplicatePositions => '포지션이 겹쳐요',
+    GuestInputError.allrounderNotAlone => ProfileTexts.allrounderSelected,
     GuestInputError.duplicateName => '이 일정에 같은 이름의 게스트가 있어요',
     GuestInputError.tooManyGuests => '게스트는 한 일정에 ${GuestInput.maxGuestsPerMatch}명까지예요',
   };
@@ -149,7 +151,9 @@ abstract final class ScheduleTexts {
     ServerErrorCode.invalidMatchSettings => '마감·알림 시간을 확인해 주세요',
     ServerErrorCode.invalidCancelReason => '사유는 20자까지 쓸 수 있어요',
     ServerErrorCode.invalidGuestName => guestError(GuestInputError.nameTooLong),
-    ServerErrorCode.invalidPositions => guestMaxPositions,
+    ServerErrorCode.invalidPositions => ProfileTexts.serverError(code),
+    // TODO(문구 미정): 임시. 2-5 복귀 확인 창이 생기면 이 오류 대신 확인 창을 띄운다.
+    ServerErrorCode.returnConfirmationRequired => '부상 중이에요. 복귀 확인 후 참석할 수 있어요',
     ServerErrorCode.guestLimitReached => guestError(GuestInputError.tooManyGuests),
     ServerErrorCode.duplicateGuestName => guestError(GuestInputError.duplicateName),
     ServerErrorCode.reservedGuestName => guestError(GuestInputError.reservedName),

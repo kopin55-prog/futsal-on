@@ -235,7 +235,7 @@ select pg_temp.expect_error($$insert into public.attendance_responses (match_id,
 select pg_temp.expect_error($$insert into public.attendance_responses (match_id, user_id, state) values (pg_temp.vid('m1'), '00000000-0000-4000-8000-0000000000e3', 'declined')$$, '%attendance_responses_one_per_user%');
 select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name) values (pg_temp.vid('m1'), pg_temp.vid('A'), repeat('가', 65))$$, '%match_guests_name_valid%');
 select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name) values (pg_temp.vid('m1'), pg_temp.vid('A'), ' 앞공백')$$, '%match_guests_name_valid%');
-select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name, positions) values (pg_temp.vid('m1'), pg_temp.vid('A'), '넷', array['goalkeeper','defender','midfielder','forward']::public.play_position[])$$, '%match_guests_positions_valid%');
+select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name, positions) values (pg_temp.vid('m1'), pg_temp.vid('A'), '넷', array['goalkeeper','defender','winger','forward']::public.play_position[])$$, '%match_guests_positions_valid%');
 select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name, positions) values (pg_temp.vid('m1'), pg_temp.vid('A'), '중복', array['forward','forward']::public.play_position[])$$, '%match_guests_positions_valid%');
 select pg_temp.expect_error($$insert into public.match_guests (match_id, team_id, name) values (pg_temp.vid('m1'), pg_temp.vid('B'), '남의팀')$$, '%match_guests_match_fk%');
 select pg_temp.expect_error($$insert into public.skill_ratings (team_id, level) values (pg_temp.vid('A'), 'pro')$$, '%skill_ratings_one_subject%');

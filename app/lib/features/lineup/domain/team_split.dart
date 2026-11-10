@@ -16,7 +16,9 @@ import 'skill_score.dart';
 ///   1. 전문 GK 를 팀마다 고르게 (팀보다 많으면 한 팀에 2명 + 경고)
 ///   2. 그룹은 같은 팀 (켜진 그룹, 온 사람끼리. 다 못 넣으면 최대한 + 경고)
 ///   3. 라이벌은 다른 팀 (못 나누면 경고)
-///   4. 선호 포지션 고르게: 포지션마다 팀별 인원 차이 1 이하를 목표 (일반 선호 포지션 골키퍼는 여기에만)
+///   4. 선호 포지션 고르게: 포지션마다 팀별 인원 차이 1 이하를 목표 (일반 선호 포지션 골키퍼는 여기에만).
+///      올라운더(v4.6)는 모든 포지션 가능으로 보고, 그 팀에서 부족한 포지션을 채운다 ([_Solver._cost] 4번).
+///      올라운더는 전문 GK 가 아니다 (1번과 별개).
 ///   5. 실력 합계 고르게 (점수는 [SkillScore], 미정은 아마추어로 계산)
 ///   6. 미정 인원 고르게
 /// 게스트는 그룹·라이벌·전문 GK 대상이 아니다 (실력·포지션 계산에는 들어감).
@@ -262,7 +264,8 @@ class _Solver {
   late final List<bool> isGk;
   late final List<int> score;
   late final List<bool> undecided;
-  late final List<int> posMask; // 비트 = Position.index
+  late final List<int> posMask; // 비트 = Position.index (올라운더 비트는 넣지 않음)
+  late final List<bool> allrounder; // 올라운더 (모든 포지션 가능)
   late final List<List<int>> groups; // players 인덱스 묶음 (2명 이상 온 그룹만)
   late final List<List<int>> rivalPairs; // players 인덱스 쌍
 
@@ -271,6 +274,8 @@ class _Solver {
   late final List<int> _skill = List.filled(teams, 0);
   late final List<int> _und = List.filled(teams, 0);
   late final List<int> _count = List.filled(teams, 0);
+  late final List<int> _ar = List.filled(teams, 0);
+  late final List<int> _hi = List.filled(Position.values.length, 0);
   late final List<List<int>> _pos = List.generate(Position.values.length, (_) => List.filled(teams, 0));
 
   List<TeamSplitPlan> solve() {
@@ -335,8 +340,11 @@ class _Solver {
     isGk = [for (final c in players) c.countsAsDedicatedGk];
     score = [for (final c in players) SkillScore.of(c.skill)];
     undecided = [for (final c in players) c.skill == SkillLevel.undecided];
+    // 올라운더가 들어 있으면 (단독 규칙상 그것 하나) 모든 포지션 가능으로 보고 특정 포지션 비트는 쓰지 않는다.
+    allrounder = [for (final c in players) c.positions.contains(Position.allrounder)];
     posMask = [
-      for (final c in players) c.positions.fold(0, (m, p) => m | (1 << p.index)),
+      for (var i = 0; i < players.length; i++)
+        allrounder[i] ? 0 : players[i].positions.fold(0, (m, p) => m | (1 << p.index)),
     ];
 
     final indexOfUser = <String, int>{
@@ -344,8 +352,7 @@ class _Solver {
         if (!players[i].person.isGuest) players[i].person.userId!: i,
     };
     groups = [
-      for (final g in TeamSplitter._groupComponents(input.rules))
-        [for (final u in g) ?indexOfUser[u]],
+      for (final g in TeamSplitter._groupComponents(input.rules)) [for (final u in g) ?indexOfUser[u]],
     ].where((g) => g.length >= 2).toList();
     final pairs = <List<int>>[];
     for (final r in input.rules.where((r) => r.enabled && r.kind == PairingKind.rival)) {
@@ -384,12 +391,14 @@ class _Solver {
     for (final row in pos) {
       row.fillRange(0, teams, 0);
     }
+    final ar = _ar..fillRange(0, teams, 0);
     for (var i = 0; i < n; i++) {
       final t = assign[i];
       if (t == bench) continue; // 교체는 어느 팀에도 없는 것으로 본다
       if (isGk[i]) gk[t]++;
       skill[t] += score[i];
       if (undecided[i]) und[t]++;
+      if (allrounder[i]) ar[t]++;
       final m = posMask[i];
       if (m != 0) {
         for (var p = 0; p < pos.length; p++) {
@@ -430,14 +439,39 @@ class _Solver {
     }
 
     // 4. 포지션: 포지션마다 (팀별 최대 - 최소 - 1) 의 양수 부분 합. 차이 1 이하면 고른 것으로 본다.
-    var cPos = 0;
-    for (final row in pos) {
-      var lo = row[0], hi = row[0];
-      for (final v in row) {
-        lo = min(lo, v);
-        hi = max(hi, v);
+    //    올라운더: 팀마다 올라운더 한 명씩, 그 팀에서 가장 부족한 포지션(팀별 최대 - 1 에 못 미치는 만큼이
+    //    가장 큰 포지션, 같으면 앞 포지션)에 1을 더한다. 부족한 포지션이 없으면 아무 데도 세지 않는다.
+    //    채운 값은 최대 - 1 을 넘지 않으므로 최대는 바뀌지 않는다. 같은 배치면 늘 같은 값(결정적).
+    final hi = _hi;
+    final posCount = Position.values.length;
+    for (var p = 0; p < posCount; p++) {
+      var h = 0;
+      for (final v in pos[p]) {
+        h = max(h, v);
       }
-      cPos += max(0, hi - lo - 1);
+      hi[p] = h;
+    }
+    for (var t = 0; t < teams; t++) {
+      for (var k = ar[t]; k > 0; k--) {
+        var best = -1, bestGap = 0;
+        for (var p = 0; p < posCount; p++) {
+          final gap = hi[p] - 1 - pos[p][t];
+          if (gap > bestGap) {
+            bestGap = gap;
+            best = p;
+          }
+        }
+        if (best < 0) break;
+        pos[best][t]++;
+      }
+    }
+    var cPos = 0;
+    for (var p = 0; p < posCount; p++) {
+      var lo = pos[p][0];
+      for (final v in pos[p]) {
+        lo = min(lo, v);
+      }
+      cPos += max(0, hi[p] - lo - 1);
     }
 
     return [cGk, cGroup, cRival, cPos, _spread(skill), _spread(und)];
@@ -476,7 +510,10 @@ class _Solver {
     for (final t in assign) {
       teamSize[t]++;
     }
-    final pairs = <int>[for (var i = 0; i < n; i++) for (var j = i + 1; j < n; j++) i * n + j];
+    final pairs = <int>[
+      for (var i = 0; i < n; i++)
+        for (var j = i + 1; j < n; j++) i * n + j,
+    ];
     var improved = true;
     while (improved) {
       improved = false;

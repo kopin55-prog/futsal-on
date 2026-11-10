@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:futsal_on/features/profile/presentation/profile_texts.dart';
 import 'package:futsal_on/core/entitlements/entitlements.dart';
 import 'package:futsal_on/features/admin/domain/match_settings.dart';
 import 'package:futsal_on/features/admin/domain/skill_level.dart';
@@ -275,11 +276,16 @@ void main() {
       expect(find.text(ScheduleTexts.guestError(GuestInputError.reservedName)), findsOneWidget);
       expect(tester.widget<PrimaryButton>(find.byKey(const Key('guest-save'))).onPressed, isNull);
       // 포지션 4번째는 선택되지 않고 안내
-      for (final p in ['goalkeeper', 'defender', 'midfielder', 'winger']) {
+      for (final p in ['goalkeeper', 'defender', 'winger', 'forward']) {
         await tester.tap(find.byKey(Key('guest-position-$p')));
         await tester.pump();
       }
       expect(find.byKey(const Key('guest-position-hint')), findsOneWidget);
+      // 올라운더는 단독: 다른 포지션을 고른 상태면 막고 안내 (v4.6, 게스트도 같은 선택지)
+      await tester.tap(find.byKey(const Key('guest-position-allrounder')));
+      await tester.pump();
+      expect(find.text(ProfileTexts.allrounderNeedsEmpty), findsOneWidget);
+      expect(tester.widget<FilterChip>(find.byKey(const Key('guest-position-allrounder'))).selected, isFalse);
       await tester.enterText(find.byKey(const Key('guest-name')), '용병');
       await tester.pump();
       await tester.tap(find.byKey(const Key('guest-save')));

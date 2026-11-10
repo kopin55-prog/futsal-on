@@ -103,6 +103,9 @@ enum GuestInputError {
   tooManyPositions,
   duplicatePositions,
 
+  /// 올라운더를 다른 포지션과 함께 고름 (v4.6 올라운더 단독, 게스트도 같은 선택지)
+  allrounderNotAlone,
+
   /// 같은 일정 안에 같은 표시 이름("게스트N" 포함)이 있음 (Q-073 3번)
   duplicateName,
 
@@ -113,13 +116,13 @@ enum GuestInputError {
 /// 게스트 추가 입력 (서버 함수 add_match_guest). 매번 새로 입력한다 (M-19).
 ///
 /// 이름은 선택 (Q-073 2번): 비우면 "게스트N", 적으면 팀에서 쓸 이름과 같은 규칙(정리 후 1~8자).
-/// 포지션은 선택, 최대 3개. 대략 실력은 선택 (실력 등급 5단계, 미정이면 저장하지 않음).
+/// 포지션은 선택, 최대 3개, 올라운더는 단독(v4.6). 대략 실력은 선택 (실력 등급 5단계, 미정이면 저장하지 않음).
 /// 한 일정 최대 12명, 같은 일정 안 같은 표시 이름 불가 (Q-073 3번). "게스트+숫자" 모양 이름 불가 (Q-074 2번). 서버도 같은 규칙으로 다시 거절한다.
 class GuestInput {
   const GuestInput({this.name = '', this.positions = const [], this.skillLevel});
 
   static const int maxNameLength = 8;
-  static const int maxPositions = 3;
+  static const int maxPositions = PositionRules.maxPositions;
   static const int maxGuestsPerMatch = 12;
 
   final String name;
@@ -147,6 +150,7 @@ class GuestInput {
     }
     if (positions.length > maxPositions) errors.add(GuestInputError.tooManyPositions);
     if (positions.toSet().length != positions.length) errors.add(GuestInputError.duplicatePositions);
+    if (!PositionRules.allrounderAlone(positions)) errors.add(GuestInputError.allrounderNotAlone);
     if (existing != null) {
       final list = existing.toList();
       if (list.length >= maxGuestsPerMatch) errors.add(GuestInputError.tooManyGuests);

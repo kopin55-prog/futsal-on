@@ -12,7 +12,24 @@ abstract interface class AttendanceRepository {
   Future<List<AttendanceResponse>> listResponses(String matchId);
 
   /// 본인 응답. [attending] 이 true 면 참석(정원이 차면 대기), false 면 불참. 저장된 상태를 돌려준다.
-  Future<AttendanceState> respond(String matchId, {required bool attending});
+  ///
+  /// 진행 중 부상이 있는 사람의 참석은 서버가 [ServerErrorCode.returnConfirmationRequired] 로 거절한다(기획서 12장).
+  /// "부상에서 복귀하셨나요?" 확인을 받은 뒤 [returnConfirmed] 를 주고 다시 부르면 한 처리 안에서
+  /// 참석(또는 대기) + 부상 회복. 불참에는 확인이 필요 없다 (스프린트 04 1-5).
+  Future<AttendanceState> respond(String matchId, {required bool attending, ReturnConfirmation? returnConfirmed});
+}
+
+/// 부상 복귀 확인을 받은 곳 (서버 injury_event_via).
+enum ReturnConfirmation {
+  /// 일정 상세·홈 카드의 [참석] 확인 창 (2-5)
+  vote('return_vote'),
+
+  /// 복귀 확인 알림을 눌러 연 창의 [참석할게요] (2-6)
+  notification('return_check');
+
+  const ReturnConfirmation(this.serverValue);
+
+  final String serverValue;
 }
 
 class SupabaseAttendanceRepository implements AttendanceRepository {
@@ -30,10 +47,15 @@ class SupabaseAttendanceRepository implements AttendanceRepository {
   });
 
   @override
-  Future<AttendanceState> respond(String matchId, {required bool attending}) => guardServer(() async {
+  Future<AttendanceState> respond(String matchId, {required bool attending, ReturnConfirmation? returnConfirmed}) =>
+      guardServer(() async {
     final state = await _client.rpc<String>(
       'respond_attendance',
-      params: {'p_match_id': matchId, 'p_attending': attending},
+      params: {
+        'p_match_id': matchId,
+        'p_attending': attending,
+        if (returnConfirmed != null) 'p_return_via': returnConfirmed.serverValue,
+      },
     );
     return AttendanceState.fromServer(state);
   });

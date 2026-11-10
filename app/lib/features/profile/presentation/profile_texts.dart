@@ -11,9 +11,9 @@ abstract final class ProfileTexts {
   static String position(Position p) => switch (p) {
     Position.goalkeeper => '골키퍼',
     Position.defender => '수비',
-    Position.midfielder => '중앙',
     Position.winger => '측면',
     Position.forward => '공격',
+    Position.allrounder => '올라운더',
   };
 
   // TODO(문구 미정): 아래 화면 제목·라벨·버튼은 임시.
@@ -29,9 +29,29 @@ abstract final class ProfileTexts {
   /// 4번째 포지션을 누름 (Q-067 1번 확정 문구)
   static const maxPositionsReached = '최대 3개까지 고를 수 있어요';
 
+  // TODO(문구 미정): 올라운더 안내 3개는 임시 (Q-067 0번, 1-8).
+  /// 다른 포지션을 고른 상태에서 올라운더를 누름
+  static const allrounderNeedsEmpty = '올라운더는 하나만 고를 수 있어요. 다른 포지션을 먼저 빼주세요';
+
+  /// 올라운더를 고른 상태에서 다른 포지션을 누름
+  static const allrounderSelected = '올라운더를 고르면 다른 포지션은 고를 수 없어요';
+
+  /// 올라운더를 고른 상태에서 전문 골키퍼 체크
+  static const allrounderNoGk = '올라운더는 전문 골키퍼와 함께 고를 수 없어요';
+
+  /// 포지션을 더할 수 없는 이유 → 안내 (프로필·게스트 공통)
+  static String addBlock(PositionAddBlock b) => switch (b) {
+    PositionAddBlock.maxReached => maxPositionsReached,
+    PositionAddBlock.allrounderNeedsEmpty => allrounderNeedsEmpty,
+    PositionAddBlock.allrounderSelected => allrounderSelected,
+  };
+
   static String hint(PositionPickHint h) => switch (h) {
     PositionPickHint.maxReached => maxPositionsReached,
     PositionPickHint.removeOneForGk => error(ProfileError.dedicatedGkNeedsFreeSlot),
+    PositionPickHint.allrounderNeedsEmpty => allrounderNeedsEmpty,
+    PositionPickHint.allrounderSelected => allrounderSelected,
+    PositionPickHint.allrounderNoGk => allrounderNoGk,
   };
 
   static String error(ProfileError e) => switch (e) {
@@ -43,6 +63,8 @@ abstract final class ProfileTexts {
     ProfileError.positionsRequired => '포지션을 하나 이상 골라주세요',
     ProfileError.tooManyPositions => '포지션은 3개까지 고를 수 있어요',
     ProfileError.duplicatePositions => '같은 포지션이 두 번 들어 있어요',
+    ProfileError.allrounderNotAlone => allrounderSelected,
+    ProfileError.allrounderWithDedicatedGk => allrounderNoGk,
     ProfileError.bioTooLong => '자기소개는 20자까지 쓸 수 있어요',
     ProfileError.bioHasLineBreak => '자기소개는 한 줄로 써주세요',
   };

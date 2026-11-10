@@ -115,6 +115,8 @@ class _ProfileFormState extends State<ProfileForm> {
           ProfileError.tooManyPositions,
           ProfileError.dedicatedGkNeedsFreeSlot,
           ProfileError.duplicatePositions,
+          ProfileError.allrounderNotAlone,
+          ProfileError.allrounderWithDedicatedGk,
         ]);
     final errorColor = Theme.of(context).colorScheme.error;
 

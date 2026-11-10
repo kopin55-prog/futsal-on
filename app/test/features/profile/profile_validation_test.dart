@@ -62,8 +62,8 @@ void main() {
             positions: [
               Position.goalkeeper,
               Position.defender,
-              Position.midfielder,
               Position.winger,
+              Position.forward,
             ],
           ),
         ),
@@ -105,7 +105,7 @@ void main() {
   group('골키퍼 포함 총 3개까지 (Q-035)', () {
     const threeOutfield = [
       Position.defender,
-      Position.midfielder,
+      Position.winger,
       Position.forward,
     ];
 
@@ -138,7 +138,7 @@ void main() {
       expect(v(input(positions: threeOutfield)), isEmpty);
     });
     test('직접 4개 이상 고르면 기존 오류만 (전문 골키퍼 여부 무관)', () {
-      final four = [...threeOutfield, Position.winger];
+      final four = [...threeOutfield, Position.goalkeeper];
       expect(v(input(positions: four)), {ProfileError.tooManyPositions});
       expect(v(input(positions: four, isDedicatedGk: true)), {
         ProfileError.tooManyPositions,
@@ -235,6 +235,33 @@ void main() {
       ProfileError.nameRequired,
       ProfileError.positionsRequired,
       ProfileError.bioTooLong,
+    });
+  });
+
+  group('올라운더 단독 (v4.6)', () {
+    test('올라운더 하나면 통과', () {
+      expect(v(input(positions: [Position.allrounder])), isEmpty);
+    });
+    test('올라운더 + 다른 포지션은 저장 불가', () {
+      expect(v(input(positions: [Position.allrounder, Position.forward])), {ProfileError.allrounderNotAlone});
+      expect(v(input(positions: [Position.goalkeeper, Position.allrounder])), {ProfileError.allrounderNotAlone});
+    });
+    test('올라운더 + 전문 골키퍼는 저장 불가 (별도 오류), 체크도 막힘', () {
+      expect(v(input(positions: [Position.allrounder], isDedicatedGk: true)), {ProfileError.allrounderWithDedicatedGk});
+      expect(ProfileValidator.canCheckDedicatedGk([Position.allrounder]), isFalse);
+    });
+    test('PositionRules: 더할 수 없는 이유', () {
+      expect(PositionRules.addBlock([], Position.allrounder), isNull);
+      expect(PositionRules.addBlock([Position.defender], Position.allrounder), PositionAddBlock.allrounderNeedsEmpty);
+      expect(PositionRules.addBlock([Position.allrounder], Position.defender), PositionAddBlock.allrounderSelected);
+      expect(
+        PositionRules.addBlock([Position.goalkeeper, Position.defender, Position.winger], Position.forward),
+        PositionAddBlock.maxReached,
+      );
+      expect(PositionRules.addBlock([Position.defender], Position.forward), isNull);
+    });
+    test('선택지는 골키퍼·수비·측면·공격·올라운더 (중앙 없음), 서버 값 이름과 같음', () {
+      expect([for (final p in Position.values) p.name], ['goalkeeper', 'defender', 'winger', 'forward', 'allrounder']);
     });
   });
 }

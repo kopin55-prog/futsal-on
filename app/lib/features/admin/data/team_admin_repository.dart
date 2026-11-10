@@ -47,6 +47,9 @@ abstract interface class TeamAdminRepository {
 
   Future<void> setSkillLevel(String teamId, String userId, SkillLevel level);
 
+  /// 여러 명 한 번에 같은 등급으로 (Q-079 3번 b). 서버가 단건과 같은 검사를 하고, 하나라도 어긋나면 아무것도 쓰지 않는다.
+  Future<void> setSkillLevels(String teamId, List<String> userIds, SkillLevel level);
+
   Future<List<PairingRule>> listPairingRules(String teamId);
 
   /// 새로 만들기(rule.id == null)·고치기. 저장한 설정 ID.
@@ -131,6 +134,14 @@ class SupabaseTeamAdminRepository implements TeamAdminRepository {
     () => _client.rpc<void>(
       'set_skill_level',
       params: {'p_team_id': teamId, 'p_user_id': userId, 'p_level': level.name},
+    ),
+  );
+
+  @override
+  Future<void> setSkillLevels(String teamId, List<String> userIds, SkillLevel level) => guardServer(
+    () => _client.rpc<void>(
+      'set_skill_levels',
+      params: {'p_team_id': teamId, 'p_user_ids': userIds, 'p_level': level.name},
     ),
   );
 

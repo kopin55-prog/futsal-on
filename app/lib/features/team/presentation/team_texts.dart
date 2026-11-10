@@ -60,6 +60,20 @@ abstract final class TeamTexts {
   // 팀원 탭 (스프린트 04 6-1, S4-14)
   static String memberCount(int n) => '팀원 $n명';
   static String injuryMark(int weeks) => '부상 ${weeks}W';
+
+  // 이름 검색·필터 칩 (Q-079 3번 a·f, 큰 팀 관리)
+  static const searchName = '이름 검색';
+  static const clearSearch = '검색어 지우기';
+  static const filterAll = '전체';
+  static const filterStaff = manager;
+  static const filterInjured = '부상';
+  static const filterSkillUndecided = '실력 미정';
+  static const noMemberMatch = '찾는 팀원이 없어요';
+
+  // 여러 명 골라 한 번에 (Q-079 3번 b·c)
+  static String selectedCount(int n) => '$n명 선택';
+  static const selectAll = '모두 고르기';
+  static const clearSelection = '선택 해제';
   static const tabAdmin = '관리';
   static const tabMy = '내 기록';
   static const loadFailed = '정보를 불러오지 못했어요.';
@@ -165,6 +179,18 @@ abstract final class TeamTexts {
   static const noRequests = '대기 중인 신청이 없어요';
   static const approve = '승인';
   static const reject = '거절';
+  // 가입 신청 여러 개 한 번에 (Q-079 3번 c)
+  static const approveSelected = '고른 사람 승인';
+  static const rejectSelected = '고른 사람 거절';
+  static String confirmApproveMany(int n) => '$n명의 가입 신청을 승인할까요?';
+  static String confirmRejectMany(int n) => '$n명의 가입 신청을 거절할까요?';
+  static String approvedMany(int n) => '$n명을 승인했어요';
+  static String rejectedMany(int n) => '$n명을 거절했어요';
+  static const partialResultTitle = '일부만 처리했어요';
+  static String skippedTeamFull(int n) => '$n명은 팀 인원이 가득 차서 승인하지 못했어요 (최대 100명)';
+  static String skippedTeamLimit(int n) => '$n명은 이미 10개 팀에 소속돼 있어 승인하지 못했어요';
+  static String skippedAlreadyDecided(int n) => '$n명은 이미 처리된 신청이에요';
+  static const skippedStayPending = '승인하지 못한 신청은 대기 상태로 남아 있어요';
   static const membersSection = '팀원 관리';
   static const appointManager = '운영진으로 지정';
   static const dismissManager = '운영진에서 해제';

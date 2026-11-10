@@ -203,6 +203,26 @@ class FakeMembershipRepository implements MembershipRepository {
     incoming.removeWhere((r) => r.requestId == requestId);
   }
 
+  /// 여러 개 처리 결과를 바꿔 끼울 때 (신청 ID → 결과). 없으면 모두 승인·거절.
+  Map<String, JoinDecisionOutcome> bulkOutcomes = {};
+
+  @override
+  Future<List<JoinDecisionResult>> decideJoinRequests(
+    String teamId,
+    List<String> requestIds, {
+    required bool approve,
+  }) async {
+    _maybeFail();
+    calls.add('decide-many:$teamId:${requestIds.join(',')}:$approve');
+    final results = <JoinDecisionResult>[];
+    for (final id in requestIds) {
+      final outcome = bulkOutcomes[id] ?? (approve ? JoinDecisionOutcome.approved : JoinDecisionOutcome.rejected);
+      results.add(JoinDecisionResult(id, outcome));
+      if (outcome.done) incoming.removeWhere((r) => r.requestId == id);
+    }
+    return results;
+  }
+
   @override
   Future<void> appointManager(String teamId, String userId) async =>
       calls.add('appoint:$userId');
@@ -295,6 +315,19 @@ class FakeTeamAdminRepository implements TeamAdminRepository {
       levels.remove(userId);
     } else {
       levels[userId] = level;
+    }
+  }
+
+  @override
+  Future<void> setSkillLevels(String teamId, List<String> userIds, SkillLevel level) async {
+    _maybeFail();
+    calls.add('skills:${userIds.join(',')}:${level.name}');
+    for (final id in userIds) {
+      if (level == SkillLevel.undecided) {
+        levels.remove(id);
+      } else {
+        levels[id] = level;
+      }
     }
   }
 

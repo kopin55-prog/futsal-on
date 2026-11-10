@@ -104,7 +104,8 @@ void main() {
       expect(find.text(AdminTexts.teamInfoMenu), findsOneWidget);
       // 2차 리포트 메뉴는 숨김
       expect(find.byKey(const Key('open-team-report')), findsNothing);
-      await tester.scrollUntilVisible(find.byKey(const Key('dissolve-team')), 200);
+      // 팀원 관리에 이름 검색 칸(스크롤 가능)이 생겨 바깥 목록을 지정한다 (Q-079 3번 f)
+      await tester.scrollUntilVisible(find.byKey(const Key('dissolve-team')), 200, scrollable: find.byType(Scrollable).first);
       expect(_y(tester, 'admin-group-owner') < _y(tester, 'manage-u1'), isTrue);
       expect(_y(tester, 'manage-u1') < _y(tester, 'dissolve-team'), isTrue);
     });

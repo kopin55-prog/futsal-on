@@ -90,12 +90,20 @@ Future<TestServices> _open(
   return t;
 }
 
-List<String> _chips(WidgetTester tester, String roster) => [
-  for (final c in tester.widgetList<Chip>(
-    find.descendant(of: find.byKey(Key('roster-$roster')), matching: find.byType(Chip)),
-  ))
-    (c.label as Text).data!,
-];
+/// 참석 현황 탭(참석·대기·불참·미투표, Q-079 3번 d)을 눌러 그 명단의 이름을 읽는다.
+Future<List<String>> _chips(WidgetTester tester, String roster) async {
+  const tabs = ['attending', 'waitlisted', 'declined', 'not-responded'];
+  final tab = find.byKey(Key('attendance-tab-${tabs.indexOf(roster)}'));
+  await tester.ensureVisible(tab);
+  await tester.tap(tab);
+  await tester.pumpAndSettle();
+  return [
+    for (final c in tester.widgetList<Chip>(
+      find.descendant(of: find.byKey(Key('roster-$roster')), matching: find.byType(Chip)),
+    ))
+      (c.label as Text).data!,
+  ];
+}
 
 void main() {
   group('일정 목록 (4-1)', () {
@@ -142,17 +150,17 @@ void main() {
       expect(find.byKey(const Key('match-deadline')), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('my-status'))).data, ScheduleTexts.notResponded);
       // 참석: 마지막으로 바꾼 시각 순 / 미투표: 가나다순
-      expect(_chips(tester, 'attending'), ['운영', '나래']);
-      expect(_chips(tester, 'declined'), ['나']);
-      expect(_chips(tester, 'not-responded'), ['가람', '다현', '라온']);
+      expect(await _chips(tester, 'attending'), ['운영', '나래']);
+      expect(await _chips(tester, 'declined'), ['나']);
+      expect(await _chips(tester, 'not-responded'), ['가람', '다현', '라온']);
 
       await tester.tap(find.byKey(const Key('rsvp-attend')));
       await tester.pumpAndSettle();
       expect(t.attendance.calls, ['respond:m1:true']);
       expect(tester.widget<Text>(find.byKey(const Key('my-status'))).data, ScheduleTexts.attending);
       // 방금 참석한 사람이 맨 뒤
-      expect(_chips(tester, 'attending'), ['운영', '나래', '다현']);
-      expect(_chips(tester, 'not-responded'), ['가람', '라온']);
+      expect(await _chips(tester, 'attending'), ['운영', '나래', '다현']);
+      expect(await _chips(tester, 'not-responded'), ['가람', '라온']);
       // 이미 참석이면 참석 버튼은 꺼지고 불참은 가능
       expect(tester.widget<FilledButton>(find.byKey(const Key('rsvp-attend'))).onPressed, isNull);
       expect(tester.widget<OutlinedButton>(find.byKey(const Key('rsvp-decline'))).onPressed, isNotNull);
@@ -172,7 +180,7 @@ void main() {
       await tester.tap(find.byKey(const Key('rsvp-attend')));
       await tester.pumpAndSettle();
       expect(tester.widget<Text>(find.byKey(const Key('my-status'))).data, ScheduleTexts.state(AttendanceState.waitlisted, 2));
-      expect(_chips(tester, 'waitlisted'), ['1. 나래', '2. 다현']);
+      expect(await _chips(tester, 'waitlisted'), ['1. 나래', '2. 다현']);
       expect(find.text(ScheduleTexts.attendingCount(1, 1)), findsOneWidget);
     });
 

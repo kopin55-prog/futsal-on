@@ -1,6 +1,7 @@
 import '../../../shared/data/server_error.dart';
 import '../../schedule/domain/attendance_models.dart';
 import '../../schedule/presentation/schedule_texts.dart';
+import '../../team/presentation/team_texts.dart';
 import '../domain/bib_color.dart';
 import '../domain/lineup_board.dart';
 import '../domain/team_split.dart';
@@ -80,6 +81,11 @@ abstract final class LineupTexts {
   static const moveToBench = '교체 블록으로';
   static const removeFromLineup = '배치에서 빼기';
   static const dragHint = '이름을 길게 눌러 끌거나, 눌러서 옮길 곳을 고르세요';
+  // 이름 검색 (Q-079 3번 e): 찾은 사람을 블록 안에서 강조
+  static const searchName = TeamTexts.searchName;
+  static const clearSearch = TeamTexts.clearSearch;
+  static String found(int n) => '$n명 찾음';
+  static const noNameMatch = '찾는 이름이 없어요';
 
   static String warning(SplitWarning w) => switch (w.kind) {
     SplitWarningKind.dedicatedGkOverTeams => '한 팀에 전문 골키퍼가 2명 이상 있어요',

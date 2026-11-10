@@ -4,7 +4,9 @@ import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/name_search.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../../shared/presentation/list_controls.dart';
 import '../../schedule/domain/match_models.dart';
 import '../../schedule/presentation/schedule_texts.dart';
 import '../../team/domain/team_models.dart';
@@ -22,8 +24,9 @@ import 'lineup_texts.dart';
 ///   운영진이 직접 넣은 팀원(참석자가 아닌 사람)도 계산에 넣어 팀에 배정한다 (Q-076 6번).
 ///   계산 정보가 없는 사람(경기 시작 뒤 팀을 떠난 사람)만 교체 블록에 그대로 둔다.
 /// - [재조합]: 다음으로 좋은 배치. 직접 옮긴 뒤면 확인 창, 후보를 다 보면 "모든 조합을 봤어요" (Q-075 7번 (1)(2)).
-/// - 끌어 옮기기(길게 눌러 끌기) 또는 이름을 눌러 옮길 곳 고르기: 팀 ↔ 팀 ↔ 교체 블록, 배치에서 빼기(Q-046).
-///   규칙이 깨져도 막지 않고 경고만 (Q-075 7번 (3)).
+/// - 끌어 옮기기(길게 눌러 끌기) 또는 이름을 눌러 옮길 곳 고르기("빨강 팀으로/교체 블록으로"): 팀 ↔ 팀 ↔ 교체 블록,
+///   배치에서 빼기(Q-046). 규칙이 깨져도 막지 않고 경고만 (Q-075 7번 (3)).
+/// - 위쪽 이름 검색 (Q-079 3번 e): 찾은 사람을 블록 안에서 강조하고 "N명 찾음". 명단은 그대로 둔다 (옮기기는 그 자리에서).
 /// - [팀원 추가]: 배치에 없는 팀원(대기·불참·미투표 등)을 교체 블록에 (Q-075 2번).
 /// - 조끼 색: 자동 배정(빨강·파랑…노조끼), 팀마다 고르기, 한 배치 안 중복 불가 (Q-075 8번).
 /// - 저장: [초안 저장]·[확정], 확정 뒤에는 [변경 저장] 한 번 = 알림 한 번 (Q-075 7번 (6), 서버 save_lineup).
@@ -68,6 +71,9 @@ class _LineupEditorScreenState extends State<LineupEditorScreen> {
 
   /// 마지막 자동 나누기·재조합 뒤 직접 옮겼는지 (재조합 확인 창).
   bool _manualMoved = false;
+
+  /// 이름 검색어 (정리 키). 비어 있으면 강조 없음.
+  String _queryKey = '';
   TeamSplitShuffler? _shuffler;
   String? _shufflerKey;
 
@@ -143,6 +149,9 @@ class _LineupEditorScreenState extends State<LineupEditorScreen> {
   String _nameOf(LineupPerson p) => p.isGuest
       ? (_guestNames[p.guestId] ?? LineupTexts.guest)
       : (_memberNames[p.userId] ?? ScheduleTexts.leftMember);
+
+  /// 검색어에 맞는 사람인지 (빈 검색어면 아무도 강조하지 않음)
+  bool _matches(LineupPerson p) => _queryKey.isNotEmpty && NameSearch.matchesKey(NameSearch.key(_nameOf(p)), _queryKey);
 
   void _toast(String text) =>
       ScaffoldMessenger.of(context)
@@ -533,6 +542,7 @@ class _LineupEditorScreenState extends State<LineupEditorScreen> {
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(LineupTexts.dragHint, style: theme.textTheme.bodySmall),
           ),
+          _search(context, b),
           for (var i = 0; i < b.squads.length; i++) _squadTarget(context, b, i),
           _benchTarget(context, b),
         ] else if (saved != null)
@@ -636,8 +646,40 @@ class _LineupEditorScreenState extends State<LineupEditorScreen> {
     );
   }
 
+  /// 위쪽 이름 검색 (Q-079 3번 e). 찾은 사람 수를 보여 주고 블록 안에서 강조한다.
+  Widget _search(BuildContext context, LineupBoard b) {
+    final theme = Theme.of(context);
+    final found = _queryKey.isEmpty ? null : b.people.where(_matches).length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSearchField(
+            key: const Key('lineup-search'),
+            hintText: LineupTexts.searchName,
+            clearTooltip: LineupTexts.clearSearch,
+            onChanged: (v) => setState(() => _queryKey = NameSearch.key(v)),
+          ),
+          if (found != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs, left: AppSpacing.xs),
+              child: Text(
+                found == 0 ? LineupTexts.noNameMatch : LineupTexts.found(found),
+                key: const Key('lineup-search-result'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: found == 0 ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _person(LineupPerson p, Color? fg) {
-    final chip = LineupNameChip(name: _nameOf(p), isGuest: p.isGuest, foreground: fg);
+    // 검색에 걸린 사람은 강조 (팀원 화면의 "내 이름" 강조와 같은 모양)
+    final chip = LineupNameChip(name: _nameOf(p), isGuest: p.isGuest, foreground: fg, highlight: _matches(p));
     return LongPressDraggable<LineupPerson>(
       key: Key('lineup-person-${p.key}'),
       data: p,

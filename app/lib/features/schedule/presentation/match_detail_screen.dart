@@ -6,6 +6,7 @@ import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../../shared/presentation/list_controls.dart';
 import '../../admin/presentation/admin_texts.dart';
 import '../../injury/presentation/injury_flows.dart';
 import '../../injury/presentation/return_check_dialog.dart';
@@ -32,6 +33,7 @@ import 'schedule_texts.dart';
 /// - 일시·장소·정원·마감, 내 상태(참석·대기 n번·불참·미투표), 참석/불참 버튼(마감·취소 후 잠김, 서버가 다시 거절).
 /// - 명단 4개(참석·대기·불참·미투표)는 팀원 전체 공개 (Entitlements: AttendanceListInfo).
 ///   순서 (Q-073 7번): 참석·불참은 마지막으로 바꾼 시각 순, 대기는 순번, 미투표는 이름 가나다순.
+///   큰 팀 (Q-079 3번 d): 참석·대기·불참·미투표를 숫자 붙은 탭(칩)으로 나눠 한 명단씩 본다. 보는 범위는 그대로.
 /// - 게스트: 이름 뒤 "게스트" 상자. 포지션·대략 실력은 팀장·운영진만 (GuestPositionInfo).
 /// - 운영진 버튼(일정 취소·게스트 추가·삭제)은 TeamAction.manageSchedule 일 때만.
 /// - 취소된 일정은 "취소됨 + 사유" (Q-073 4번).
@@ -80,6 +82,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   bool _missing = false;
   bool _failed = false;
   bool _busy = false;
+
+  /// 참석 현황에서 보고 있는 명단 (Q-079 3번 d)
+  AttendanceTab _tab = AttendanceTab.attending;
 
   AppServices get _s => widget.services;
   Entitlements get _e => _s.entitlements;
@@ -436,31 +441,20 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             child: Text(ScheduleTexts.deadlinePassed, style: theme.textTheme.bodySmall),
           ),
         AppSpacing.sectionGap,
-        // ---- 명단
-        if (showRoster) ...[
-          _RosterSection(
-            keyName: 'attending',
-            title: ScheduleTexts.attending,
-            names: [for (final r in roster.attending) nameOf(r.userId)],
+        // ---- 명단: 참석·대기·불참·미투표 탭 + 숫자 (Q-079 3번 d), 한 명단씩
+        if (showRoster)
+          _AttendanceTabs(
+            tab: _tab,
+            onTab: (t) => setState(() => _tab = t),
+            names: {
+              AttendanceTab.attending: [for (final r in roster.attending) nameOf(r.userId)],
+              AttendanceTab.waitlisted: [
+                for (final (i, r) in roster.waitlist.indexed) '${i + 1}. ${nameOf(r.userId)}',
+              ],
+              AttendanceTab.declined: [for (final r in roster.declined) nameOf(r.userId)],
+              AttendanceTab.notResponded: [for (final id in roster.notRespondedSorted(_members)) _members[id]!],
+            },
           ),
-          _RosterSection(
-            keyName: 'waitlisted',
-            title: ScheduleTexts.waitlisted,
-            names: [
-              for (final (i, r) in roster.waitlist.indexed) '${i + 1}. ${nameOf(r.userId)}',
-            ],
-          ),
-          _RosterSection(
-            keyName: 'declined',
-            title: ScheduleTexts.declined,
-            names: [for (final r in roster.declined) nameOf(r.userId)],
-          ),
-          _RosterSection(
-            keyName: 'not-responded',
-            title: ScheduleTexts.notResponded,
-            names: [for (final id in roster.notRespondedSorted(_members)) _members[id]!],
-          ),
-        ],
         // ---- 게스트
         SectionHeader(
           ScheduleTexts.guestsTitle(_guests.length),
@@ -550,33 +544,65 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
   }
 }
 
-class _RosterSection extends StatelessWidget {
-  const _RosterSection({required this.keyName, required this.title, required this.names});
+/// 참석 현황 탭 (Q-079 3번 d). 순서는 칩 순서.
+enum AttendanceTab {
+  attending('attending'),
+  waitlisted('waitlisted'),
+  declined('declined'),
+  notResponded('not-responded');
 
+  const AttendanceTab(this.keyName);
+
+  /// 명단 Wrap 키: `roster-<keyName>`
   final String keyName;
-  final String title;
-  final List<String> names;
+
+  String get label => switch (this) {
+    AttendanceTab.attending => ScheduleTexts.attending,
+    AttendanceTab.waitlisted => ScheduleTexts.waitlisted,
+    AttendanceTab.declined => ScheduleTexts.declined,
+    AttendanceTab.notResponded => ScheduleTexts.notResponded,
+  };
+}
+
+/// 참석·대기·불참·미투표 칩(숫자 포함) 한 줄 + 고른 명단. 큰 팀에서 미투표 명단을 한눈에 본다.
+class _AttendanceTabs extends StatelessWidget {
+  const _AttendanceTabs({required this.tab, required this.onTab, required this.names});
+
+  final AttendanceTab tab;
+  final ValueChanged<AttendanceTab> onTab;
+  final Map<AttendanceTab, List<String>> names;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shown = names[tab] ?? const <String>[];
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SectionHeader(ScheduleTexts.rosterTitle(title, names.length)),
-          if (names.isEmpty)
+          const SectionHeader(ScheduleTexts.attendanceSection),
+          FilterChipBar<AttendanceTab>(
+            keyPrefix: 'attendance-tab',
+            options: [
+              for (final t in AttendanceTab.values) FilterOption(t, t.label, count: names[t]?.length ?? 0),
+            ],
+            selected: tab,
+            onSelected: onTab,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (shown.isEmpty)
             Text(
               ScheduleTexts.nobody,
+              key: Key('roster-${tab.keyName}-empty'),
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             )
           else
             Wrap(
-              key: Key('roster-$keyName'),
+              key: Key('roster-${tab.keyName}'),
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
-              children: [for (final n in names) Chip(label: Text(n))],
+              children: [for (final n in shown) Chip(label: Text(n))],
             ),
         ],
       ),

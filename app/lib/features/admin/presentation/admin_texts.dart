@@ -86,6 +86,11 @@ abstract final class AdminTexts {
 
   // 실력 등급
   static const skillLevelsNote = '실력 등급은 팀장·운영진만 볼 수 있어요';
+  // 여러 명 한 번에 (Q-079 3번 b)
+  static const undecidedOnly = '미정만 보기';
+  static const setLevelForSelected = '등급 한 번에 지정';
+  static String pickLevelTitle(int n) => '$n명의 실력 등급';
+  static String levelsSaved(int n) => '$n명의 등급을 저장했어요';
 
   // 그룹·라이벌
   static const groupNote = '항상 같은 팀으로 배치할 사람들';
@@ -96,8 +101,8 @@ abstract final class AdminTexts {
   static const enabled = '켜기';
   static const pickMembers = '2명 이상 골라주세요';
   // 사람 고르기 화면 (스프린트 04 6-4)
-  static const searchName = '이름 검색';
-  static const clearSearch = '검색어 지우기';
+  static const searchName = TeamTexts.searchName;
+  static const clearSearch = TeamTexts.clearSearch;
   static const unpick = '빼기';
   static const noNameMatch = '찾는 이름이 없어요';
   static String pickedCount(int n) => '고른 사람 $n명';

@@ -5,16 +5,22 @@ import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../../shared/presentation/list_controls.dart';
+import '../../admin/domain/skill_level.dart';
 import '../../dashboard/domain/dashboard_models.dart' show DashboardRules;
 import '../../injury/domain/injury_models.dart';
 import '../../profile/presentation/profile_texts.dart';
 import '../data/team_repository.dart' show sortMembers;
+import '../domain/member_filter.dart';
 import '../domain/team_models.dart';
 import 'team_texts.dart';
 
 /// 팀원 탭 (스프린트 04 6-1, 기획서 11장, S4-14).
 ///
 /// - 위에 "팀원 N명". 순서는 팀장 → 운영진 → 팀원, 각각 이름 가나다순.
+/// - 이름 검색 + 필터 칩(전체·운영진·부상·실력 미정) (Q-079 3번 a, 큰 팀 관리).
+///   "실력 미정" 칩은 실력 등급을 볼 수 있는 팀장·운영진에게만 (Entitlements.showSkillUndecidedFilter, Q-017).
+///   등급은 칩을 보이는 사람만 읽는다 (서버도 팀원에게는 주지 않는다). 등급 자체는 목록에 표시하지 않는다.
 /// - 한 줄: 이름, 역할 배지(팀장·운영진), 이름 옆 작은 "부상 2W" 표시, 한줄 자기소개.
 ///   부상 메모는 목록에 보이지 않는다 (홈 부상자·프로필 보기에서만). 선호 포지션·실력 등급도 목록에 없다.
 /// - 누르면 프로필 보기. 선호 포지션·전문 골키퍼는 본인과 팀장·운영진만 본다 (Q-017, Entitlements 판단).
@@ -40,7 +46,7 @@ class RosterTab extends StatefulWidget {
 }
 
 class _RosterData {
-  const _RosterData(this.members, this.injuries, this.today);
+  const _RosterData(this.members, this.injuries, this.today, this.skillLevels);
 
   /// 정렬된 팀원
   final List<MemberEntry> members;
@@ -50,10 +56,17 @@ class _RosterData {
 
   /// 남은 회복 기간 계산 기준 (한국 날짜)
   final DateTime today;
+
+  /// 실력 등급 (볼 수 있는 사람만, "실력 미정" 칩용). 볼 수 없으면 null.
+  final Map<String, SkillLevel>? skillLevels;
 }
 
 class _RosterTabState extends State<RosterTab> {
   late Future<_RosterData> _data = _read();
+  MemberFilter _filter = MemberFilter.all;
+  String _query = '';
+
+  bool get _showSkillFilter => widget.services.entitlements.showSkillUndecidedFilter(widget.viewer);
 
   Future<_RosterData> _read() async {
     final s = widget.services;
@@ -67,7 +80,16 @@ class _RosterTabState extends State<RosterTab> {
         ))
           i.userId: i,
     };
-    return _RosterData(members, visible, DashboardRules.todayKst(widget.now()));
+    // 실력 등급은 칩을 볼 수 있는 사람만 읽는다 (Entitlements 한 곳 판단). 읽기 실패는 칩만 빠지고 명단은 보인다.
+    Map<String, SkillLevel>? levels;
+    if (_showSkillFilter) {
+      try {
+        levels = await s.admin.listSkillLevels(widget.team.id);
+      } on ServerFailure {
+        levels = null;
+      }
+    }
+    return _RosterData(members, visible, DashboardRules.todayKst(widget.now()), levels);
   }
 
   Future<void> _reload() async {
@@ -89,8 +111,27 @@ class _RosterTabState extends State<RosterTab> {
     );
   }
 
+  List<FilterOption<MemberFilter>> _options(_RosterData data) {
+    final staff = data.members.where((m) => m.role.isStaff).length;
+    final injured = data.members.where((m) => data.injuries.containsKey(m.userId)).length;
+    final levels = data.skillLevels;
+    return [
+      const FilterOption(MemberFilter.all, TeamTexts.filterAll),
+      FilterOption(MemberFilter.staff, TeamTexts.filterStaff, count: staff),
+      FilterOption(MemberFilter.injured, TeamTexts.filterInjured, count: injured),
+      // 실력 등급을 볼 수 있는 사람(팀장·운영진)에게만 (Q-017). 등급을 못 읽었으면 칩도 없다.
+      if (levels != null)
+        FilterOption(
+          MemberFilter.skillUndecided,
+          TeamTexts.filterSkillUndecided,
+          count: data.members.where((m) => isSkillUndecided(m.userId, levels)).length,
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return FutureBuilder<_RosterData>(
       future: _data,
       builder: (context, snap) {
@@ -103,21 +144,56 @@ class _RosterTabState extends State<RosterTab> {
         }
         final data = snap.data;
         if (data == null) return const Center(child: CircularProgressIndicator());
-        final members = data.members;
+        final options = _options(data);
+        // 칩이 사라진 경우(등급을 못 읽음)에는 전체로
+        final filter = options.any((o) => o.value == _filter) ? _filter : MemberFilter.all;
+        final shown = filterMembers(
+          data.members,
+          filter: filter,
+          query: _query,
+          injuredIds: data.injuries.keys.toSet(),
+          skillLevels: data.skillLevels,
+        );
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.builder(
             padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.lg, AppSpacing.gutter, AppSpacing.xxl),
             physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: members.length + 1,
+            itemCount: shown.length + 2,
             itemBuilder: (context, i) {
               if (i == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: SectionHeader(TeamTexts.memberCount(members.length), key: const Key('roster-count')),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SectionHeader(TeamTexts.memberCount(data.members.length), key: const Key('roster-count')),
+                    AppSearchField(
+                      key: const Key('roster-search'),
+                      hintText: TeamTexts.searchName,
+                      clearTooltip: TeamTexts.clearSearch,
+                      onChanged: (v) => setState(() => _query = v),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    FilterChipBar<MemberFilter>(
+                      keyPrefix: 'roster-filter',
+                      options: options,
+                      selected: filter,
+                      onSelected: (v) => setState(() => _filter = v),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                 );
               }
-              final m = members[i - 1];
+              if (i == shown.length + 1) {
+                return shown.isEmpty
+                    ? const EmptyState(
+                        key: Key('roster-no-match'),
+                        icon: Icons.person_search_outlined,
+                        message: TeamTexts.noMemberMatch,
+                        compact: true,
+                      )
+                    : const SizedBox.shrink();
+              }
+              final m = shown[i - 1];
               final injury = data.injuries[m.userId];
               final weeks = injury?.remainingWeeks(data.today);
               // 카드형 목록 (Q-079 1·2번): 한 사람 = 카드 한 장
@@ -142,7 +218,7 @@ class _RosterTabState extends State<RosterTab> {
                     ),
                     subtitle: (m.bio == null || m.bio!.isEmpty)
                         ? null
-                        : Text(m.bio!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        : Text(m.bio!, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
                     onTap: () => _openMember(m, injury, data.today),
                   ),
                 ),

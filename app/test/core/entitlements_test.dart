@@ -151,6 +151,13 @@ void main() {
       );
     });
 
+    test('팀원 탭 "실력 미정" 필터 칩: 실력 등급을 볼 수 있는 팀장·운영진만 (Q-079 3번 a)', () {
+      expect(e.showSkillUndecidedFilter(owner), isTrue);
+      expect(e.showSkillUndecidedFilter(manager), isTrue);
+      expect(e.showSkillUndecidedFilter(member), isFalse);
+      expect(e.showSkillUndecidedFilter(outsider), isFalse);
+    });
+
     test('선호 포지션·전문 골키퍼: 다른 사람 것은 팀장·운영진만 (Q-017)', () {
       const info = PreferredPositionsInfo(subjectUserId: 'other');
       expect(e.canView(owner, info), isTrue);

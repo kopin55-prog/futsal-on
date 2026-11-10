@@ -67,6 +67,11 @@ class Entitlements {
   bool showJoinRequestTodo(Viewer viewer) =>
       canPerform(viewer, TeamAction.reviewJoinRequests);
 
+  /// 팀원 탭의 "실력 미정" 필터 칩 (Q-079 3번 a): 실력 등급을 볼 수 있는 사람(팀장·운영진)만.
+  /// 본인 등급을 볼 수 있는 사람은 모두의 등급을 보는 사람이다 (Q-016). 팀원에게는 칩 자체가 없다.
+  bool showSkillUndecidedFilter(Viewer viewer) =>
+      canView(viewer, SkillLevelInfo(subjectUserId: viewer.userId));
+
   /// 홈 "처리할 일"의 팀 나누기 대기 (참석 마감 뒤·경기 종료 전·배치 미확정 일정, S4-05): 팀장·운영진만.
   /// 미확정(초안) 배치를 볼 수 있는 사람만 "미확정"을 알 수 있다.
   bool showLineupTodo(Viewer viewer) =>

@@ -112,8 +112,9 @@ abstract final class ScheduleTexts {
   static const respondFailed = '저장하지 못했어요. 다시 시도해 주세요.';
   static const cancelledLocked = '취소된 일정이라 투표할 수 없어요';
 
-  // 명단
+  // 명단 (Q-079 3번 d: 참석·대기·불참·미투표 탭 + 숫자)
   static String rosterTitle(String label, int n) => '$label $n';
+  static const attendanceSection = '참석 현황';
   static const nobody = '아직 없어요';
   static const leftMember = AdminTexts.unknownMember;
 

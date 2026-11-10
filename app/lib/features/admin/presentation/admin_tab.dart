@@ -5,7 +5,11 @@ import '../../../core/app_services.dart';
 import '../../../core/entitlements/entitlements.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/data/server_error.dart';
+import '../../../shared/domain/name_search.dart';
 import '../../../shared/presentation/common_widgets.dart';
+import '../../../shared/presentation/list_controls.dart';
+import '../../../shared/presentation/selection_bar.dart';
+import '../../membership/domain/join_decision.dart';
 import '../../pom_vote/presentation/award_settings_screen.dart';
 import '../../pom_vote/presentation/award_texts.dart';
 import '../../team/domain/team_models.dart';
@@ -25,6 +29,9 @@ import 'team_info_edit_screen.dart';
 /// 버튼 노출은 Entitlements 로만 판단하고, 서버가 같은 규칙으로 다시 거절한다.
 ///
 /// 역할 변경·위임·내보내기·가입 처리·해체 알림은 서버 함수가 같은 처리 안에서 만든다 (202611050029, Q-022, Q-067 8·15번).
+///
+/// 큰 팀 (Q-079 3번 c·f): 가입 신청은 여러 명 골라(체크) 한 번에 승인·거절 (서버 decide_join_requests 가 신청 순서대로,
+/// 정원 초과는 대기로 남기고 결과를 돌려준다 → 안내). 팀원 관리에는 이름 검색.
 class AdminTab extends StatefulWidget {
   const AdminTab({
     required this.services,
@@ -53,6 +60,12 @@ class _AdminTabState extends State<AdminTab> {
   bool _busy = false;
   String? _error;
 
+  /// 한 번에 처리할 가입 신청 (신청 ID)
+  final Set<String> _pickedRequests = {};
+
+  /// 팀원 관리 이름 검색 (정리 키)
+  String _memberQueryKey = '';
+
   AppServices get _s => widget.services;
   Entitlements get _e => _s.entitlements;
   String get _teamId => widget.team.id;
@@ -74,6 +87,7 @@ class _AdminTabState extends State<AdminTab> {
         _requests = requests;
         _members = members;
         _error = null;
+        _pickedRequests.removeWhere((id) => !requests.any((r) => r.requestId == id));
       });
     } on ServerFailure catch (e) {
       if (mounted) setState(() => _error = TeamTexts.serverError(e.code));
@@ -161,6 +175,61 @@ class _AdminTabState extends State<AdminTab> {
       await _load();
     }
   }
+
+  /// 고른 신청을 한 번에 (Q-079 3번 c). 결과는 "승인 가능한 만큼 신청 순서대로, 나머지는 그대로" 이므로 안내한다.
+  Future<void> _decideMany(bool approve) async {
+    final ids = [
+      for (final r in _requests ?? const <IncomingJoinRequest>[])
+        if (_pickedRequests.contains(r.requestId)) r.requestId,
+    ];
+    if (ids.isEmpty) return;
+    final message = approve ? TeamTexts.confirmApproveMany(ids.length) : TeamTexts.confirmRejectMany(ids.length);
+    if (!await _confirm(message)) return;
+    List<JoinDecisionResult>? results;
+    final ok = await _run(() async {
+      results = await _s.membership.decideJoinRequests(_teamId, ids, approve: approve);
+    });
+    if (!ok || !mounted) return;
+    final summary = JoinDecisionSummary(results ?? const []);
+    _pickedRequests.clear();
+    await _load();
+    if (!mounted) return;
+    final doneText = approve
+        ? TeamTexts.approvedMany(summary.of(JoinDecisionOutcome.approved))
+        : TeamTexts.rejectedMany(summary.of(JoinDecisionOutcome.rejected));
+    if (summary.allDone) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(doneText)));
+      return;
+    }
+    final lines = [
+      doneText,
+      if (summary.of(JoinDecisionOutcome.teamFull) > 0)
+        TeamTexts.skippedTeamFull(summary.of(JoinDecisionOutcome.teamFull)),
+      if (summary.of(JoinDecisionOutcome.teamLimitReached) > 0)
+        TeamTexts.skippedTeamLimit(summary.of(JoinDecisionOutcome.teamLimitReached)),
+      if (summary.of(JoinDecisionOutcome.alreadyDecided) > 0)
+        TeamTexts.skippedAlreadyDecided(summary.of(JoinDecisionOutcome.alreadyDecided)),
+      if (summary.of(JoinDecisionOutcome.teamFull) > 0 || summary.of(JoinDecisionOutcome.teamLimitReached) > 0)
+        TeamTexts.skippedStayPending,
+    ];
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('decide-many-result'),
+        title: const Text(TeamTexts.partialResultTitle),
+        content: Text(lines.join('\n')),
+        actions: [
+          FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text(TeamTexts.confirm)),
+        ],
+      ),
+    );
+  }
+
+  void _togglePicked(String requestId) => setState(() {
+    if (!_pickedRequests.remove(requestId)) _pickedRequests.add(requestId);
+  });
 
   Future<void> _memberAction(MemberEntry m, TeamAction action) async {
     final String message;
@@ -332,18 +401,27 @@ class _AdminTabState extends State<AdminTab> {
         message: TeamTexts.noRequests,
         compact: true,
       )
-    else
+    else ...[
       SectionCard(
         children: [
           for (final r in requests)
             ListTile(
               key: Key('request-${r.requestId}'),
+              // 여러 명 한 번에: 체크해서 고른다 (Q-079 3번 c)
+              leading: Checkbox(
+                key: Key('request-pick-${r.requestId}'),
+                value: _pickedRequests.contains(r.requestId),
+                onChanged: _busy ? null : (_) => _togglePicked(r.requestId),
+              ),
+              selected: _pickedRequests.contains(r.requestId),
+              onTap: _busy ? null : () => _togglePicked(r.requestId),
               title: Text(r.displayName),
               subtitle: (r.bio == null || r.bio!.isEmpty) ? null : Text(r.bio!),
               trailing: Wrap(
                 spacing: AppSpacing.xs,
                 children: [
                   TextButton(
+                    key: Key('reject-${r.requestId}'),
                     onPressed: _busy ? null : () => _decide(r, false),
                     child: const Text(TeamTexts.reject),
                   ),
@@ -357,6 +435,33 @@ class _AdminTabState extends State<AdminTab> {
             ),
         ],
       ),
+      const SizedBox(height: AppSpacing.sm),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        child: SelectionBar(
+          keyPrefix: 'request-selection',
+          countLabel: TeamTexts.selectedCount(_pickedRequests.length),
+          selectAllLabel: TeamTexts.selectAll,
+          clearLabel: TeamTexts.clearSelection,
+          onSelectAll: _busy || _pickedRequests.length == requests.length
+              ? null
+              : () => setState(() => _pickedRequests.addAll(requests.map((r) => r.requestId))),
+          onClear: _busy || _pickedRequests.isEmpty ? null : () => setState(_pickedRequests.clear),
+          actions: [
+            OutlinedButton(
+              key: const Key('reject-many'),
+              onPressed: _busy || _pickedRequests.isEmpty ? null : () => _decideMany(false),
+              child: const Text(TeamTexts.rejectSelected),
+            ),
+            FilledButton(
+              key: const Key('approve-many'),
+              onPressed: _busy || _pickedRequests.isEmpty ? null : () => _decideMany(true),
+              child: const Text(TeamTexts.approveSelected),
+            ),
+          ],
+        ),
+      ),
+    ],
   ];
 
   /// 초대 코드 (팀장·운영진)
@@ -374,46 +479,67 @@ class _AdminTabState extends State<AdminTab> {
     ),
   ];
 
-  /// 팀원 관리 (팀장만)
-  List<Widget> _membersSection(List<MemberEntry> members) => [
-    const SectionHeader(TeamTexts.membersSection),
-    SectionCard(
-      children: [
-        for (final m in members)
-          Builder(
-            builder: (context) {
-              final actions = _e.memberActions(
-                widget.viewer,
-                targetUserId: m.userId,
-                targetRole: m.role,
-              );
-              return ListTile(
-                key: Key('manage-${m.userId}'),
-                title: Row(
-                  children: [
-                    Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
-                    if (m.role != TeamRole.member) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      RoleBadge(role: m.role),
-                    ],
-                  ],
-                ),
-                trailing: actions.isEmpty
-                    ? null
-                    : PopupMenuButton<TeamAction>(
-                        key: Key('manage-menu-${m.userId}'),
-                        enabled: !_busy,
-                        onSelected: (a) => _memberAction(m, a),
-                        itemBuilder: (_) => [
-                          for (final a in actions) PopupMenuItem(value: a, child: Text(_actionLabel(m, a))),
+  /// 팀원 관리 (팀장만). 이름 검색으로 거른다 (Q-079 3번 f).
+  List<Widget> _membersSection(List<MemberEntry> members) {
+    final shown = [
+      for (final m in members)
+        if (NameSearch.matchesKey(NameSearch.key(m.displayName), _memberQueryKey)) m,
+    ];
+    return [
+      const SectionHeader(TeamTexts.membersSection),
+      AppSearchField(
+        key: const Key('manage-search'),
+        hintText: TeamTexts.searchName,
+        clearTooltip: TeamTexts.clearSearch,
+        onChanged: (v) => setState(() => _memberQueryKey = NameSearch.key(v)),
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      if (shown.isEmpty)
+        const EmptyState(
+          key: Key('manage-no-match'),
+          icon: Icons.person_search_outlined,
+          message: TeamTexts.noMemberMatch,
+          compact: true,
+        )
+      else
+        SectionCard(
+          children: [
+            for (final m in shown)
+              Builder(
+                builder: (context) {
+                  final actions = _e.memberActions(
+                    widget.viewer,
+                    targetUserId: m.userId,
+                    targetRole: m.role,
+                  );
+                  return ListTile(
+                    key: Key('manage-${m.userId}'),
+                    title: Row(
+                      children: [
+                        Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
+                        if (m.role != TeamRole.member) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          RoleBadge(role: m.role),
                         ],
-                      ),
-              );
-            },
-          ),
-      ],
-    ),
-  ];
+                      ],
+                    ),
+                    trailing: actions.isEmpty
+                        ? null
+                        : PopupMenuButton<TeamAction>(
+                            key: Key('manage-menu-${m.userId}'),
+                            enabled: !_busy,
+                            onSelected: (a) => _memberAction(m, a),
+                            itemBuilder: (_) => [
+                              for (final a in actions) PopupMenuItem(value: a, child: Text(_actionLabel(m, a))),
+                            ],
+                          ),
+                  );
+                },
+              ),
+          ],
+        ),
+    ];
+  }
 
   /// 팀 해체 (팀장만, Q-067 7·8번)
   List<Widget> _dissolveSection(ThemeData theme) => [

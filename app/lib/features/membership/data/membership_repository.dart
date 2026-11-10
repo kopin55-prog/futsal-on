@@ -4,6 +4,9 @@ import '../../../shared/data/server_error.dart';
 import '../../../shared/domain/region.dart';
 import '../../team/data/team_repository.dart' show scheduleFromRow;
 import '../../team/domain/team_models.dart';
+import '../domain/join_decision.dart';
+
+export '../domain/join_decision.dart';
 
 /// 팀 찾기·가입 신청(신청자 쪽)과 초대·신청 처리·역할 변경(관리자 쪽).
 /// 권한 최종 판단은 서버 함수가 한다. 실패는 모두 [ServerFailure].
@@ -34,6 +37,14 @@ abstract interface class MembershipRepository {
   Future<List<IncomingJoinRequest>> listPendingRequests(String teamId);
 
   Future<void> decideJoinRequest(String requestId, {required bool approve});
+
+  /// 여러 신청을 한 번에 승인·거절 (Q-079 3번 c). 서버가 신청 순서대로 처리하고 정원·팀 수에 걸린 승인은
+  /// 대기로 남긴다. 신청마다 결과 한 줄. 알림은 단건과 같게 사람마다 서버가 보낸다.
+  Future<List<JoinDecisionResult>> decideJoinRequests(
+    String teamId,
+    List<String> requestIds, {
+    required bool approve,
+  });
 
   Future<void> appointManager(String teamId, String userId);
 
@@ -167,6 +178,19 @@ class SupabaseMembershipRepository implements MembershipRepository {
           params: {'p_request_id': requestId, 'p_approve': approve},
         ),
       );
+
+  @override
+  Future<List<JoinDecisionResult>> decideJoinRequests(
+    String teamId,
+    List<String> requestIds, {
+    required bool approve,
+  }) => guardServer(() async {
+    final rows = await _client.rpc<List<dynamic>>(
+      'decide_join_requests',
+      params: {'p_team_id': teamId, 'p_request_ids': requestIds, 'p_approve': approve},
+    );
+    return [for (final r in rows) JoinDecisionResult.fromRow(r as Map<String, dynamic>)];
+  });
 
   Future<void> _roleCall(String fn, String teamId, String userId) => guardServer(
     () => _client.rpc<void>(fn, params: {'p_team_id': teamId, 'p_user_id': userId}),

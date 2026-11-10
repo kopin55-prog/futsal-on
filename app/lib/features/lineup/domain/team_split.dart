@@ -21,8 +21,12 @@ import 'skill_score.dart';
 ///   6. 미정 인원 고르게
 /// 게스트는 그룹·라이벌·전문 GK 대상이 아니다 (실력·포지션 계산에는 들어감).
 ///
-/// 남는 사람 (Q-075 4번): 참석을 가장 늦게 누른 사람부터 교체 블록 (게스트는 참석자보다 늦은 것으로 봄,
-/// 전문 GK 는 제외). 모자라면 팀마다 고르게 나누고 "N명 모자라요" 경고.
+/// 남는 사람 (Q-077 2번, Q-075 4번 변경): 교체에 따로 우선순위를 두지 않는다. 교체 블록도 한 칸으로 보고
+/// 위 기준으로 팀 블록을 가장 좋게 만드는 배치를 고르면, 팀 블록에 못 들어간 사람이 교체가 된다
+/// (참석을 누른 시각·게스트 여부·전문 GK 여부와 무관). 교체 블록의 사람은 어느 팀에도 없는 것으로 보고
+/// 기준을 잰다 (경고 계산 [TeamSplitter.evaluateWarnings] 와 같음). 단, 전문 GK 를 교체로 보내 GK 없는
+/// 팀이 생기는 배치는 GK 분산(1번)에서 진다.
+/// 모자라면 팀마다 고르게 나누고 "N명 모자라요" 경고.
 ///
 /// 같은 입력이면 같은 첫 배치 (고정 시드). 재조합은 [TeamSplitShuffler].
 
@@ -32,7 +36,6 @@ class SplitCandidate {
     required this.person,
     required this.skill,
     required this.positions,
-    required this.attendedAt,
     this.isDedicatedGk = false,
   });
 
@@ -44,9 +47,6 @@ class SplitCandidate {
 
   /// 전문 골키퍼. 게스트는 계산에서 항상 아님으로 본다.
   final bool isDedicatedGk;
-
-  /// 남는 사람 고르기 기준. 팀원: 참석을 누른(마지막으로 바꾼) 시각, 게스트: 추가한 시각.
-  final DateTime attendedAt;
 
   bool get countsAsDedicatedGk => isDedicatedGk && !person.isGuest;
 }
@@ -252,9 +252,11 @@ class _Solver {
   final TeamSplitInput input;
 
   late final int teams = input.teamCount;
-  late final List<SplitCandidate> players; // 팀 블록에 들어갈 사람 (키 순)
-  late final List<LineupPerson> bench;
-  late final List<int> sizes; // 팀별 인원
+
+  /// 교체 블록의 칸 번호 (팀 블록은 0..teams-1).
+  late final int benchSlot = teams;
+  late final List<SplitCandidate> players; // 계산 대상 전원 (교체 포함, 키 순)
+  late final List<int> sizes; // 칸별 인원 (팀 블록들 + 마지막이 교체 블록)
 
   // 사람별 계산 재료 (players 순서)
   late final List<bool> isGk;
@@ -318,31 +320,17 @@ class _Solver {
   }
 
   // ---------------------------------------------------------------------------
-  // 준비: 남는 사람 고르기, 팀별 인원, 계산 재료
+  // 준비: 칸별 인원, 계산 재료
   // ---------------------------------------------------------------------------
   void _prepare() {
-    final all = [...input.candidates]..sort((a, b) => a.person.compareTo(b.person));
+    players = [...input.candidates]..sort((a, b) => a.person.compareTo(b.person));
     final capacity = teams * input.playersPerTeam;
-    final benchCount = max(0, all.length - capacity);
+    final benchCount = max(0, players.length - capacity);
+    final placed = players.length - benchCount;
 
-    // 늦게 온 순서: 게스트(늦게 추가한 순) → 팀원(늦게 누른 순). 전문 GK 는 맨 마지막.
-    int lateFirst(SplitCandidate a, SplitCandidate b) {
-      if (a.person.isGuest != b.person.isGuest) return a.person.isGuest ? -1 : 1;
-      final t = b.attendedAt.compareTo(a.attendedAt);
-      return t != 0 ? t : b.person.compareTo(a.person);
-    }
-
-    final benchOrder = [
-      ...all.where((c) => !c.countsAsDedicatedGk).toList()..sort(lateFirst),
-      ...all.where((c) => c.countsAsDedicatedGk).toList()..sort(lateFirst),
-    ];
-    final benched = benchOrder.take(benchCount).map((c) => c.person).toSet();
-    bench = [for (final c in benchOrder.take(benchCount)) c.person];
-    players = [for (final c in all) if (!benched.contains(c.person)) c];
-
-    final base = players.length ~/ teams;
-    final extra = players.length % teams;
-    sizes = [for (var t = 0; t < teams; t++) base + (t < extra ? 1 : 0)];
+    final base = placed ~/ teams;
+    final extra = placed % teams;
+    sizes = [for (var t = 0; t < teams; t++) base + (t < extra ? 1 : 0), benchCount];
 
     isGk = [for (final c in players) c.countsAsDedicatedGk];
     score = [for (final c in players) SkillScore.of(c.skill)];
@@ -387,6 +375,7 @@ class _Solver {
   // ---------------------------------------------------------------------------
   _Cost _cost(List<int> assign) {
     final n = players.length;
+    final bench = benchSlot;
     // 계산마다 새로 만들지 않고 다시 쓴다 (탐색 중 수십만 번 불림)
     final gk = _gk..fillRange(0, teams, 0);
     final skill = _skill..fillRange(0, teams, 0);
@@ -397,6 +386,7 @@ class _Solver {
     }
     for (var i = 0; i < n; i++) {
       final t = assign[i];
+      if (t == bench) continue; // 교체는 어느 팀에도 없는 것으로 본다
       if (isGk[i]) gk[t]++;
       skill[t] += score[i];
       if (undecided[i]) und[t]++;
@@ -408,28 +398,35 @@ class _Solver {
       }
     }
 
-    // 1. 전문 GK: 팀별 인원 제곱 합 (고르게 나뉠수록 작음)
-    var cGk = 0;
+    // 1. 전문 GK: 먼저 GK 없는 팀 수 (전문 GK 를 교체로 보내 GK 없는 팀이 생기지 않게),
+    //    그다음 팀별 인원 제곱 합 (고르게 나뉠수록 작음). 제곱 합은 n² 이하라 한 칸에 합친다.
+    var noGk = 0, gkSq = 0;
     for (final g in gk) {
-      cGk += g * g;
+      if (g == 0) noGk++;
+      gkSq += g * g;
     }
+    final cGk = noGk * (n * n + 1) + gkSq;
 
-    // 2. 그룹: 가장 많이 모인 팀 밖에 있는 인원
+    // 2. 그룹: 팀 블록에 있는 그룹 인원 중 가장 많이 모인 팀 밖에 있는 인원
     var cGroup = 0;
     final count = _count;
     for (final g in groups) {
       count.fillRange(0, teams, 0);
-      var most = 0;
+      var most = 0, inTeams = 0;
       for (final i in g) {
-        most = max(most, ++count[assign[i]]);
+        final t = assign[i];
+        if (t == bench) continue;
+        inTeams++;
+        most = max(most, ++count[t]);
       }
-      cGroup += g.length - most;
+      cGroup += inTeams - most;
     }
 
-    // 3. 라이벌: 같은 팀에 있는 쌍
+    // 3. 라이벌: 같은 팀에 있는 쌍 (교체끼리는 같은 팀 아님)
     var cRival = 0;
     for (final p in rivalPairs) {
-      if (assign[p[0]] == assign[p[1]]) cRival++;
+      final t = assign[p[0]];
+      if (t != bench && t == assign[p[1]]) cRival++;
     }
 
     // 4. 포지션: 포지션마다 (팀별 최대 - 최소 - 1) 의 양수 부분 합. 차이 1 이하면 고른 것으로 본다.
@@ -463,7 +460,7 @@ class _Solver {
     final order = List.generate(players.length, (i) => i)..shuffle(rng);
     final assign = List.filled(players.length, 0);
     var k = 0;
-    for (var t = 0; t < teams; t++) {
+    for (var t = 0; t < sizes.length; t++) {
       for (var s = 0; s < sizes[t]; s++) {
         assign[order[k++]] = t;
       }
@@ -475,7 +472,7 @@ class _Solver {
     final n = players.length;
     if (n < 2) return;
     var current = _cost(assign);
-    final teamSize = List.filled(teams, 0);
+    final teamSize = List.filled(teams + 1, 0);
     for (final t in assign) {
       teamSize[t]++;
     }
@@ -499,7 +496,8 @@ class _Solver {
         }
         assign[i] = ti;
         assign[j] = tj;
-        // 옮기기: 인원 차이가 1 인 두 팀 사이 (팀별 인원 구성은 그대로)
+        // 옮기기: 인원 차이가 1 인 두 팀 블록 사이 (팀별 인원 구성은 그대로, 교체 블록 인원은 고정)
+        if (ti == benchSlot || tj == benchSlot) continue;
         for (final (a, from, to) in [(i, ti, tj), (j, tj, ti)]) {
           if (teamSize[from] != teamSize[to] + 1) continue;
           assign[a] = to;
@@ -521,18 +519,20 @@ class _Solver {
   // 결과
   // ---------------------------------------------------------------------------
   String _signature(List<int> assign) {
-    final buckets = List.generate(teams, (_) => <String>[]);
+    final buckets = List.generate(teams + 1, (_) => <String>[]);
     for (var i = 0; i < players.length; i++) {
       buckets[assign[i]].add(players[i].person.key);
     }
-    return ([for (final b in buckets) (b..sort()).join(',')]..sort()).join('|');
+    final bench = buckets.removeLast()..sort();
+    return '${([for (final b in buckets) (b..sort()).join(',')]..sort()).join('|')}#${bench.join(',')}';
   }
 
   TeamSplitPlan _toPlan(List<int> assign) {
-    final buckets = List.generate(teams, (_) => <LineupPerson>[]);
+    final buckets = List.generate(teams + 1, (_) => <LineupPerson>[]);
     for (var i = 0; i < players.length; i++) {
       buckets[assign[i]].add(players[i].person);
     }
+    final bench = buckets.removeLast()..sort();
     for (final b in buckets) {
       b.sort();
     }

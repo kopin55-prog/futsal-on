@@ -110,6 +110,12 @@ select pg_temp.check(private.notification_send_at('match_created', pg_temp.kst('
 select pg_temp.check(private.notification_send_at('match_created', pg_temp.kst('2026-11-11 12:59')) = pg_temp.kst('2026-11-11 12:59'), '12:59 now');
 -- 미투표 알림은 조용한 시간이어도 바로 (Q-072 1번, SC-32, H-03)
 select pg_temp.check(private.notification_send_at('rsvp_deadline_soon', pg_temp.kst('2026-11-11 06:00')) = pg_temp.kst('2026-11-11 06:00'), 'reminder in quiet hours now');
+-- 결과 발표 알림도 조용한 시간이어도 바로 (Q-077 1번): 경계 00:00·07:59:59, 한가운데 03:00, 08:00
+select pg_temp.check(private.notification_send_at('award_results_announced', pg_temp.kst('2026-11-11 00:00')) = pg_temp.kst('2026-11-11 00:00'), 'results 00:00 now');
+select pg_temp.check(private.notification_send_at('award_results_announced', pg_temp.kst('2026-11-11 03:00')) = pg_temp.kst('2026-11-11 03:00'), 'results 03:00 now');
+select pg_temp.check(private.notification_send_at('award_results_announced', pg_temp.kst('2026-11-11 07:59:59')) = pg_temp.kst('2026-11-11 07:59:59'), 'results 07:59:59 now');
+select pg_temp.check(private.notification_send_at('award_results_announced', pg_temp.kst('2026-11-11 08:00')) = pg_temp.kst('2026-11-11 08:00'), 'results 08:00 now');
+select pg_temp.check(private.notification_send_at('award_results_announced', pg_temp.kst('2026-11-10 23:59')) = pg_temp.kst('2026-11-10 23:59'), 'results 23:59 now');
 -- 일시 표시
 select pg_temp.check(private.match_time_label(pg_temp.kst('2026-11-11 10:00')) = '11월 11일(수) 10:00', 'time label');
 

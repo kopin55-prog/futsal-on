@@ -10,20 +10,17 @@ import 'package:futsal_on/shared/domain/position.dart';
 
 // sprint-03.md "QA 완료 기준" K-01~K-14 (팀 나누기 알고리즘).
 
-final _t0 = DateTime.utc(2026, 11, 10, 9);
 
 SplitCandidate m(
   String id, {
   SkillLevel skill = SkillLevel.amateur,
   Set<Position> pos = const {Position.midfielder},
   bool gk = false,
-  int minute = 0,
 }) => SplitCandidate(
   person: LineupPerson.member(id),
   skill: skill,
   positions: gk ? {...pos, Position.goalkeeper} : pos,
   isDedicatedGk: gk,
-  attendedAt: _t0.add(Duration(minutes: minute)),
 );
 
 SplitCandidate g(
@@ -31,13 +28,11 @@ SplitCandidate g(
   SkillLevel skill = SkillLevel.undecided,
   Set<Position> pos = const {},
   bool gk = false,
-  int minute = 0,
 }) => SplitCandidate(
   person: LineupPerson.guest(id),
   skill: skill,
   positions: pos,
   isDedicatedGk: gk,
-  attendedAt: _t0.add(Duration(minutes: minute)),
 );
 
 PairingRule grp(List<String> ids, {bool enabled = true}) =>
@@ -49,7 +44,7 @@ PairingRule rival(List<String> ids, {bool enabled = true}) =>
 /// 여러 포지션이 섞인 팀원 n명 (p1..pn)
 List<SplitCandidate> people(int n, {int from = 1}) => [
   for (var i = from; i < from + n; i++)
-    m('p$i', pos: {Position.values[i % 4 + 1]}, minute: i),
+    m('p$i', pos: {Position.values[i % 4 + 1]}),
 ];
 
 int teamOf(TeamSplitPlan plan, String key) =>
@@ -315,40 +310,63 @@ void main() {
     });
   });
 
-  group('K-10 인원 남음', () {
-    test('15명, 2팀 × 7명 → 교체 1명(가장 늦게 참석) + 경고', () {
-      final plan = TeamSplitter.split(
-        TeamSplitInput(candidates: people(15), teamCount: 2, playersPerTeam: 7),
-      );
+  group('K-10 인원 남음 (Q-077 2번: 교체 우선순위 없음, 기준으로 정함)', () {
+    test('15명, 2팀 × 7명 → 7:7 + 교체 1명 + 경고, 같은 입력이면 같은 교체', () {
+      final input = TeamSplitInput(candidates: people(15), teamCount: 2, playersPerTeam: 7);
+      final plan = TeamSplitter.split(input);
       expect(plan.squads.map((s) => s.length), [7, 7]);
-      expect(plan.bench, [const LineupPerson.member('p15')]);
+      expect(plan.bench, hasLength(1));
       expect(plan.warnings, {const SplitWarning(SplitWarningKind.benchRemaining, 1)});
       expect(plan.storedWarnings, isEmpty);
+      expect(TeamSplitter.split(input).bench, plan.bench);
     });
 
-    test('게스트는 참석자보다 늦은 것으로 봄, 전문 GK 는 교체로 안 감 (Q-075 4번)', () {
+    test('게스트를 먼저 교체로 보내지 않음: 실력 합계가 고른 쪽으로 정함', () {
+      // 2팀 × 1명, 3명 → 1명 교체. 프로 팀원이 들어가면 실력 차이가 생기므로 프로 팀원이 교체
       final plan = TeamSplitter.split(TeamSplitInput(
-        candidates: [
-          ...people(3),
-          m('lateGk', gk: true, minute: 99),
-          g('guest1', minute: -50),
-          g('guest2', minute: -40),
-        ],
+        candidates: [m('pro', skill: SkillLevel.pro), m('am'), g('guest', skill: SkillLevel.amateur)],
+        teamCount: 2,
+        playersPerTeam: 1,
+      ));
+      expect(plan.bench, [const LineupPerson.member('pro')]);
+      expect(teamOf(plan, 'g:guest'), isNot(-1));
+    });
+
+    test('전문 GK 도 교체가 될 수 있음: GK 가 팀보다 많으면 교체로 보내 경고를 피함', () {
+      // 전문 GK 3명 + 2명, 2팀 × 2명 → 1명 교체. GK 한 명이 교체로 가면 팀마다 GK 1명
+      final plan = TeamSplitter.split(TeamSplitInput(
+        candidates: [m('gk1', gk: true), m('gk2', gk: true), m('gk3', gk: true), m('a'), m('b')],
         teamCount: 2,
         playersPerTeam: 2,
       ));
-      // 6명 - 4자리 = 2명: 게스트 중 늦게 추가한 guest2, 그다음 guest1. 가장 늦게 누른 전문 GK 는 남음
-      expect(plan.bench, [const LineupPerson.guest('guest2'), const LineupPerson.guest('guest1')]);
-      expect(teamOf(plan, 'u:lateGk'), isNot(-1));
+      expect(plan.bench, hasLength(1));
+      expect(plan.bench.single.key, startsWith('u:gk'));
+      expect(kinds(plan), {SplitWarningKind.benchRemaining});
     });
 
-    test('게스트가 없으면 참석을 가장 늦게 누른 팀원부터 (전문 GK 제외)', () {
+    test('전문 GK 를 교체로 보내 GK 없는 팀이 생기지는 않음', () {
+      // 전문 GK 1명(비기너) + 아마추어 4명, 2팀 × 2명 → 실력만 보면 GK 가 교체지만 GK 분산이 먼저
       final plan = TeamSplitter.split(TeamSplitInput(
-        candidates: [m('a', minute: 1), m('b', minute: 5), m('c', minute: 3), m('gk', gk: true, minute: 9), m('d', minute: 2)],
+        candidates: [m('gk', gk: true, skill: SkillLevel.beginner), m('a'), m('b'), m('c'), m('d')],
         teamCount: 2,
         playersPerTeam: 2,
       ));
-      expect(plan.bench, [const LineupPerson.member('b')]);
+      expect(teamOf(plan, 'u:gk'), isNot(-1));
+      expect(plan.bench, hasLength(1));
+    });
+
+    test('교체 인원도 재조합에서 바뀔 수 있고 다 보면 처음으로', () {
+      final shuffler = TeamSplitShuffler(
+        TeamSplitInput(candidates: people(7), teamCount: 2, playersPerTeam: 3),
+      );
+      final benches = {for (final p in shuffler.plans) p.bench.single.key};
+      expect(benches.length, greaterThan(1));
+      final first = shuffler.current.signature;
+      for (var i = 1; i < shuffler.plans.length; i++) {
+        shuffler.next();
+      }
+      expect(shuffler.next().signature, first);
+      expect(shuffler.wrapped, isTrue);
     });
   });
 
@@ -440,6 +458,7 @@ void main() {
         TeamSplitInput(candidates: list.reversed.toList(), teamCount: 3, playersPerTeam: 5),
       );
       expect(a.signature, b.signature);
+      expect(a.bench, b.bench);
       expect(a.squads.map((s) => s.map((p) => p.key).toList()), b.squads.map((s) => s.map((p) => p.key).toList()));
     });
   });
@@ -480,9 +499,8 @@ void main() {
           for (var i = 1; i <= 26; i++)
             m('p$i',
                 skill: SkillLevel.values[i % 5],
-                pos: {Position.values[i % 4 + 1], Position.values[(i * 3) % 5]},
-                minute: i),
-          for (var i = 1; i <= 4; i++) m('gk$i', gk: true, minute: 40 + i),
+                pos: {Position.values[i % 4 + 1], Position.values[(i * 3) % 5]}),
+          for (var i = 1; i <= 4; i++) m('gk$i', gk: true),
         ],
         rules: [grp(['p1', 'p2', 'p3']), grp(['p7', 'p8']), rival(['p4', 'p5', 'p6']), rival(['p9', 'p10'])],
         teamCount: 6,

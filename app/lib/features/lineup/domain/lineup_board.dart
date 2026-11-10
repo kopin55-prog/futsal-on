@@ -83,7 +83,6 @@ class LineupPool {
     final candidates = <LineupPerson, SplitCandidate>{};
     final auto = <LineupPerson>{};
     final states = <String, AttendanceState?>{};
-    final epoch = DateTime.utc(2000);
     for (final m in members) {
       final person = LineupPerson.member(m.userId);
       final r = byUser[m.userId];
@@ -94,7 +93,6 @@ class LineupPool {
         skill: skills[m.userId] ?? SkillLevel.undecided,
         positions: {...?p?.positions},
         isDedicatedGk: p?.isDedicatedGk ?? false,
-        attendedAt: r?.updatedAt ?? epoch,
       );
       if (r?.state == AttendanceState.attending) auto.add(person);
     }
@@ -104,7 +102,6 @@ class LineupPool {
         person: person,
         skill: g.skillLevel,
         positions: g.positions.toSet(),
-        attendedAt: g.createdAt,
       );
       auto.add(person);
     }

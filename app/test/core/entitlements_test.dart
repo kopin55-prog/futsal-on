@@ -316,4 +316,28 @@ void main() {
       );
     });
   });
+
+  group('홈 대시보드 (스프린트 04 4-6, S4-05)', () {
+    test('처리할 일(가입 신청·팀 나누기 대기)은 팀장·운영진만', () {
+      for (final v in [owner, manager]) {
+        expect(e.showJoinRequestTodo(v), isTrue);
+        expect(e.showLineupTodo(v), isTrue);
+      }
+      for (final v in [member, outsider]) {
+        expect(e.showJoinRequestTodo(v), isFalse);
+        expect(e.showLineupTodo(v), isFalse);
+      }
+    });
+
+    test('2차 리포트 메뉴는 1차에 누구에게도 안 보인다 (등급이 있어도)', () {
+      for (final v in [owner, manager, member, Viewer(userId: 'o', role: TeamRole.owner, grants: allGrants)]) {
+        expect(e.showTeamReportMenu(v), isFalse);
+      }
+    });
+
+    test('내 기록은 본인만 (팀 소속과 무관)', () {
+      expect(e.canView(outsider, const PersonalRecordInfo(subjectUserId: 'x')), isTrue);
+      expect(e.canView(owner, const PersonalRecordInfo(subjectUserId: 'u')), isFalse);
+    });
+  });
 }
